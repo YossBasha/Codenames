@@ -1,11 +1,17 @@
 import { useNavigate } from 'react-router-dom';
-
+import { useEffect } from 'react';
+import { useGameContext } from '../context/GameContext';
 
 export default function Home() {
   const navigate = useNavigate();
+  const { socket, setSocket } = useGameContext();
 
-
-
+  useEffect(() => {
+    if (socket) {
+      socket.disconnect();
+      setSocket(null);
+    }
+  }, [socket, setSocket]);
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden">
       {/* Background decoration */}

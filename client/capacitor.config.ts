@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.codenames.app',
-  appName: 'Codenames Duet',
+  appName: 'Codenames',
   webDir: 'dist',
   server: {
     cleartext: true,

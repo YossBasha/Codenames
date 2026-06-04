@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Team } from '../../../shared/types';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -47,6 +47,12 @@ export default function TopBar({
   const navigate = useNavigate();
   const [cueInput, setCueInput] = useState('');
   const [numInput, setNumInput] = useState<number | ''>('');
+
+  useEffect(() => {
+    if (clueTargetCount > 0) {
+      setNumInput(clueTargetCount);
+    }
+  }, [clueTargetCount]);
 
   const handleSubmitCue = (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,43 +129,43 @@ export default function TopBar({
         )}
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 w-full sm:w-auto">
         {amHost && (
           <button
             onClick={onRestartGame}
-            className="px-4 py-2 rounded-lg font-bold bg-amber-600 hover:bg-amber-500 text-white transition-all shadow-lg shadow-amber-600/20 whitespace-nowrap"
+            className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold bg-amber-600 hover:bg-amber-500 text-white transition-all shadow-lg shadow-amber-600/20 whitespace-nowrap text-xs sm:text-base"
           >
             New Game
           </button>
         )}
         {isActiveSpymaster ? (
-          <form onSubmit={handleSubmitCue} className="flex gap-2 bg-slate-800 p-1.5 rounded-xl">
+          <form onSubmit={handleSubmitCue} className="flex gap-1 sm:gap-2 bg-slate-800 p-1 sm:p-1.5 rounded-xl">
             <input 
               type="text" 
               placeholder="Enter clue..."
               value={cueInput}
               onChange={(e) => setCueInput(e.target.value.replace(/[^a-zA-Z0-9\u0600-\u06FF\s]/g, ''))}
-              className="bg-slate-900 text-white px-3 py-2 rounded-lg outline-none w-32 sm:w-48 text-sm"
+              className="bg-slate-900 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg outline-none w-24 sm:w-48 text-xs sm:text-sm"
               maxLength={20}
             />
             <select 
               value={numInput} 
               onChange={(e) => setNumInput(e.target.value ? Number(e.target.value) : '')}
-              className="bg-slate-900 text-white px-2 py-2 rounded-lg outline-none text-sm cursor-pointer"
+              className="bg-slate-900 text-white px-1 py-1.5 sm:px-2 sm:py-2 rounded-lg outline-none text-xs sm:text-sm cursor-pointer"
             >
               <option value="" disabled>-</option>
               {[0,1,2,3,4,5,6,7,8,9].map(n => <option key={n} value={n}>{n}</option>)}
-              <option value={99}>Unlimited</option>
+              <option value={99}>∞</option>
             </select>
             <button 
               type="submit"
               disabled={
                 cueInput.trim().length === 0 || 
                 numInput === '' || 
-                (numInput !== 99 && clueTargetCount !== numInput) || 
+                (numInput !== 99 && clueTargetCount > 0 && clueTargetCount !== numInput) || 
                 (numInput === 99 && clueTargetCount === 0)
               }
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors text-sm"
+              className="px-2 py-1.5 sm:px-4 sm:py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors text-xs sm:text-sm whitespace-nowrap"
             >
               Give Clue
             </button>

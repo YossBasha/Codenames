@@ -1,7 +1,7 @@
 {
   "name": "client",
   "private": true,
-  "version": "1.0.36",
+  "version": "1.0.38",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -16,9 +16,15 @@
   },
   "build": {
     "appId": "com.codenames.app",
-    "productName": "Codenames Duet",
+    "productName": "Codenames",
     "directories": {
       "output": "dist-electron"
+    },
+    "win": {
+      "icon": "build/icon.png"
+    },
+    "mac": {
+      "icon": "build/icon.png"
     },
     "files": [
       "dist/**/*",

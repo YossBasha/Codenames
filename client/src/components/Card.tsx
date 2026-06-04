@@ -48,18 +48,41 @@ export default function Card({ card, isSpymaster, disabled, playerTeam, gameMode
   const hiddenClasses =
     "bg-slate-700/80 text-white border border-slate-600 hover:bg-slate-600/80";
 
+  let isValidClueTarget = false;
+  if (isGivingClue) {
+    if (gameMode === 'classic') {
+      isValidClueTarget = card.type === playerTeam && !card.revealed;
+    } else {
+      if (playerTeam === 'red') {
+        isValidClueTarget = card.duetTypeA === 'green' && !card.revealedByB;
+      } else if (playerTeam === 'blue') {
+        isValidClueTarget = card.duetTypeB === 'green' && !card.revealedByA;
+      }
+    }
+  }
+
+  let isDisabled = disabled;
+  if (isGivingClue) {
+    isDisabled = !isValidClueTarget;
+  } else {
+    isDisabled = isRevealedForMe || (isSpymaster && gameMode !== 'duet') || disabled;
+  }
+
   return (
     <button
       onClick={() => onClick(card.id)}
-      disabled={!isGivingClue && (isRevealedForMe || ((isSpymaster && gameMode !== 'duet') && !isGivingClue) || (disabled && !isGivingClue))}
+      disabled={isDisabled}
       className={cn(
         "relative w-full aspect-[4/3] sm:aspect-[3/2] rounded-lg sm:rounded-xl text-[9px] xs:text-[11px] sm:text-sm lg:text-lg font-black tracking-tighter sm:tracking-tight shadow-md transition-all duration-300 transform overflow-hidden",
-        (((isSpymaster && gameMode !== 'duet') || disabled) && !isRevealedForMe && !isGivingClue)
+        isDisabled && !isRevealedForMe && !isGivingClue
           ? "cursor-default opacity-80"
-          : "hover:-translate-y-1 hover:shadow-xl cursor-pointer",
+          : isGivingClue && !isValidClueTarget
+            ? "cursor-default opacity-80"
+            : "hover:-translate-y-1 hover:shadow-xl cursor-pointer",
         showColor ? colorClasses[typeToDisplay] : hiddenClasses,
         card.revealed && isSpymaster && "opacity-50",
         isRevealedForMe && !card.revealed && "opacity-80",
+        isGivingClue && isValidClueTarget && !isClueTarget && "ring-2 ring-emerald-400 ring-offset-1 ring-offset-slate-900 animate-pulse",
         isClueTarget && "ring-4 ring-yellow-400 ring-offset-2 ring-offset-slate-900 scale-105 z-10"
       )}
       dir={isRTL ? 'rtl' : 'ltr'}

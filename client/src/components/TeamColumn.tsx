@@ -7,16 +7,17 @@ interface TeamColumnProps {
   operatives: Player[];
   spymasters: Player[];
   gameMode?: 'classic' | 'duet';
+  className?: string;
 }
 
-export default function TeamColumn({ team, score, operatives, spymasters, gameMode = 'classic' }: TeamColumnProps) {
+export default function TeamColumn({ team, score, operatives, spymasters, gameMode = 'classic', className }: TeamColumnProps) {
   const isRed = team === 'red';
   
   if (gameMode === 'duet') {
     const allPlayers = [...operatives, ...spymasters];
     const isSideA = isRed;
     return (
-      <div className="flex flex-col gap-2 flex-1 lg:flex-none lg:w-48 xl:w-56 lg:flex-shrink-0">
+      <div className={cn("flex flex-col gap-2 flex-1 lg:flex-none lg:w-48 xl:w-56 lg:flex-shrink-0", className)}>
         <div className={cn(
           "rounded-xl lg:rounded-2xl p-4 flex flex-col items-center shadow-lg",
           isSideA ? "bg-lime-500/20 border-2 border-lime-500/50" : "bg-green-500/20 border-2 border-green-500/50"
@@ -44,7 +45,7 @@ export default function TeamColumn({ team, score, operatives, spymasters, gameMo
   }
 
   return (
-    <div className="flex flex-col gap-2 flex-1 lg:flex-none lg:w-48 xl:w-56 lg:flex-shrink-0">
+    <div className={cn("flex flex-col gap-2 flex-1 lg:flex-none lg:w-48 xl:w-56 lg:flex-shrink-0", className)}>
       {/* OPERATIVES BOX */}
       <div className={cn(
         "rounded-xl lg:rounded-2xl p-2 lg:p-4 flex flex-col items-center",

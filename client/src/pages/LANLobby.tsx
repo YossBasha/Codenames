@@ -133,6 +133,10 @@ export default function LANLobby() {
 
       newSocket.on('disconnect', () => {
         setIsConnected(false);
+        if (!isHost) {
+          setHostDisconnected(true);
+          setTimeout(() => navigate('/'), 4000);
+        }
       });
 
       newSocket.on('room_update', (room) => {

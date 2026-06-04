@@ -77,6 +77,11 @@ export default function LANGame() {
       setTimeout(() => navigate('/'), 4000);
     });
 
+    socket.on("disconnect", () => {
+      setHostDisconnected(true);
+      setTimeout(() => navigate('/'), 4000);
+    });
+
     // Request fresh room state immediately upon mounting
     socket.emit("join_room", { roomId, player });
 
@@ -86,6 +91,7 @@ export default function LANGame() {
       socket.off("timer_tick");
       socket.off("return_to_lobby");
       socket.off("host_disconnected");
+      socket.off("disconnect");
     };
   }, [socket, roomId, player, navigate]);
 
@@ -103,6 +109,22 @@ export default function LANGame() {
     if (!gameState || gameState.winner || !socket || !roomId) return;
     
     if (isGivingClue) {
+      const card = gameState.cards.find(c => c.id === id);
+      if (!card) return;
+      
+      let isValidClueTarget = false;
+      if (gameState.gameMode === 'classic') {
+        isValidClueTarget = card.type === currentPlayer?.team && !card.revealed;
+      } else {
+        if (currentPlayer?.team === 'red') {
+          isValidClueTarget = card.duetTypeA === 'green' && !card.revealedByB;
+        } else if (currentPlayer?.team === 'blue') {
+          isValidClueTarget = card.duetTypeB === 'green' && !card.revealedByA;
+        }
+      }
+      
+      if (!isValidClueTarget) return;
+
       setClueTargets(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]);
       return;
     }
@@ -236,59 +258,77 @@ export default function LANGame() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col lg:flex-row w-full max-w-[1600px] mx-auto p-2 lg:px-6 lg:py-2 gap-4 lg:gap-3 lg:min-h-0">
         {/* MOBILE TOP ROW (Teams + Log) - Hidden on lg */}
-        <div className="flex lg:hidden flex-row gap-2 h-64 w-full">
-          <div className="flex-1 min-w-0 flex flex-col">
-            <GameLog logs={gameState.gameLog || []} gameMode={gameState.gameMode} />
+        {gameState.gameMode === 'classic' ? (
+          <div className="flex lg:hidden flex-row gap-2 h-48 xs:h-56 sm:h-64 w-full">
+            <TeamColumn
+              team="blue"
+              score={gameState.blueScore}
+              operatives={blueOperatives}
+              spymasters={blueSpymasters}
+              gameMode="classic"
+              className="w-[80px] xs:w-[90px] sm:w-[130px] flex-shrink-0"
+            />
+            <div className="flex-1 min-w-0 flex flex-col bg-[#1a1a1a]/50 rounded-xl overflow-hidden">
+              <GameLog logs={gameState.gameLog || []} gameMode="classic" />
+            </div>
+            <TeamColumn
+              team="red"
+              score={gameState.redScore}
+              operatives={redOperatives}
+              spymasters={redSpymasters}
+              gameMode="classic"
+              className="w-[80px] xs:w-[90px] sm:w-[130px] flex-shrink-0"
+            />
           </div>
-          
-          <div className="w-[100px] xs:w-[120px] sm:w-[140px] flex-shrink-0 flex flex-col justify-between">
-            <div className={cn(
-              "flex-1 rounded-xl flex flex-col items-center p-2 shadow-inner border overflow-y-auto scrollbar-none",
-              gameState.gameMode === 'duet' ? "bg-lime-500/20 border-lime-500/50" : "bg-red-500/20 border-red-500/50"
-            )}>
-              <span className={cn(
-                "font-black text-[10px] xs:text-xs sm:text-sm tracking-widest mb-1 text-center sticky top-0 bg-black/40 w-full rounded py-0.5",
-                gameState.gameMode === 'duet' ? "text-lime-400" : "text-red-400"
+        ) : (
+          <div className="flex lg:hidden flex-row gap-2 h-64 w-full">
+            <div className="flex-1 min-w-0 flex flex-col">
+              <GameLog logs={gameState.gameLog || []} gameMode={gameState.gameMode} />
+            </div>
+            
+            <div className="w-[100px] xs:w-[120px] sm:w-[140px] flex-shrink-0 flex flex-col justify-between">
+              <div className={cn(
+                "flex-1 rounded-xl flex flex-col items-center p-2 shadow-inner border overflow-y-auto scrollbar-none",
+                "bg-lime-500/20 border-lime-500/50"
               )}>
-                {gameState.gameMode === 'duet' ? 'SIDE A' : 'RED'}
-              </span>
-              <div className="flex flex-col gap-1 w-full mt-1">
-                {[...redOperatives, ...redSpymasters].map(p => (
+                <span className="font-black text-[10px] xs:text-xs sm:text-sm tracking-widest mb-1 text-center sticky top-0 bg-black/40 w-full rounded py-0.5 text-lime-400">
+                  SIDE A
+                </span>
+                <div className="flex flex-col gap-1 w-full mt-1">
+                  {[...redOperatives, ...redSpymasters].map(p => (
+                      <div key={p.id} className={cn(
+                        "flex items-center gap-1 bg-black/40 p-1 lg:p-1.5 rounded-lg border border-white/5 w-full overflow-hidden transition-opacity",
+                        p.connected === false && "opacity-50 grayscale"
+                      )}>
+                        <img src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=84cc16`} alt={p.name} className="w-4 h-4 xs:w-5 xs:h-5 rounded-full flex-shrink-0" />
+                        <span className="text-white font-bold text-[9px] xs:text-[10px] truncate">{p.name} {p.connected === false && "(Offline)"}</span>
+                      </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div className={cn(
+                "flex-1 rounded-xl flex flex-col items-center p-2 shadow-inner border overflow-y-auto scrollbar-none mt-2",
+                "bg-green-500/20 border-green-500/50"
+              )}>
+                <span className="font-black text-[10px] xs:text-xs sm:text-sm tracking-widest mb-1 text-center sticky top-0 bg-black/40 w-full rounded py-0.5 text-green-400">
+                  SIDE B
+                </span>
+                <div className="flex flex-col gap-1 w-full mt-1">
+                  {[...blueOperatives, ...blueSpymasters].map(p => (
                     <div key={p.id} className={cn(
                       "flex items-center gap-1 bg-black/40 p-1 lg:p-1.5 rounded-lg border border-white/5 w-full overflow-hidden transition-opacity",
                       p.connected === false && "opacity-50 grayscale"
                     )}>
-                      <img src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=${gameState.gameMode === 'duet' ? '84cc16' : 'ef4444'}`} alt={p.name} className="w-4 h-4 xs:w-5 xs:h-5 rounded-full flex-shrink-0" />
+                      <img src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=22c55e`} alt={p.name} className="w-4 h-4 xs:w-5 xs:h-5 rounded-full flex-shrink-0" />
                       <span className="text-white font-bold text-[9px] xs:text-[10px] truncate">{p.name} {p.connected === false && "(Offline)"}</span>
                     </div>
-                ))}
-              </div>
-            </div>
-            
-            <div className={cn(
-              "flex-1 rounded-xl flex flex-col items-center p-2 shadow-inner border overflow-y-auto scrollbar-none mt-2",
-              gameState.gameMode === 'duet' ? "bg-green-500/20 border-green-500/50" : "bg-blue-500/20 border-blue-500/50"
-            )}>
-              <span className={cn(
-                "font-black text-[10px] xs:text-xs sm:text-sm tracking-widest mb-1 text-center sticky top-0 bg-black/40 w-full rounded py-0.5",
-                gameState.gameMode === 'duet' ? "text-green-400" : "text-blue-400"
-              )}>
-                {gameState.gameMode === 'duet' ? 'SIDE B' : 'BLUE'}
-              </span>
-              <div className="flex flex-col gap-1 w-full mt-1">
-                {[...blueOperatives, ...blueSpymasters].map(p => (
-                  <div key={p.id} className={cn(
-                    "flex items-center gap-1 bg-black/40 p-1 lg:p-1.5 rounded-lg border border-white/5 w-full overflow-hidden transition-opacity",
-                    p.connected === false && "opacity-50 grayscale"
-                  )}>
-                    <img src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=${gameState.gameMode === 'duet' ? '22c55e' : '3b82f6'}`} alt={p.name} className="w-4 h-4 xs:w-5 xs:h-5 rounded-full flex-shrink-0" />
-                    <span className="text-white font-bold text-[9px] xs:text-[10px] truncate">{p.name} {p.connected === false && "(Offline)"}</span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* DESKTOP LEFT SIDEBAR */}
         <div className="hidden lg:flex">
