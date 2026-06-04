@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Codenames Duet</string>
+    <string name="title_activity_main">Codenames Duet</string>
+    <string name="package_name">com.codenames.app</string>
+    <string name="custom_url_scheme">com.codenames.app</string>
+</resources>

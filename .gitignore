@@ -1,0 +1,11 @@
+node_modules/
+dist/
+build/
+dist-electron/
+.env
+.DS_Store
+*.log
+*.exe
+*.asar
+*.apk
+*.aab

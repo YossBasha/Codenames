@@ -1,0 +1,86 @@
+import type { Card as CardType } from "../../../shared/types";
+import { cn } from "../utils";
+
+interface CardProps {
+  card: CardType;
+  isSpymaster: boolean;
+  disabled?: boolean;
+  playerTeam?: string;
+  gameMode?: 'classic' | 'duet';
+  isRTL?: boolean;
+  isClueTarget?: boolean;
+  isGivingClue?: boolean;
+  onClick: (id: number) => void;
+}
+
+export default function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, isClueTarget = false, isGivingClue = false, onClick }: CardProps) {
+  let isRevealedForMe = card.revealed;
+  if (gameMode === 'duet' && !card.revealed) {
+    if (playerTeam === 'red' && card.revealedByA) {
+      isRevealedForMe = true;
+    }
+    if (playerTeam === 'blue' && card.revealedByB) {
+      isRevealedForMe = true;
+    }
+  }
+
+  const showColor = isRevealedForMe || isSpymaster;
+
+  let typeToDisplay = card.type;
+  if (gameMode === 'duet' && isSpymaster && !card.revealed) {
+    // Spymasters see their team's key (A = red, B = blue)
+    typeToDisplay = playerTeam === 'blue' ? card.duetTypeB! : card.duetTypeA!;
+  }
+  
+  if (gameMode === 'duet' && card.revealed) {
+    // Use whatever the server set card.type to dynamically upon reveal
+    typeToDisplay = card.type;
+  }
+
+  const colorClasses = {
+    red: "bg-red-500 text-white shadow-red-500/50",
+    blue: "bg-blue-500 text-white shadow-blue-500/50",
+    green: "bg-emerald-500 text-white shadow-emerald-500/50",
+    neutral: "bg-stone-300 text-stone-800 shadow-stone-300/50",
+    assassin: "bg-slate-900 text-white shadow-slate-900/50",
+  };
+
+  const hiddenClasses =
+    "bg-slate-700/80 text-white border border-slate-600 hover:bg-slate-600/80";
+
+  return (
+    <button
+      onClick={() => onClick(card.id)}
+      disabled={!isGivingClue && (isRevealedForMe || ((isSpymaster && gameMode !== 'duet') && !isGivingClue) || (disabled && !isGivingClue))}
+      className={cn(
+        "relative w-full aspect-[4/3] sm:aspect-[3/2] rounded-lg sm:rounded-xl text-[9px] xs:text-[11px] sm:text-sm lg:text-lg font-black tracking-tighter sm:tracking-tight shadow-md transition-all duration-300 transform overflow-hidden",
+        (((isSpymaster && gameMode !== 'duet') || disabled) && !isRevealedForMe && !isGivingClue)
+          ? "cursor-default opacity-80"
+          : "hover:-translate-y-1 hover:shadow-xl cursor-pointer",
+        showColor ? colorClasses[typeToDisplay] : hiddenClasses,
+        card.revealed && isSpymaster && "opacity-50",
+        isRevealedForMe && !card.revealed && "opacity-80",
+        isClueTarget && "ring-4 ring-yellow-400 ring-offset-2 ring-offset-slate-900 scale-105 z-10"
+      )}
+      dir={isRTL ? 'rtl' : 'ltr'}
+    >
+      {/* Base Word */}
+      <div className="flex items-center justify-center h-full w-full p-1 sm:p-2 text-center break-words leading-none sm:leading-tight">
+        {card.word}
+      </div>
+
+      {/* Spymaster Overlay */}
+      {showColor && !card.revealed && isSpymaster && (
+        <div className="absolute inset-0 bg-white/20" />
+      )}
+      
+      {/* Tracking Indicators for Asymmetric Duet State */}
+      {gameMode === 'duet' && !card.revealed && (
+        <div className="absolute bottom-1 right-1 sm:bottom-1.5 sm:right-1.5 flex gap-1 z-20">
+          {card.revealedByA && <div className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded-full bg-red-500 border border-slate-900 shadow-md"></div>}
+          {card.revealedByB && <div className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded-full bg-blue-500 border border-slate-900 shadow-md"></div>}
+        </div>
+      )}
+    </button>
+  );
+}
