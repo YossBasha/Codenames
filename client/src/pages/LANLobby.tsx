@@ -198,6 +198,7 @@ export default function LANLobby() {
     if (!name.trim()) { setTimeout(() => alert("Please enter a Display Name."), 10); return; }
 
     const newPlayer: Player = {
+      ...(player || {}),
       id: socket.id!,
       name,
       team,

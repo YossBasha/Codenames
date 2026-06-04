@@ -124,6 +124,14 @@ export default function TopBar({
       </div>
 
       <div className="flex items-center gap-4">
+        {amHost && (
+          <button
+            onClick={onRestartGame}
+            className="px-4 py-2 rounded-lg font-bold bg-amber-600 hover:bg-amber-500 text-white transition-all shadow-lg shadow-amber-600/20 whitespace-nowrap"
+          >
+            New Game
+          </button>
+        )}
         {isActiveSpymaster ? (
           <form onSubmit={handleSubmitCue} className="flex gap-2 bg-slate-800 p-1.5 rounded-xl">
             <input 
@@ -174,14 +182,6 @@ export default function TopBar({
                 }`}
               >
                 {isSpymaster ? 'Hide Spymaster View' : 'Spymaster View'}
-              </button>
-            )}
-            {amHost && (
-              <button
-                onClick={onRestartGame}
-                className="px-4 py-2 rounded-lg font-bold bg-amber-600 hover:bg-amber-500 text-white transition-all shadow-lg shadow-amber-600/20 whitespace-nowrap"
-              >
-                Restart Game
               </button>
             )}
           </div>

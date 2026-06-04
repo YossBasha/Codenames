@@ -544,10 +544,15 @@ export function setupRoomManager(io: Server) {
         const room = rooms[roomId];
         const playerIndex = room.players.findIndex(p => p.id === socket.id);
         if (playerIndex !== -1) {
-          // Instead of removing the player, mark them as disconnected so they can rejoin and reclaim their spot
-          room.players[playerIndex].connected = false;
-          
-          io.to(roomId).emit('room_update', getSafeRoom(room));
+          if (playerIndex === 0) {
+            // The host disconnected, kick everyone else
+            io.to(roomId).emit('host_disconnected');
+            delete rooms[roomId];
+          } else {
+            // Instead of removing the player, mark them as disconnected so they can rejoin and reclaim their spot
+            room.players[playerIndex].connected = false;
+            io.to(roomId).emit('room_update', getSafeRoom(room));
+          }
         }
       }
     });
