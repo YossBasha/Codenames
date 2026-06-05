@@ -211,12 +211,6 @@ export function startListening() {
 
   const handleMessage = (msg: Buffer, rinfo: dgram.RemoteInfo) => {
     try {
-      const fs = require('fs');
-      const os = require('os');
-      const path = require('path');
-      const logFile = path.join(os.homedir(), 'Desktop', 'codenames_udp_log.txt');
-      fs.appendFileSync(logFile, `[${new Date().toISOString()}] Received packet from ${rinfo.address}:${rinfo.port} -> ${msg.toString()}\n`);
-      
       const data = JSON.parse(msg.toString());
       if (data.protocol === PROTOCOL_ID) {
         console.log(`[Discovery] Received valid broadcast from ${rinfo.address}:${rinfo.port} payload: ${JSON.stringify(data)}`);
@@ -232,9 +226,9 @@ export function startListening() {
       } else {
         console.log(`[Discovery] Received unknown payload protocol from ${rinfo.address}:${rinfo.port} payload: ${JSON.stringify(data)}`);
       }
-    } catch (e) {
+    } catch (e: any) {
       // Ignore invalid packets
-      console.log(`[Discovery] Failed to parse broadcast from ${rinfo.address}:${rinfo.port} raw: ${msg.toString().substring(0, 50)}`);
+      console.log(`[Discovery] Failed to parse broadcast from ${rinfo.address}:${rinfo.port}. Error: ${e.message}. Raw: ${msg.toString()}`);
     }
   };
 

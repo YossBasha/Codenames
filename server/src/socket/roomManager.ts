@@ -421,6 +421,7 @@ export function setupRoomManager(io: Server) {
               room.gameState!.activeCue = null;
               room.gameState!.activeCueNumber = null;
               room.gameState!.successfulGuessesThisTurn = 0;
+              room.gameState!.highlightedCards = {};
               room.gameState!.timerTokens--;
               if (room.gameState!.timerTokens <= 0) {
                  room.gameState!.winner = 'spectator'; // LOSS
@@ -492,6 +493,7 @@ export function setupRoomManager(io: Server) {
               room.gameState!.activeCue = null;
               room.gameState!.activeCueNumber = null;
               room.gameState!.successfulGuessesThisTurn = 0;
+              room.gameState!.highlightedCards = {};
               startTimer(io, room);
             };
 

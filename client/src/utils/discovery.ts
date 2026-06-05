@@ -47,6 +47,12 @@ export async function getBaseApiUrl(): Promise<string> {
       }
     } catch (_) {}
   }
+  
+  // If testing on a mobile browser on the local network
+  if (typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return `http://${window.location.hostname}:${port}/api/discovery`;
+  }
+
   return `http://localhost:${port}/api/discovery`;
 }
 

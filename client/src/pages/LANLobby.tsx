@@ -22,9 +22,16 @@ export default function LANLobby() {
   const { player, setPlayer, roomId, setRoomId, socket, setSocket, language, setLanguage } = useGameContext();
   
   // connectIp is the stable address used for socket.io - never changes after mount.
-  // Host always connects to own server via 127.0.0.1; joiner uses URL param.
-  // serverIp is only for display and UDP broadcast.
-  const connectIp = isHost ? '127.0.0.1' : (searchParams.get('ip') || '127.0.0.1');
+  // Host always connects to own server via 127.0.0.1, UNLESS it's a browser test over LAN.
+  const connectIp = useMemo(() => {
+    if (isHost) {
+      if (typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        return window.location.hostname;
+      }
+      return '127.0.0.1';
+    }
+    return searchParams.get('ip') || '127.0.0.1';
+  }, [isHost, searchParams]);
   const [serverIp, setServerIp] = useState(searchParams.get('ip') || (isHost ? 'Detecting IP...' : '127.0.0.1'));
   const [serverPort, setServerPort] = useState(parseInt(searchParams.get('port') || '0', 10));
   const [inputRoom, setInputRoom] = useState(searchParams.get('room') || `Room-${Math.floor(Math.random() * 10000)}`);
