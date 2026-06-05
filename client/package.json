@@ -1,7 +1,7 @@
 {
   "name": "client",
   "private": true,
-  "version": "1.1.2",
+  "version": "1.1.8",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -12,7 +12,7 @@
     "electron:start": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "electron:build": "npm run build && electron-builder",
     "android:sync": "npm run build && npx esbuild ../server/src/index.ts --bundle --platform=node --target=node18 --outfile=dist/nodejs/index.js --format=cjs --external:bridge && node -e \"const fs=require('fs'); fs.writeFileSync('dist/nodejs/package.json', JSON.stringify({name:'server',main:'index.js'}));\" && npx cap sync android",
-    "android:build": "npm run android:sync && cd android && gradlew assembleDebug && node -e \"const fs=require('fs'); fs.renameSync('app/build/outputs/apk/debug/app-debug.apk', '../Codenames v' + process.env.npm_package_version + '.apk');\""
+    "android:build": "npm run android:sync && cd android && gradlew assembleDebug && node -e \"const fs=require('fs'); fs.renameSync('app/build/outputs/apk/debug/app-debug.apk', 'app/build/outputs/apk/debug/Codenames v' + process.env.npm_package_version + '.apk');\""
   },
   "build": {
     "appId": "com.codenames.app",

@@ -95,7 +95,18 @@ export default function Card({ card, isSpymaster, disabled, playerTeam, gameMode
   }
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (!isDisabled) {
+            playCardSelectSfx();
+            onClick(card.id);
+          }
+        }
+      }}
       onClick={() => {
         if (!isDisabled) {
           playCardSelectSfx();
@@ -108,7 +119,7 @@ export default function Card({ card, isSpymaster, disabled, playerTeam, gameMode
       onMouseEnter={() => {
         if (!isDisabled) playCardHoverSfx();
       }}
-      disabled={isDisabled}
+      aria-disabled={isDisabled}
       className={cn(
         "relative w-full aspect-[4/3] sm:aspect-[3/2] rounded-lg sm:rounded-xl text-[9px] xs:text-[11px] sm:text-sm lg:text-lg font-black tracking-tighter sm:tracking-tight transition-all duration-300 transform overflow-hidden",
         isDisabled && !isRevealedForMe && !isGivingClue
@@ -119,13 +130,19 @@ export default function Card({ card, isSpymaster, disabled, playerTeam, gameMode
         hiddenClasses,
         card.revealed && isSpymaster && "opacity-50",
         showColor && shadowClasses[typeToDisplay],
-        isClueTarget && "ring-4 ring-yellow-400 ring-offset-2 ring-offset-slate-900 scale-105 z-10",
-        highlightedBy.length > 0 && "ring-4 ring-white ring-offset-2 ring-offset-slate-900 scale-[1.02] z-10 shadow-[0_0_15px_rgba(255,255,255,0.5)]",
+        (isClueTarget || highlightedBy.length > 0) && "scale-[1.02] z-10",
         justRevealed && !['green', 'red', 'blue'].includes(typeToDisplay) && "animate-reveal-pop",
         justRevealed && ['green', 'red', 'blue'].includes(typeToDisplay) && "animate-card-flip"
       )}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
+      {/* Ring Overlay (so it sits above the color background) */}
+      <div className={cn(
+        "absolute inset-0 rounded-lg sm:rounded-xl pointer-events-none z-20",
+        isClueTarget && "ring-2 sm:ring-4 ring-inset ring-yellow-400 shadow-[inset_0_0_15px_rgba(250,204,21,0.5),0_0_15px_rgba(250,204,21,0.5)]",
+        highlightedBy.length > 0 && "ring-2 sm:ring-4 ring-inset ring-white shadow-[inset_0_0_15px_rgba(255,255,255,0.5),0_0_15px_rgba(255,255,255,0.5)]"
+      )} />
+
       {/* Background Revealed Layer (Ink Bleed) */}
       {showColor && (
         <div 
@@ -137,33 +154,40 @@ export default function Card({ card, isSpymaster, disabled, playerTeam, gameMode
         />
       )}
 
-      {/* Base Word */}
-      {!isRevealedForMe || !['green', 'red', 'blue'].includes(typeToDisplay) ? (
+      {/* Base Word - only hide text for globally revealed green/red/blue cards (correct guesses) */}
+      {!card.revealed || !['green', 'red', 'blue'].includes(typeToDisplay) ? (
         <div className="relative z-10 flex items-center justify-center h-full w-full p-1 sm:p-2 text-center break-words leading-none sm:leading-tight">
           {card.word}
         </div>
       ) : null}
 
-      {/* Highlight Indicators & Confirm Button */}
+      {/* Highlight Indicators & Confirm Button - positioned at bottom-left to avoid hiding card text */}
       {highlightedBy.length > 0 && (
-        <div className="absolute top-1 left-1 sm:top-2 sm:left-2 flex gap-1 z-30 pointer-events-none">
+        <div className="absolute bottom-0.5 left-0.5 sm:bottom-1.5 sm:left-1.5 flex items-end gap-0.5 sm:gap-1 z-30 pointer-events-none">
           {highlightedBy.map((p, i) => (
-             <div key={i} className="flex flex-col items-center drop-shadow-md">
-               <img src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=${p.team === 'red' ? 'ef4444' : '3b82f6'}`} alt={p.name} className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 border-white/80" />
-               <div className="bg-slate-900/80 text-white text-[6px] sm:text-[8px] font-bold px-1.5 rounded-full mt-0.5 truncate max-w-[40px] sm:max-w-[50px]">{p.name}</div>
-             </div>
+             <img key={i} src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=${p.team === 'red' ? 'ef4444' : '3b82f6'}`} alt={p.name} title={p.name} className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-white/80 drop-shadow-md" />
           ))}
           {highlightedBy.some(p => p.id === currentPlayerId) && onGuess && !isDisabled && (
-            <button
+            <div
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  playCardSelectSfx();
+                  onGuess(card.id);
+                }
+              }}
               onClick={(e) => {
                 e.stopPropagation();
                 playCardSelectSfx();
                 onGuess(card.id);
               }}
-              className="pointer-events-auto ml-1 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-orange-500 border-2 border-orange-300 shadow-[0_0_10px_rgba(249,115,22,0.5)] flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+              className="pointer-events-auto ml-0.5 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-orange-500 border-2 border-orange-300 shadow-[0_0_10px_rgba(249,115,22,0.5)] flex items-center justify-center hover:scale-110 active:scale-95 transition-transform cursor-pointer"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="sm:w-5 sm:h-5"><path d="M8 13v-8.5a1.5 1.5 0 0 1 3 0v7.5"/><path d="M11 11.5v-2a1.5 1.5 0 1 1 3 0v2.5"/><path d="M14 10.5v-1.5a1.5 1.5 0 1 1 3 0v4"/><path d="M17 11.5v-1.5a1.5 1.5 0 1 1 3 0v4.5a6 6 0 0 1-6 6h-2h.208a6 6 0 0 1-5.012-2.7L7 19c-1.3-2.3-1.4-2.81-1.76-4.57a1.503 1.503 0 0 1 2.87-1.12l1.89 5.69"/></svg>
-            </button>
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="sm:w-4 sm:h-4"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
           )}
         </div>
       )}
@@ -195,13 +219,7 @@ export default function Card({ card, isSpymaster, disabled, playerTeam, gameMode
         <div className="absolute inset-0 bg-white/20 z-10" />
       )}
       
-      {/* Tracking Indicators for Asymmetric Duet State */}
-      {gameMode === 'duet' && !card.revealed && (
-        <div className="absolute bottom-1 right-1 sm:bottom-1.5 sm:right-1.5 flex gap-1 z-20">
-          {card.revealedByA && <div className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded-full bg-red-500 border border-slate-900 shadow-md"></div>}
-          {card.revealedByB && <div className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded-full bg-blue-500 border border-slate-900 shadow-md"></div>}
-        </div>
-      )}
-    </button>
+
+    </div>
   );
 }

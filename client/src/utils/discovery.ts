@@ -205,7 +205,6 @@ export async function scanForRoomsHTTP(): Promise<DiscoveredRoom[]> {
     '172.20.10.1',    // iPhone hotspot
   ];
 
-  // Also try to derive the gateway from our own IP (e.g. 192.168.X.1)
   try {
     const localIp = await getLocalIp();
     if (localIp && localIp !== '127.0.0.1') {
@@ -218,6 +217,13 @@ export async function scanForRoomsHTTP(): Promise<DiscoveredRoom[]> {
       }
     }
   } catch (_) {}
+
+  // Also ALWAYS check the IP we are currently hosted from (crucial for mobile browser testing)
+  if (typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    if (!candidateIPs.includes(window.location.hostname)) {
+      candidateIPs.unshift(window.location.hostname);
+    }
+  }
 
   const ports = [3000, 3001, 3002, 3003, 3004, 3005];
   const rooms: DiscoveredRoom[] = [];

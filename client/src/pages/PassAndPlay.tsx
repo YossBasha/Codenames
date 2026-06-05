@@ -6,6 +6,7 @@ import type { GameState, CustomWordWeight, TimerSettings, Team } from "../../../
 import Grid from "../components/Grid";
 import TopBar from "../components/TopBar";
 import ActiveClueBar from "../components/ActiveClueBar";
+import GameLog from '../components/GameLog';
 import { cn } from "../utils";
 import GameSettingsPanel from "../components/GameSettingsPanel";
 import { playCardRevealSfx, playMenuClickSfx, playMenuHoverSfx } from "../utils/sfx";
@@ -198,7 +199,7 @@ export default function PassAndPlay() {
     if (!gameState || gameState.winner) return;
     if (localPhase !== "Operative_Guessing") return;
 
-    const maxGuesses = (gameState.activeCueNumber || 0) + 1;
+    const maxGuesses = gameState.activeCueNumber === 0 ? Infinity : (gameState.activeCueNumber || 0) + 1;
     if (gameState.successfulGuessesThisTurn >= maxGuesses) return;
 
     const newCards = [...gameState.cards];
@@ -226,9 +227,13 @@ export default function PassAndPlay() {
       if (expectedGuessTeam === 'blue') card.revealedByB = true;
       else card.revealedByA = true;
       
-      card.revealed = true;
-      card.type = keyType!; 
-      playCardRevealSfx(keyType as any);
+      if (keyType === 'green' || keyType === 'assassin' || (card.revealedByA && card.revealedByB)) {
+        card.revealed = true;
+        card.type = keyType!; 
+        playCardRevealSfx(keyType as any);
+      } else {
+        playCardRevealSfx('neutral'); // still play sound for neutral token drop
+      }
 
       const endTurnDuet = () => {
         nextTurn = getNextTurnDuetLocal(gameState.currentTurn, newCards);
@@ -308,21 +313,45 @@ export default function PassAndPlay() {
       }
     }
 
-    setGameState(prev => prev ? ({
-      ...prev,
-      cards: newCards,
-      currentTurn: nextTurn,
-      activeCue: newCue,
-      activeCueNumber: newCueNum,
-      successfulGuessesThisTurn: newGuesses,
-      redScore: newRedScore,
-      blueScore: newBlueScore,
-      timerTokens: newTokens,
-      winner,
-      isFirstTurnOfGame: false,
-      currentPhase: newPhase === 'Spymaster_Setup' ? 'spymaster' : 'operative',
-      highlightedCards: newPhase === 'Spymaster_Setup' ? {} : prev.highlightedCards // clear highlights on turn end
-    }) : null);
+    setGameState(prev => {
+      if (!prev) return null;
+      // On turn end, clear all highlights; otherwise remove only the guessed card
+      let updatedHighlights = prev.highlightedCards ? { ...prev.highlightedCards } : {};
+      if (newPhase === 'Spymaster_Setup') {
+        updatedHighlights = {};
+      } else {
+        for (const playerId of Object.keys(updatedHighlights)) {
+          updatedHighlights[playerId] = updatedHighlights[playerId].filter(cId => cId !== id);
+        }
+      }
+      return {
+        ...prev,
+        cards: newCards,
+        currentTurn: nextTurn,
+        activeCue: newCue,
+        activeCueNumber: newCueNum,
+        successfulGuessesThisTurn: newGuesses,
+        redScore: newRedScore,
+        blueScore: newBlueScore,
+        timerTokens: newTokens,
+        winner,
+        isFirstTurnOfGame: false,
+        currentPhase: newPhase === 'Spymaster_Setup' ? 'spymaster' : 'operative',
+        highlightedCards: updatedHighlights,
+        gameLog: [...(prev.gameLog || []), {
+          id: Math.random().toString(36).substring(7),
+          type: 'guess',
+          player: {
+            name: prev.gameMode === 'duet' ? (prev.currentTurn === 'red' ? 'SIDE B' : 'SIDE A') : `${prev.currentTurn.toUpperCase()} OPERATIVES`,
+            avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent('Operatives')}&backgroundColor=${prev.currentTurn === 'red' ? 'ef4444' : '3b82f6'}`
+          },
+          guessingTeam: (prev.gameMode === 'duet' ? (prev.currentTurn === 'red' ? 'blue' : 'red') : prev.currentTurn) as 'red' | 'blue',
+          cardWord: card.word,
+          revealedColor: card.type,
+          timestamp: Date.now()
+        }]
+      };
+    });
     
     setLocalPhase(newPhase);
   };
@@ -354,7 +383,19 @@ export default function PassAndPlay() {
       activeCue: cue,
       activeCueNumber: number,
       successfulGuessesThisTurn: 0,
-      currentPhase: 'operative'
+      currentPhase: 'operative',
+      gameLog: [...(prev.gameLog || []), {
+        id: Math.random().toString(36).substring(7),
+        type: 'cue',
+        player: { 
+          name: prev.gameMode === 'duet' ? (prev.currentTurn === 'red' ? 'SIDE A' : 'SIDE B') : `${prev.currentTurn.toUpperCase()} SPYMASTER`,
+          avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent('Spymaster')}&backgroundColor=${prev.currentTurn === 'red' ? 'ef4444' : '3b82f6'}`
+        },
+        team: prev.currentTurn as 'red' | 'blue',
+        cueWord: cue,
+        cueNumber: number,
+        timestamp: Date.now()
+      }]
     }) : null);
     setLocalPhase('Operative_Handoff');
     setClueTargets([]);
@@ -555,31 +596,43 @@ export default function PassAndPlay() {
           </div>
         )}
 
-        <div className="w-full max-w-5xl mx-auto flex-1 flex flex-col justify-center pb-8 transition-all duration-1000">
-          <Grid
-            cards={gameState.cards}
-            isSpymaster={gameState.gameMode === 'duet' || isSpymasterVisible || !!gameState.winner}
-            disabled={localPhase !== 'Operative_Guessing' || !!gameState.winner}
-            onCardClick={handleCardClick}
-            gameMode={gameState.gameMode}
-            playerTeam={isSpymasterVisible ? gameState.currentTurn : expectedGuessTeam}
-            clueTargets={clueTargets}
-            isGivingClue={localPhase === 'Spymaster_Input'}
-            highlightedCards={gameState.highlightedCards || {}}
-            players={[{id: 'local_players', name: 'Operatives', role: 'operative', team: expectedGuessTeam}]}
-            currentPlayerId="local_players"
-            onCardContextMenu={handleCardContextMenu}
-            onGuess={handleGuessCard}
-          />
-          {localPhase === 'Operative_Guessing' && !gameState.winner && (
-            <ActiveClueBar 
-              activeCue={gameState.activeCue}
-              activeCueNumber={gameState.activeCueNumber}
-              successfulGuessesThisTurn={gameState.successfulGuessesThisTurn}
-              onEndTurn={handleEndTurn}
-              canEndTurn={true}
+        <div className="w-full max-w-[1600px] mx-auto flex-1 flex flex-col lg:flex-row gap-6 justify-center pb-8 transition-all duration-1000">
+          <div className="flex-1 flex flex-col justify-center">
+            <Grid
+              cards={gameState.cards}
+              isSpymaster={gameState.gameMode === 'duet' || isSpymasterVisible || !!gameState.winner}
+              disabled={localPhase !== 'Operative_Guessing' || !!gameState.winner}
+              onCardClick={handleCardClick}
+              gameMode={gameState.gameMode}
+              playerTeam={isSpymasterVisible ? gameState.currentTurn : expectedGuessTeam}
+              clueTargets={clueTargets}
+              isGivingClue={localPhase === 'Spymaster_Input'}
+              highlightedCards={gameState.highlightedCards || {}}
+              players={[{id: 'local_players', name: 'Operatives', role: 'operative', team: expectedGuessTeam}]}
+              currentPlayerId="local_players"
+              onCardContextMenu={handleCardContextMenu}
+              onGuess={handleGuessCard}
             />
-          )}
+            {localPhase === 'Operative_Guessing' && !gameState.winner && (
+              <ActiveClueBar 
+                activeCue={gameState.activeCue}
+                activeCueNumber={gameState.activeCueNumber}
+                successfulGuessesThisTurn={gameState.successfulGuessesThisTurn}
+                onEndTurn={handleEndTurn}
+                canEndTurn={true}
+              />
+            )}
+            
+            {/* MOBILE GAME LOG */}
+            <div className="flex lg:hidden flex-col w-full max-w-lg mx-auto mt-8">
+              <GameLog logs={gameState.gameLog || []} gameMode={gameState.gameMode} />
+            </div>
+          </div>
+          
+          {/* DESKTOP GAME LOG */}
+          <div className="hidden lg:flex flex-col w-64 xl:w-80 flex-shrink-0">
+             <GameLog logs={gameState.gameLog || []} gameMode={gameState.gameMode} />
+          </div>
         </div>
       </div>
     </div>

@@ -371,7 +371,7 @@ export function setupRoomManager(io: Server) {
 
         if (player.team !== expectedGuessTeam || (!isDuet && player.role !== 'operative')) return;
         
-        const maxGuesses = (room.gameState.activeCueNumber || 0) + 1;
+        const maxGuesses = room.gameState.activeCueNumber === 0 ? Infinity : (room.gameState.activeCueNumber || 0) + 1;
         if (room.gameState.successfulGuessesThisTurn >= maxGuesses) return;
 
         const card = room.gameState.cards.find(c => c.id === cardId);
@@ -389,8 +389,12 @@ export function setupRoomManager(io: Server) {
             if (expectedGuessTeam === 'blue') card.revealedByB = true;
             else card.revealedByA = true;
             
-            // Clear highlights since a card was picked
-            room.gameState.highlightedCards = {};
+            // Remove only the guessed card from highlights (keep other highlights)
+            if (room.gameState.highlightedCards) {
+              for (const playerId of Object.keys(room.gameState.highlightedCards)) {
+                room.gameState.highlightedCards[playerId] = room.gameState.highlightedCards[playerId].filter(cId => cId !== cardId);
+              }
+            }
 
             if (keyType === 'green' || keyType === 'assassin' || (card.revealedByA && card.revealedByB)) {
               // Mark globally revealed if it's an objective, assassin, or both sides have guessed it
@@ -458,10 +462,16 @@ export function setupRoomManager(io: Server) {
               }
             }
           }
+        } else {
           // CLASSIC MODE GUESSING
           if (card && !card.revealed) {
             card.revealed = true;
-            room.gameState.highlightedCards = {};
+            // Remove only the guessed card from highlights
+            if (room.gameState.highlightedCards) {
+              for (const playerId of Object.keys(room.gameState.highlightedCards)) {
+                room.gameState.highlightedCards[playerId] = room.gameState.highlightedCards[playerId].filter(cId => cId !== cardId);
+              }
+            }
             
             room.gameState.gameLog.push({
             id: Math.random().toString(36).substring(7),
