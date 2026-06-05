@@ -334,6 +334,10 @@ export function setupRoomManager(io: Server) {
       if (room && room.gameState && !room.gameState.winner && player) {
         if (room.gameState.currentPhase !== 'operative') return;
         
+        if (!room.gameState.highlightedCards) {
+          room.gameState.highlightedCards = {};
+        }
+        
         if (cardId === null) {
           room.gameState.highlightedCards[player.id] = [];
         } else {

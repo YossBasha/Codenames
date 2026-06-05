@@ -566,7 +566,7 @@ export default function PassAndPlay() {
             clueTargets={clueTargets}
             isGivingClue={localPhase === 'Spymaster_Input'}
             highlightedCards={gameState.highlightedCards || {}}
-            players={[{id: 'local_players', name: 'Operatives', role: 'operative', team: expectedGuessTeam, isHost: false, status: 'connected'}]}
+            players={[{id: 'local_players', name: 'Operatives', role: 'operative', team: expectedGuessTeam}]}
             currentPlayerId="local_players"
             onCardContextMenu={handleCardContextMenu}
             onGuess={handleGuessCard}
