@@ -88,6 +88,7 @@ function startTimer(io: Server, room: Room) {
         room.gameState.activeCue = null;
         room.gameState.activeCueNumber = null;
         room.gameState.successfulGuessesThisTurn = 0;
+        room.gameState.highlightedCards = {};
         
         room.gameState.gameLog.push({
           id: Math.random().toString(36).substring(7),
@@ -578,6 +579,14 @@ export function setupRoomManager(io: Server) {
           startTimer(io, room);
           io.to(roomId).emit('game_update', room.gameState);
         }
+      }
+    });
+
+    socket.on('prank_vibrate', ({ roomId, targetPlayerId }: { roomId: string, targetPlayerId: string }) => {
+      const room = rooms[roomId];
+      // Only host can trigger prank (index 0)
+      if (room && room.players.length > 0 && room.players[0].id === socket.id) {
+        io.to(roomId).emit('trigger_prank', { targetPlayerId });
       }
     });
 

@@ -19,6 +19,7 @@ export default function LANGame() {
   const roomPlayersRef = useRef<Player[]>([]);
   const [clueTargets, setClueTargets] = useState<number[]>([]);
   const [hostDisconnected, setHostDisconnected] = useState(false);
+  const [showPrankMenu, setShowPrankMenu] = useState(false);
 
   useEffect(() => {
     if (!socket || !roomId || !player) {
@@ -42,9 +43,21 @@ export default function LANGame() {
 
     socket.on("game_update", handleGameUpdate);
     socket.on("room_update", handleRoomUpdate);
-    socket.on("timer_tick", (timeRemaining: number) => {
+    socket.on("timer_tick", async (timeRemaining: number) => {
+      if (timeRemaining <= 10 && timeRemaining > 0) {
+        const { triggerHeartbeatVibration } = await import("../utils/haptics");
+        triggerHeartbeatVibration(timeRemaining);
+      }
       setGameState(prev => prev ? { ...prev, timeRemaining } : null);
     });
+    
+    socket.on("trigger_prank", async ({ targetPlayerId }: { targetPlayerId: string }) => {
+      if (player?.id === targetPlayerId) {
+        const { triggerPrankVibration } = await import("../utils/haptics");
+        triggerPrankVibration();
+      }
+    });
+
     socket.on("return_to_lobby", () => {
       // Reconstruct lobby URL from the socket connection info.
       // LANGame has no URL params, so we derive them from the live socket.
@@ -112,6 +125,24 @@ export default function LANGame() {
       lastLogLength.current = currentLength;
     }
   }, [gameState?.gameLog]);
+
+  const isHost = roomPlayers.length > 0 && roomPlayers[0].id === player?.id;
+
+  const previousWinner = useRef<string | null>(null);
+  useEffect(() => {
+    if (gameState?.winner && gameState.winner !== previousWinner.current) {
+      import("../utils/haptics").then(({ triggerPrankVibration }) => {
+        triggerPrankVibration(); // Heavy impact for game over
+      });
+    }
+    previousWinner.current = gameState?.winner || null;
+  }, [gameState?.winner]);
+
+  const handlePrank = (targetPlayerId: string) => {
+    if (!socket || !roomId) return;
+    socket.emit("prank_vibrate", { roomId, targetPlayerId });
+    setShowPrankMenu(false);
+  };
 
   const isGivingClue = gameState && !gameState.winner && 
     gameState.currentPhase === 'spymaster' && 
@@ -468,6 +499,43 @@ export default function LANGame() {
           <GameLog logs={gameState.gameLog || []} gameMode={gameState.gameMode} />
         </div>
       </div>
+
+      {/* HOST PRANK MENU */}
+      {isHost && (
+        <div className="fixed bottom-4 left-4 z-50">
+          {showPrankMenu && (
+            <div className="absolute bottom-full left-0 mb-2 w-48 bg-slate-800 border border-slate-600 rounded-xl shadow-2xl p-2 animate-fade-in origin-bottom-left">
+              <div className="text-xs text-slate-400 font-bold mb-2 px-2 uppercase">Prank Vibrate</div>
+              <div className="max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                {roomPlayers.filter(p => p.id !== player?.id).map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => handlePrank(p.id)}
+                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-700 transition-colors flex items-center gap-2"
+                  >
+                    <img 
+                      src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=${p.team === 'red' ? 'ef4444' : '3b82f6'}`} 
+                      className="w-6 h-6 rounded-full" 
+                      alt="" 
+                    />
+                    <span className="truncate text-sm font-bold text-white">{p.name}</span>
+                  </button>
+                ))}
+                {roomPlayers.length <= 1 && (
+                  <div className="text-sm text-slate-500 px-2 italic">Nobody else here...</div>
+                )}
+              </div>
+            </div>
+          )}
+          <button
+            onClick={() => setShowPrankMenu(!showPrankMenu)}
+            className="w-10 h-10 rounded-full bg-slate-800 border border-slate-600 shadow-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all active:scale-95"
+            title="Prank Menu"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17v1c0 .5-.5 1-1 1H3c-.5 0-1-.5-1-1v-1"/><path d="M6 14v-2c0-3.3 2.7-6 6-6s6 2.7 6 6v2"/><path d="M10 3.4a1 1 0 0 1 4 0"/><path d="M12 2v1"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

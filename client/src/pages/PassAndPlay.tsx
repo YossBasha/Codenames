@@ -77,6 +77,10 @@ export default function PassAndPlay() {
         }
         
         const newTime = prev.timeRemaining - 1;
+        if (newTime <= 10 && newTime > 0) {
+          import("../utils/haptics").then(({ triggerHeartbeatVibration }) => triggerHeartbeatVibration(newTime));
+        }
+
         if (newTime <= 0) {
           if (timerRef.current) clearInterval(timerRef.current);
           
@@ -89,6 +93,7 @@ export default function PassAndPlay() {
               activeCueNumber: 0,
               currentPhase: 'operative',
               successfulGuessesThisTurn: 0,
+              highlightedCards: {},
               timeRemaining: prev.timerSettings.operativeTime
             };
           } else {
@@ -111,6 +116,7 @@ export default function PassAndPlay() {
               activeCue: null,
               activeCueNumber: null,
               successfulGuessesThisTurn: 0,
+              highlightedCards: {},
               timerTokens: tokens,
               winner
             };
@@ -129,13 +135,21 @@ export default function PassAndPlay() {
 
   // Restart timer when phase actually starts (user dismisses overlay)
   useEffect(() => {
-    if (gameState && !gameState.winner) {
-      if (localPhase === 'Spymaster_Input' || localPhase === 'Operative_Guessing') {
-        startTimer(gameState);
-      }
+    if (gameState && !gameState.winner && localPhase !== 'Spymaster_Setup' && localPhase !== 'Operative_Handoff') {
+      startTimer(gameState);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localPhase]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localPhase, gameState?.currentPhase]);
+
+  const previousWinner = useRef<string | null>(null);
+  useEffect(() => {
+    if (gameState?.winner && gameState.winner !== previousWinner.current) {
+      import("../utils/haptics").then(({ triggerPrankVibration }) => {
+        triggerPrankVibration();
+      });
+    }
+    previousWinner.current = gameState?.winner || null;
+  }, [gameState?.winner]);
 
   const handleStartGame = () => {
     const { cards, startingTeam } = gameMode === 'duet'
