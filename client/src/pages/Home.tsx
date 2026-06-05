@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useGameContext } from '../context/GameContext';
+import { playMenuHoverSfx, playMenuClickSfx } from '../utils/sfx';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -30,7 +31,8 @@ export default function Home() {
 
         <div className="flex flex-col w-full gap-4 mt-8">
           <button
-            onClick={() => navigate('/pass-and-play')}
+            onMouseEnter={playMenuHoverSfx}
+            onClick={() => { playMenuClickSfx(); navigate('/pass-and-play'); }}
             className="w-full py-4 px-6 bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-500 hover:to-purple-700 rounded-xl font-bold text-lg shadow-lg shadow-purple-500/25 transition-all transform hover:-translate-y-1"
           >
             Pass & Play
@@ -44,13 +46,15 @@ export default function Home() {
 
           <div className="flex gap-4">
             <button
-              onClick={() => navigate('/lan-lobby?host=true')}
+              onMouseEnter={playMenuHoverSfx}
+              onClick={() => { playMenuClickSfx(); navigate('/lan-lobby?host=true'); }}
               className="flex-1 py-4 px-6 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl font-bold text-lg transition-all transform hover:-translate-y-1"
             >
               Host Game
             </button>
             <button
-              onClick={() => navigate('/join-game')}
+              onMouseEnter={playMenuHoverSfx}
+              onClick={() => { playMenuClickSfx(); navigate('/join-game'); }}
               className="flex-1 py-4 px-6 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl font-bold text-lg transition-all transform hover:-translate-y-1"
             >
               Join Game

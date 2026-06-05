@@ -8,6 +8,7 @@ import { clsx, type ClassValue } from 'clsx';
 import GameSettingsPanel from '../components/GameSettingsPanel';
 import { twMerge } from 'tailwind-merge';
 import { getLocalServerPort, startHostBroadcast, stopHostBroadcast, getLocalIp } from '../utils/discovery';
+import { playLobbyHoverSfx, playLobbyClickSfx, playMenuClickSfx, playMenuHoverSfx } from '../utils/sfx';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -141,6 +142,14 @@ export default function LANLobby() {
 
       newSocket.on('room_update', (room) => {
         setRoomPlayers(room.players);
+        setPlayer(prev => {
+          if (!prev) return prev;
+          const me = room.players.find((p: Player) => p.id === prev.id);
+          if (me && (me.team !== prev.team || me.role !== prev.role)) {
+            return { ...prev, team: me.team, role: me.role };
+          }
+          return prev;
+        });
       });
       
       newSocket.on('game_started', () => {
@@ -211,6 +220,7 @@ export default function LANLobby() {
     
     setPlayer(newPlayer);
     socket.emit('join_room', { roomId, player: newPlayer });
+    playLobbyClickSfx();
   };
 
   const handleWelcomeSubmit = () => {
@@ -236,18 +246,21 @@ export default function LANLobby() {
         customWords: customWordsArray,
         customWordWeight
       });
+      playLobbyClickSfx();
     }
   };
 
   const handleResetTeams = () => {
     if (socket && roomId && isHost) {
       socket.emit('reset_teams', { roomId });
+      playLobbyClickSfx();
     }
   };
 
   const handleRandomizeTeams = () => {
     if (socket && roomId && isHost) {
       socket.emit('randomize_teams', { roomId });
+      playLobbyClickSfx();
     }
   };
 
@@ -261,7 +274,7 @@ export default function LANLobby() {
   const spectators = roomPlayers.filter(p => p.team === 'spectator');
 
   return (
-    <div className="min-h-screen lg:h-screen lg:max-h-screen lg:overflow-hidden bg-[#121212] flex flex-col p-4 sm:p-6 font-sans text-white">
+    <div className="min-h-screen bg-[#121212] flex flex-col p-4 sm:p-6 font-sans text-white">
       {/* Host Disconnected Overlay */}
       {hostDisconnected && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-fade-in">
@@ -308,7 +321,8 @@ export default function LANLobby() {
               autoFocus
             />
             <button 
-              onClick={handleWelcomeSubmit}
+              onMouseEnter={playMenuHoverSfx}
+              onClick={() => { playMenuClickSfx(); handleWelcomeSubmit(); }}
               disabled={!name.trim() || name.startsWith('Spectator')}
               className="w-full py-3 bg-gradient-to-b from-[#f39c12] to-[#d35400] hover:from-[#e67e22] hover:to-[#c0392b] border-2 border-white/20 rounded-2xl font-black text-white shadow-lg transition-transform hover:scale-105 tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -325,7 +339,8 @@ export default function LANLobby() {
         </div>
       )}
       <div className="flex items-center mb-6">
-        <button onClick={() => {
+        <button onMouseEnter={playMenuHoverSfx} onClick={() => {
+          playMenuClickSfx();
           if (isHost) stopHostBroadcast();
           navigate('/');
         }} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors">
@@ -334,13 +349,13 @@ export default function LANLobby() {
       </div>
 
       {/* Main Content Layout */}
-      <div className={cn("flex-1 max-w-[1400px] w-full mx-auto grid gap-4 lg:min-h-0", 
+      <div className={cn("flex-1 max-w-[1400px] w-full mx-auto grid gap-4", 
         gameMode === 'duet' ? "grid-cols-1 lg:grid-cols-[2fr_1fr]" : "grid-cols-1 lg:grid-cols-[1fr_2fr_1fr]"
       )}>
         
         {/* LEFT COLUMN: BLUE TEAM (Only in Classic) */}
         {gameMode === 'classic' && (
-          <div className="flex flex-col gap-4 lg:min-h-0">
+          <div className="flex flex-col gap-4">
             <div className="bg-slate-800 rounded-full py-2 text-center border-2 border-slate-600 font-bold tracking-widest text-sm shadow-md">
               BLUE TEAM
             </div>
@@ -357,6 +372,7 @@ export default function LANLobby() {
                 </div>
               </div>
               <button 
+                onMouseEnter={playLobbyHoverSfx}
                 onClick={() => handleJoinTeam('blue', 'operative')}
                 disabled={!isConnected}
                 className="mt-4 w-full py-2 bg-blue-500 hover:bg-blue-400 rounded-full font-bold text-white shadow-lg transition-transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
@@ -377,6 +393,7 @@ export default function LANLobby() {
                 </div>
               </div>
               <button 
+                onMouseEnter={playLobbyHoverSfx}
                 onClick={() => handleJoinTeam('blue', 'spymaster')}
                 disabled={!isConnected}
                 className="mt-4 w-full py-2 bg-blue-500 hover:bg-blue-400 rounded-full font-bold text-white shadow-lg transition-transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
@@ -388,7 +405,7 @@ export default function LANLobby() {
         )}
 
         {/* MIDDLE COLUMN: SETTINGS & SPECTATORS */}
-        <div className="bg-[#242424] rounded-3xl p-6 lg:p-8 flex flex-col gap-6 shadow-xl relative overflow-hidden">
+        <div className="bg-[#242424] rounded-3xl p-6 lg:p-8 flex flex-col gap-6 shadow-xl relative">
           
           {/* SPECTATORS POOL */}
           <div className="flex flex-col gap-2">
@@ -466,7 +483,7 @@ export default function LANLobby() {
           )}
 
           {/* Settings Boxes (Visuals) */}
-          <div className="flex flex-col gap-4 mt-2 h-full">
+          <div className="flex flex-col gap-4 mt-2 flex-1">
             <GameSettingsPanel
               isHost={isHost}
               gameMode={gameMode}
@@ -487,15 +504,15 @@ export default function LANLobby() {
 
           {isHost && (
             <div className="flex justify-center gap-4 mt-auto">
-              <button onClick={handleResetTeams} className="px-6 py-2 rounded-full border border-slate-500 hover:bg-slate-700 transition-colors text-sm font-bold">Reset teams</button>
-              <button onClick={handleRandomizeTeams} className="px-6 py-2 rounded-full border border-slate-500 hover:bg-slate-700 transition-colors text-sm font-bold">Randomize teams</button>
+              <button onMouseEnter={playLobbyHoverSfx} onClick={handleResetTeams} className="px-6 py-2 rounded-full border border-slate-500 hover:bg-slate-700 transition-colors text-sm font-bold">Reset teams</button>
+              <button onMouseEnter={playLobbyHoverSfx} onClick={handleRandomizeTeams} className="px-6 py-2 rounded-full border border-slate-500 hover:bg-slate-700 transition-colors text-sm font-bold">Randomize teams</button>
             </div>
           )}
         </div>
 
         {/* RIGHT COLUMN: RED TEAM / DUET SIDES */}
         {gameMode === 'classic' ? (
-          <div className="flex flex-col gap-4 lg:min-h-0">
+          <div className="flex flex-col gap-4">
             <div className="bg-slate-800 rounded-full py-2 text-center border-2 border-slate-600 font-bold tracking-widest text-sm shadow-md">
               RED TEAM
             </div>
@@ -512,6 +529,7 @@ export default function LANLobby() {
                 </div>
               </div>
               <button 
+                onMouseEnter={playLobbyHoverSfx}
                 onClick={() => handleJoinTeam('red', 'operative')}
                 disabled={!isConnected}
                 className="mt-4 w-full py-2 bg-red-500 hover:bg-red-400 rounded-full font-bold text-white shadow-lg transition-transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
@@ -532,6 +550,7 @@ export default function LANLobby() {
                 </div>
               </div>
               <button 
+                onMouseEnter={playLobbyHoverSfx}
                 onClick={() => handleJoinTeam('red', 'spymaster')}
                 disabled={!isConnected}
                 className="mt-4 w-full py-2 bg-red-500 hover:bg-red-400 rounded-full font-bold text-white shadow-lg transition-transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
@@ -541,7 +560,7 @@ export default function LANLobby() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-4 h-full lg:min-h-0">
+          <div className="flex flex-col gap-4 h-full">
             {/* DUET SIDE A */}
             <div className="flex-1 bg-green-500/20 border-2 border-green-400 rounded-3xl p-4 flex flex-col items-center shadow-[0_0_20px_rgba(34,197,94,0.3)] min-h-[250px] relative overflow-hidden group">
               <div className="absolute top-0 w-full h-10 bg-green-600/30 font-black text-center pt-2 text-white/80 tracking-widest text-sm z-0">
@@ -557,6 +576,7 @@ export default function LANLobby() {
                 </div>
               </div>
               <button 
+                onMouseEnter={playLobbyHoverSfx}
                 onClick={() => handleJoinTeam('red', 'spymaster')}
                 className="mt-auto w-full py-3 bg-[#e67e22] hover:bg-[#d35400] border-b-4 border-[#a04000] rounded-2xl font-black text-white shadow-lg transition-all hover:translate-y-[2px] hover:border-b-2 active:border-b-0 active:translate-y-1 tracking-widest z-10"
               >
@@ -579,6 +599,7 @@ export default function LANLobby() {
                 </div>
               </div>
               <button 
+                onMouseEnter={playLobbyHoverSfx}
                 onClick={() => handleJoinTeam('blue', 'spymaster')}
                 className="mt-auto w-full py-3 bg-[#e67e22] hover:bg-[#d35400] border-b-4 border-[#a04000] rounded-2xl font-black text-white shadow-lg transition-all hover:translate-y-[2px] hover:border-b-2 active:border-b-0 active:translate-y-1 tracking-widest z-10"
               >
@@ -594,6 +615,7 @@ export default function LANLobby() {
       <div className="w-full max-w-[1400px] mx-auto mt-6">
         {isHost ? (
           <button 
+            onMouseEnter={playLobbyHoverSfx}
             onClick={handleStartGame}
             className="w-full py-4 bg-[#22c55e] hover:bg-[#16a34a] rounded-full font-black text-2xl tracking-widest text-white shadow-[0_10px_0_#15803d] hover:translate-y-1 hover:shadow-[0_5px_0_#15803d] transition-all"
           >

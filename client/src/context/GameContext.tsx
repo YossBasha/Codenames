@@ -1,16 +1,19 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, type ReactNode } from 'react';
 import type { Language, Player } from '../../../shared/types';
 import { Socket } from 'socket.io-client';
+import { setMasterVolume } from '../utils/sfx';
 
 interface GameContextProps {
   language: Language;
   setLanguage: (lang: Language) => void;
   player: Player | null;
-  setPlayer: (player: Player | null) => void;
+  setPlayer: React.Dispatch<React.SetStateAction<Player | null>>;
   roomId: string | null;
   setRoomId: (id: string | null) => void;
   socket: Socket | null;
   setSocket: (socket: Socket | null) => void;
+  volume: number;
+  setVolume: (vol: number) => void;
 }
 
 const GameContext = createContext<GameContextProps | undefined>(undefined);
@@ -38,6 +41,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
   });
   const [roomId, setRoomId] = useState<string | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
+  
+  const [volume, setVolume] = useState<number>(() => {
+    const saved = localStorage.getItem('codenames_volume');
+    return saved ? parseFloat(saved) : 0.5;
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem('codenames_volume', volume.toString());
+    setMasterVolume(volume);
+  }, [volume]);
 
   return (
     <GameContext.Provider
@@ -50,6 +63,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setRoomId,
         socket,
         setSocket,
+        volume,
+        setVolume,
       }}
     >
       <div className="min-h-screen">

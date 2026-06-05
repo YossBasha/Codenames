@@ -1,5 +1,7 @@
+import { useState, useEffect, useRef } from "react";
 import type { Card as CardType } from "../../../shared/types";
 import { cn } from "../utils";
+import { playCardHoverSfx, playCardSelectSfx } from "../utils/sfx";
 
 interface CardProps {
   card: CardType;
@@ -23,6 +25,18 @@ export default function Card({ card, isSpymaster, disabled, playerTeam, gameMode
       isRevealedForMe = true;
     }
   }
+
+  const [justRevealed, setJustRevealed] = useState(false);
+  const wasRevealedForMe = useRef(isRevealedForMe);
+
+  useEffect(() => {
+    if (!wasRevealedForMe.current && isRevealedForMe) {
+      setJustRevealed(true);
+      const timer = setTimeout(() => setJustRevealed(false), 600);
+      return () => clearTimeout(timer);
+    }
+    wasRevealedForMe.current = isRevealedForMe;
+  }, [isRevealedForMe]);
 
   const showColor = isRevealedForMe || isSpymaster;
 
@@ -70,7 +84,15 @@ export default function Card({ card, isSpymaster, disabled, playerTeam, gameMode
 
   return (
     <button
-      onClick={() => onClick(card.id)}
+      onClick={() => {
+        if (!isDisabled) {
+          playCardSelectSfx();
+          onClick(card.id);
+        }
+      }}
+      onMouseEnter={() => {
+        if (!isDisabled) playCardHoverSfx();
+      }}
       disabled={isDisabled}
       className={cn(
         "relative w-full aspect-[4/3] sm:aspect-[3/2] rounded-lg sm:rounded-xl text-[9px] xs:text-[11px] sm:text-sm lg:text-lg font-black tracking-tighter sm:tracking-tight shadow-md transition-all duration-300 transform overflow-hidden",
@@ -79,22 +101,43 @@ export default function Card({ card, isSpymaster, disabled, playerTeam, gameMode
           : isGivingClue && !isValidClueTarget
             ? "cursor-default opacity-80"
             : "hover:-translate-y-1 hover:shadow-xl cursor-pointer",
-        showColor ? colorClasses[typeToDisplay] : hiddenClasses,
+        hiddenClasses,
         card.revealed && isSpymaster && "opacity-50",
         isRevealedForMe && !card.revealed && "opacity-80",
-        isGivingClue && isValidClueTarget && !isClueTarget && "ring-2 ring-emerald-400 ring-offset-1 ring-offset-slate-900 animate-pulse",
-        isClueTarget && "ring-4 ring-yellow-400 ring-offset-2 ring-offset-slate-900 scale-105 z-10"
+        isClueTarget && "ring-4 ring-yellow-400 ring-offset-2 ring-offset-slate-900 scale-105 z-10",
+        justRevealed && "animate-reveal-pop"
       )}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
+      {/* Background Revealed Layer (Ink Bleed) */}
+      {showColor && (
+        <div 
+          className={cn(
+            "absolute inset-0 flex items-center justify-center w-full h-full",
+            (!isSpymaster || justRevealed) && "animate-ink-bleed",
+            colorClasses[typeToDisplay]
+          )}
+        />
+      )}
+
       {/* Base Word */}
-      <div className="flex items-center justify-center h-full w-full p-1 sm:p-2 text-center break-words leading-none sm:leading-tight">
+      <div className="relative z-10 flex items-center justify-center h-full w-full p-1 sm:p-2 text-center break-words leading-none sm:leading-tight">
         {card.word}
       </div>
 
+      {/* Glow Layer (Always animating, toggles opacity) */}
+      {isGivingClue && isValidClueTarget && (
+        <div 
+          className={cn(
+            "absolute inset-0 rounded-lg sm:rounded-xl ring-2 ring-emerald-400 ring-offset-1 ring-offset-slate-900 animate-pulse pointer-events-none transition-opacity duration-200 z-20",
+            isClueTarget ? "opacity-0" : "opacity-100"
+          )}
+        />
+      )}
+
       {/* Spymaster Overlay */}
       {showColor && !card.revealed && isSpymaster && (
-        <div className="absolute inset-0 bg-white/20" />
+        <div className="absolute inset-0 bg-white/20 z-10" />
       )}
       
       {/* Tracking Indicators for Asymmetric Duet State */}

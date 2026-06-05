@@ -9,6 +9,7 @@ import GameLog from "../components/GameLog";
 import ActiveClueBar from "../components/ActiveClueBar";
 import { cn } from "../utils";
 import type { Player } from "../../../shared/types";
+import { playCardRevealSfx } from "../utils/sfx";
 
 export default function LANGame() {
   const navigate = useNavigate();
@@ -97,6 +98,20 @@ export default function LANGame() {
 
   // Ensure we use the freshest player state synced from the server (e.g. after randomize teams)
   const currentPlayer = roomPlayers.find(p => p.id === player?.id) || player;
+
+  const lastLogLength = useRef(0);
+  useEffect(() => {
+    if (gameState?.gameLog) {
+      const currentLength = gameState.gameLog.length;
+      if (currentLength > lastLogLength.current && lastLogLength.current !== 0) {
+        const newLog = gameState.gameLog[currentLength - 1];
+        if (newLog.type === 'guess') {
+          playCardRevealSfx(newLog.revealedColor as any);
+        }
+      }
+      lastLogLength.current = currentLength;
+    }
+  }, [gameState?.gameLog]);
 
   const isGivingClue = gameState && !gameState.winner && 
     gameState.currentPhase === 'spymaster' && 
@@ -208,7 +223,7 @@ export default function LANGame() {
 
   return (
     <div
-      className={`min-h-screen lg:h-screen lg:max-h-screen flex flex-col relative overflow-x-hidden lg:overflow-hidden ${bgClass} transition-colors duration-1000`}
+      className={cn(`min-h-screen lg:h-screen lg:max-h-screen flex flex-col relative overflow-x-hidden lg:overflow-hidden transition-colors duration-1000`, bgClass)}
     >
       {/* Host Disconnected Overlay */}
       {hostDisconnected && (
@@ -365,7 +380,7 @@ export default function LANGame() {
           {gameState.winner && (
             <div className="mb-4 lg:mb-8 p-4 lg:p-6 glass rounded-2xl text-center shadow-[0_0_50px_rgba(0,0,0,0.5)] z-20 animate-fade-in-up w-full max-w-lg mx-auto">
               {gameState.gameMode === 'duet' ? (
-                <h2 className={`text-2xl lg:text-4xl font-black mb-4 ${gameState.winner === 'red' ? "text-lime-500" : "text-green-500"}`}>
+                <h2 className={`text-2xl lg:text-4xl font-black mb-4 ${gameState.winner === 'red' ? "text-lime-500" : "text-red-500"}`}>
                   {gameState.winner === 'red' ? "YOU WIN TOGETHER!" : "YOU LOSE TOGETHER!"}
                 </h2>
               ) : (
@@ -397,7 +412,7 @@ export default function LANGame() {
                                  (isSpymaster && gameState.gameMode !== 'duet' && !isGivingClue) ||
                                  !!gameState.winner;
               return (
-                <div className="w-full flex flex-col items-center">
+                <div className="w-full flex flex-col items-center transition-all duration-1000">
                   <Grid
                     cards={gameState.cards}
                     isSpymaster={gameState.gameMode === 'duet' || isSpymaster || !!gameState.winner}

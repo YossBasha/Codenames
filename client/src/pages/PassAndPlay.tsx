@@ -8,6 +8,7 @@ import TopBar from "../components/TopBar";
 import ActiveClueBar from "../components/ActiveClueBar";
 import { cn } from "../utils";
 import GameSettingsPanel from "../components/GameSettingsPanel";
+import { playCardRevealSfx, playMenuClickSfx, playMenuHoverSfx } from "../utils/sfx";
 
 type LocalPhase = 'Setup' | 'Spymaster_Setup' | 'Spymaster_Input' | 'Operative_Handoff' | 'Operative_Guessing';
 
@@ -203,6 +204,7 @@ export default function PassAndPlay() {
       
       card.revealed = true;
       card.type = keyType!; 
+      playCardRevealSfx(keyType as any);
 
       const endTurnDuet = () => {
         nextTurn = getNextTurnDuetLocal(gameState.currentTurn, newCards);
@@ -245,6 +247,7 @@ export default function PassAndPlay() {
     } else {
       if (card.revealed) return;
       card.revealed = true;
+      playCardRevealSfx(card.type as any);
 
       const endTurn = () => {
         nextTurn = gameState.currentTurn === "red" ? "blue" : "red";
@@ -344,7 +347,7 @@ export default function PassAndPlay() {
     return (
       <div className="min-h-screen bg-[#121212] flex flex-col p-4 sm:p-6 font-sans text-white">
         <div className="flex items-center mb-6">
-          <button onClick={() => navigate('/')} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors">
+          <button onMouseEnter={playMenuHoverSfx} onClick={() => { playMenuClickSfx(); navigate('/'); }} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
           </button>
           <h1 className="ml-4 text-xl font-black tracking-widest text-slate-200">PASS & PLAY SETUP</h1>
@@ -372,7 +375,8 @@ export default function PassAndPlay() {
           
           <div className="mt-6">
             <button 
-              onClick={handleStartGame}
+              onMouseEnter={playMenuHoverSfx}
+              onClick={() => { playMenuClickSfx(); handleStartGame(); }}
               className="w-full py-4 bg-[#22c55e] hover:bg-[#16a34a] rounded-full font-black text-2xl tracking-widest text-white shadow-[0_10px_0_#15803d] hover:translate-y-1 hover:shadow-[0_5px_0_#15803d] transition-all"
             >
               START GAME
@@ -415,7 +419,7 @@ export default function PassAndPlay() {
   }
 
   return (
-    <div className={`min-h-screen ${bgClass} transition-colors duration-1000 flex flex-col relative`}>
+    <div className={`min-h-screen ${bgClass} transition-colors duration-1000 flex flex-col relative overflow-hidden`}>
       <TopBar
         redScore={gameState.redScore}
         blueScore={gameState.blueScore}
@@ -506,7 +510,7 @@ export default function PassAndPlay() {
           </div>
         )}
 
-        <div className="w-full max-w-5xl mx-auto flex-1 flex flex-col justify-center pb-8">
+        <div className="w-full max-w-5xl mx-auto flex-1 flex flex-col justify-center pb-8 transition-all duration-1000">
           <Grid
             cards={gameState.cards}
             isSpymaster={gameState.gameMode === 'duet' || isSpymasterVisible || !!gameState.winner}

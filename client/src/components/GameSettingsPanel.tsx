@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { BookOpen, Clock, X, Globe, Check, Keyboard, Upload } from 'lucide-react';
+import { BookOpen, Clock, X, Globe, Check, Keyboard, Upload, Volume2, VolumeX } from 'lucide-react';
 import { cn } from '../utils';
 import type { Language, CustomWordWeight, TimerSettings } from '../../../shared/types';
+import { useGameContext } from '../context/GameContext';
 
 interface GameSettingsPanelProps {
   isHost: boolean;
@@ -39,6 +40,8 @@ export default function GameSettingsPanel({
   const [showTimerModal, setShowTimerModal] = useState(false);
   const [showWordPacksModal, setShowWordPacksModal] = useState(false);
   const [customWordsTab, setCustomWordsTab] = useState<'type'|'upload'>('type');
+  
+  const { volume, setVolume } = useGameContext();
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -65,7 +68,7 @@ export default function GameSettingsPanel({
 
   return (
     <>
-      <div className="flex flex-col gap-4 h-full">
+      <div className="flex flex-col gap-4 flex-1">
         <div className="grid grid-cols-2 gap-4">
           <button 
             onClick={() => isHost && setGameMode('classic')}
@@ -126,6 +129,26 @@ export default function GameSettingsPanel({
               </div>
             </div>
           </button>
+        </div>
+        <div className="bg-[#2a2a2a] rounded-2xl p-4 border border-[#444] shadow-inner mt-2 flex items-center gap-4">
+          <div className="p-2 rounded-full bg-slate-700 text-white flex-shrink-0">
+            {volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+          </div>
+          <div className="flex-1">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-xs font-bold text-slate-400 tracking-wider">SFX VOLUME</span>
+              <span className="text-xs font-mono font-bold text-slate-300">{Math.round(volume * 100)}%</span>
+            </div>
+            <input 
+              type="range" 
+              min="0" 
+              max="1" 
+              step="0.05"
+              value={volume}
+              onChange={(e) => setVolume(parseFloat(e.target.value))}
+              className="w-full accent-indigo-500 h-2 bg-[#1a1a1a] rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
         </div>
       </div>
 
