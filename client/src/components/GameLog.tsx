@@ -54,9 +54,13 @@ export default function GameLog({ logs, gameMode = 'classic' }: GameLogProps) {
                   </div>
                   
                   <div className="bg-white rounded-lg p-2 text-center shadow-inner">
-                    <span className="text-slate-900 font-black text-sm tracking-widest uppercase break-all">
-                      {log.cueWord}
-                    </span>
+                    {log.cueWord.startsWith('data:image') ? (
+                      <img src={log.cueWord} alt="Clue" className="w-full max-h-24 object-contain rounded-md" />
+                    ) : (
+                      <span className="text-slate-900 font-black text-sm tracking-widest uppercase break-all">
+                        {log.cueWord}
+                      </span>
+                    )}
                   </div>
                   
                   <div className={cn(

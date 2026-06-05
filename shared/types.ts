@@ -57,6 +57,10 @@ export interface TimerSettings {
 
 export type CustomWordWeight = 'none' | 'few' | 'some' | 'many';
 
+export type ThemeType = 'default' | 'cyberpunk' | 'noir';
+
+export type ClueType = 'text' | 'doodle' | 'both';
+
 export interface GameState {
   gameMode: GameMode;
   timerSettings: TimerSettings;
@@ -76,4 +80,5 @@ export interface GameState {
   language: Language;
   gameLog: LogEntry[];
   highlightedCards?: Record<string, number[]>; // Maps player ID to array of card IDs
+  clueType: ClueType;
 }

@@ -94,6 +94,8 @@ export default function Card({ card, isSpymaster, disabled, playerTeam, gameMode
     isDisabled = isRevealedForMe || (isSpymaster && gameMode !== 'duet') || disabled;
   }
 
+  const isEmoji = /\p{Extended_Pictographic}/u.test(card.word);
+
   return (
     <div
       role="button"
@@ -121,7 +123,8 @@ export default function Card({ card, isSpymaster, disabled, playerTeam, gameMode
       }}
       aria-disabled={isDisabled}
       className={cn(
-        "relative w-full aspect-[4/3] sm:aspect-[3/2] rounded-lg sm:rounded-xl text-[9px] xs:text-[11px] sm:text-sm lg:text-lg font-black tracking-tighter sm:tracking-tight transition-all duration-300 transform overflow-hidden",
+        "relative w-full aspect-[4/3] sm:aspect-[3/2] rounded-lg sm:rounded-xl font-black transition-all duration-300 transform overflow-hidden",
+        isEmoji ? "text-4xl sm:text-5xl lg:text-7xl" : "text-[9px] xs:text-[11px] sm:text-sm lg:text-lg tracking-tighter sm:tracking-tight",
         isDisabled && !isRevealedForMe && !isGivingClue
           ? "cursor-default opacity-80"
           : isGivingClue && !isValidClueTarget

@@ -311,6 +311,7 @@ export default function LANGame() {
         clueTargetCount={clueTargets.length}
         amHost={amHost}
         onRestartGame={handleRestartGame}
+        clueType={gameState.clueType}
       />
 
       {/* Main Content Area */}

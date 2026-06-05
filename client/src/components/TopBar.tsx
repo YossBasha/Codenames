@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import type { Team } from '../../../shared/types';
-import { ArrowLeft } from 'lucide-react';
+import type { Team, ClueType } from '../../../shared/types';
+import { ArrowLeft, PenTool } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../utils';
+import DrawingModal from './DrawingModal';
 
 interface TopBarProps {
   redScore: number;
@@ -23,6 +24,7 @@ interface TopBarProps {
   clueTargetCount?: number;
   amHost?: boolean;
   onRestartGame?: () => void;
+  clueType?: ClueType;
 }
 
 export default function TopBar({
@@ -43,11 +45,13 @@ export default function TopBar({
   isSpymaster,
   clueTargetCount = 0,
   amHost = false,
-  onRestartGame
+  onRestartGame,
+  clueType = 'both'
 }: TopBarProps) {
   const navigate = useNavigate();
   const [cueInput, setCueInput] = useState('');
   const [numInput, setNumInput] = useState<number | ''>('');
+  const [showDrawingModal, setShowDrawingModal] = useState(false);
 
   useEffect(() => {
     if (clueTargetCount > 0) {
@@ -64,12 +68,26 @@ export default function TopBar({
     }
   };
 
+  const handleDrawingSubmit = (dataUrl: string) => {
+    if (numInput !== '' && onSubmitCue) {
+      onSubmitCue(dataUrl, Number(numInput));
+      setCueInput('');
+      setNumInput('');
+      setShowDrawingModal(false);
+    } else {
+      // Just set it to the input so they can submit later
+      setCueInput(dataUrl);
+      setShowDrawingModal(false);
+    }
+  };
+
   const isActiveSpymaster = currentPhase === 'spymaster' && (
     (gameMode === 'classic' && playerTeam === currentTurn && playerRole === 'spymaster') ||
     (gameMode === 'duet' && playerTeam === currentTurn)
   );
 
   return (
+    <>
     <div className="w-full flex flex-col sm:flex-row items-center justify-between p-4 bg-slate-900/50 backdrop-blur-md shadow-md gap-4">
       <div className="flex items-center gap-4">
         <button 
@@ -144,14 +162,27 @@ export default function TopBar({
         )}
         {isActiveSpymaster ? (
           <form onSubmit={handleSubmitCue} className="flex gap-1 sm:gap-2 bg-slate-800 p-1 sm:p-1.5 rounded-xl">
-            <input 
-              type="text" 
-              placeholder="Enter clue..."
-              value={cueInput}
-              onChange={(e) => setCueInput(e.target.value.replace(/[^a-zA-Z0-9\u0600-\u06FF\s]/g, ''))}
-              className="bg-slate-900 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg outline-none w-24 sm:w-48 text-xs sm:text-sm"
-              maxLength={20}
-            />
+            {clueType !== 'text' && (
+              <button
+                type="button"
+                onClick={() => setShowDrawingModal(true)}
+                className="p-1.5 sm:p-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                title="Draw a Clue"
+              >
+                <PenTool className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+            )}
+            {clueType !== 'doodle' && (
+              <input 
+                type="text" 
+                placeholder="Enter clue..."
+                value={cueInput.startsWith('data:image') ? '[Doodle Clue]' : cueInput}
+                readOnly={cueInput.startsWith('data:image')}
+                onChange={(e) => setCueInput(e.target.value.replace(/[^a-zA-Z0-9\u0600-\u06FF\s]/g, ''))}
+                className="bg-slate-900 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg outline-none w-24 sm:w-48 text-xs sm:text-sm"
+                maxLength={20}
+              />
+            )}
             <select 
               value={numInput} 
               onChange={(e) => setNumInput(e.target.value ? Number(e.target.value) : '')}
@@ -198,5 +229,9 @@ export default function TopBar({
         )}
       </div>
     </div>
+    {showDrawingModal && (
+      <DrawingModal onClose={() => setShowDrawingModal(false)} onSubmit={handleDrawingSubmit} />
+    )}
+    </>
   );
 }

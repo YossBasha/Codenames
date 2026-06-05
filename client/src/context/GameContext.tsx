@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, type ReactNode } from 'react';
-import type { Language, Player } from '../../../shared/types';
+import type { Language, Player, ThemeType } from '../../../shared/types';
 import { Socket } from 'socket.io-client';
 import { setMasterVolume } from '../utils/sfx';
 
@@ -14,6 +14,8 @@ interface GameContextProps {
   setSocket: (socket: Socket | null) => void;
   volume: number;
   setVolume: (vol: number) => void;
+  theme: ThemeType;
+  setTheme: (theme: ThemeType) => void;
 }
 
 const GameContext = createContext<GameContextProps | undefined>(undefined);
@@ -47,10 +49,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
     return saved ? parseFloat(saved) : 0.5;
   });
 
+  const [theme, setTheme] = useState<ThemeType>(() => {
+    return (localStorage.getItem('codenames_theme') as ThemeType) || 'default';
+  });
+
   React.useEffect(() => {
     localStorage.setItem('codenames_volume', volume.toString());
     setMasterVolume(volume);
   }, [volume]);
+
+  React.useEffect(() => {
+    localStorage.setItem('codenames_theme', theme);
+    document.body.className = `theme-${theme}`;
+  }, [theme]);
 
   return (
     <GameContext.Provider
@@ -65,6 +76,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setSocket,
         volume,
         setVolume,
+        theme,
+        setTheme,
       }}
     >
       <div className="min-h-screen">

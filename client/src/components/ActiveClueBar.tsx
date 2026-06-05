@@ -24,9 +24,13 @@ export default function ActiveClueBar({
   return (
     <div className="w-full max-w-3xl mx-auto mt-4 sm:mt-6 lg:mt-2 flex items-center justify-center gap-3 sm:gap-4 px-2 sm:px-4 animate-fade-in">
       <div className="flex-1 bg-gradient-to-r from-slate-100 to-white rounded-full py-2 sm:py-3 px-4 sm:px-6 flex items-center justify-between shadow-xl ring-1 ring-slate-200">
-        <span className="text-slate-900 font-black text-xl sm:text-3xl uppercase tracking-widest truncate">
-          {activeCue}
-        </span>
+        {activeCue.startsWith('data:image') ? (
+          <img src={activeCue} alt="Doodle Clue" className="h-10 sm:h-14 rounded-lg border border-slate-300 shadow-sm object-contain bg-white" />
+        ) : (
+          <span className="text-slate-900 font-black text-xl sm:text-3xl uppercase tracking-widest truncate">
+            {activeCue}
+          </span>
+        )}
         
         {isBonus ? (
           <div className="flex items-center gap-2 bg-gradient-to-r from-blue-100 to-indigo-100 px-3 py-1 sm:px-4 sm:py-2 rounded-full border-2 border-blue-400 shadow-inner">

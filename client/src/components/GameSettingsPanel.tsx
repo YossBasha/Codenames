@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { BookOpen, Clock, X, Globe, Check, Keyboard, Upload, Volume2, VolumeX } from 'lucide-react';
+import { BookOpen, Clock, X, Globe, Check, Keyboard, Upload, Volume2, VolumeX, PenTool } from 'lucide-react';
 import { cn } from '../utils';
-import type { Language, CustomWordWeight, TimerSettings } from '../../../shared/types';
+import type { Language, CustomWordWeight, TimerSettings, ClueType } from '../../../shared/types';
 import { useGameContext } from '../context/GameContext';
 
 interface GameSettingsPanelProps {
@@ -19,6 +19,8 @@ interface GameSettingsPanelProps {
   customWordsArray: string[];
   language: Language;
   setLanguage: (lang: Language) => void;
+  clueType: ClueType;
+  setClueType: (clueType: ClueType) => void;
 }
 
 export default function GameSettingsPanel({
@@ -35,10 +37,13 @@ export default function GameSettingsPanel({
   setCustomWordWeight,
   customWordsArray,
   language,
-  setLanguage
+  setLanguage,
+  clueType,
+  setClueType
 }: GameSettingsPanelProps) {
   const [showTimerModal, setShowTimerModal] = useState(false);
   const [showWordPacksModal, setShowWordPacksModal] = useState(false);
+  const [showClueModal, setShowClueModal] = useState(false);
   const [customWordsTab, setCustomWordsTab] = useState<'type'|'upload'>('type');
   
   const { volume, setVolume } = useGameContext();
@@ -94,7 +99,7 @@ export default function GameSettingsPanel({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
           <button 
             onClick={() => setShowWordPacksModal(true)}
             className={cn("flex flex-col items-center justify-center gap-2 rounded-2xl p-4 border transition-all h-full min-h-[120px]", 
@@ -126,6 +131,25 @@ export default function GameSettingsPanel({
               <div className="font-black text-lg tracking-widest text-white mb-1">TIMER</div>
               <div className="text-xs font-bold text-slate-400 tracking-wider">
                 {timerSettings.preset === 'off' ? 'OFF' : timerSettings.preset.toUpperCase()}
+              </div>
+            </div>
+          </button>
+
+
+
+          <button 
+            onClick={() => setShowClueModal(true)}
+            className={cn("flex flex-col items-center justify-center gap-2 rounded-2xl p-4 border transition-all h-full min-h-[120px]", 
+              clueType !== 'text' ? "bg-[#333] border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.2)]" : "bg-[#333] border-[#444] hover:border-emerald-500"
+            )}
+          >
+            <div className={cn("p-3 rounded-full text-white mb-2", clueType !== 'text' ? "bg-emerald-500" : "bg-slate-600")}>
+              <PenTool className="w-8 h-8" />
+            </div>
+            <div className="text-center">
+              <div className="font-black text-lg tracking-widest text-white mb-1">CLUES</div>
+              <div className="text-xs font-bold text-slate-400 tracking-wider">
+                {clueType === 'both' ? 'TEXT & DOODLES' : clueType === 'doodle' ? 'DOODLES ONLY' : 'TEXT ONLY'}
               </div>
             </div>
           </button>
@@ -214,6 +238,13 @@ export default function GameSettingsPanel({
                     </div>
                     <input type="checkbox" className="hidden" checked={selectedPacks.includes('duet')} onChange={() => isHost && setSelectedPacks(prev => prev.includes('duet') ? prev.filter(p => p !== 'duet') : [...prev, 'duet'])} disabled={!isHost} />
                     <span className="text-sm font-bold text-slate-300">Duet Pack</span>
+                  </label>
+                  <label className={cn("flex items-center gap-3 group bg-[#222] p-3 rounded-xl border border-[#444] transition-colors", isHost ? "cursor-pointer hover:border-indigo-500" : "opacity-70 cursor-not-allowed")}>
+                    <div className={cn("w-5 h-5 rounded flex items-center justify-center border transition-colors", selectedPacks.includes('emojis') ? "bg-indigo-500 border-indigo-500" : "border-slate-500")}>
+                      {selectedPacks.includes('emojis') && <Check className="w-4 h-4 text-white" />}
+                    </div>
+                    <input type="checkbox" className="hidden" checked={selectedPacks.includes('emojis')} onChange={() => isHost && setSelectedPacks(prev => prev.includes('emojis') ? prev.filter(p => p !== 'emojis') : [...prev, 'emojis'])} disabled={!isHost} />
+                    <span className="text-sm font-bold text-slate-300">Emojis 🎭</span>
                   </label>
                 </div>
               </div>
@@ -406,6 +437,62 @@ export default function GameSettingsPanel({
             <button 
               onClick={() => setShowTimerModal(false)}
               className="mt-8 w-full py-3 bg-orange-500 hover:bg-orange-400 rounded-xl font-black tracking-widest text-white shadow-lg transition-colors"
+            >
+              DONE
+            </button>
+          </div>
+        </div>
+      )}
+    {showClueModal && (
+        <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[#1a1a1a] rounded-3xl w-full max-w-md p-6 border-2 border-slate-700 shadow-2xl relative">
+            <button 
+              onClick={() => setShowClueModal(false)}
+              className="absolute top-4 right-4 p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition-colors"
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
+
+            <div className="flex items-center gap-4 mb-8">
+              <div className="bg-emerald-500 p-3 rounded-full text-white">
+                <PenTool className="w-8 h-8" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-black tracking-widest text-white">CLUE TYPE</h2>
+                <p className="text-sm font-bold text-slate-400">How spymasters give clues</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              {[
+                { type: 'both', label: 'TEXT & DOODLES', desc: 'Spymasters can type words or draw pictures' },
+                { type: 'text', label: 'TEXT ONLY', desc: 'Spymasters can only type words (Classic)' },
+                { type: 'doodle', label: 'DOODLES ONLY', desc: 'Spymasters can only draw pictures' }
+              ].map(opt => (
+                <button
+                  key={opt.type}
+                  onClick={() => isHost && setClueType(opt.type as ClueType)}
+                  disabled={!isHost}
+                  className={cn(
+                    "w-full text-left p-4 rounded-xl border-2 transition-all flex items-center justify-between",
+                    clueType === opt.type 
+                      ? "bg-slate-800 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.2)]" 
+                      : "bg-[#222] border-[#333] hover:border-slate-500",
+                    !isHost && "opacity-50 cursor-not-allowed"
+                  )}
+                >
+                  <div>
+                    <div className="font-black tracking-widest text-white uppercase mb-1">{opt.label}</div>
+                    <div className="text-xs text-slate-400 font-bold">{opt.desc}</div>
+                  </div>
+                  {clueType === opt.type && <Check className="w-5 h-5 text-emerald-500 flex-shrink-0" />}
+                </button>
+              ))}
+            </div>
+
+            <button 
+              onClick={() => setShowClueModal(false)}
+              className="mt-8 w-full py-3 bg-emerald-500 hover:bg-emerald-400 rounded-xl font-black tracking-widest text-white shadow-lg transition-colors"
             >
               DONE
             </button>

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { useGameContext } from '../context/GameContext';
-import type { Player, Team, Role, CustomWordWeight, TimerSettings } from '../../../shared/types';
+import type { Player, Team, Role, CustomWordWeight, TimerSettings, ClueType } from '../../../shared/types';
 import { ArrowLeft } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import GameSettingsPanel from '../components/GameSettingsPanel';
@@ -49,19 +49,29 @@ export default function LANLobby() {
     return !player?.name && !savedNickname;
   });
   
-  const [gameMode, setGameMode] = useState<'classic'|'duet'>('classic');
-  const [selectedPacks, setSelectedPacks] = useState<string[]>(['classic']);
-  
-  const [timerSettings, setTimerSettings] = useState<TimerSettings>({
-    preset: 'off',
-    spymasterTime: 0,
-    operativeTime: 0,
-    extraFirstClueTime: 0
+  const [gameMode, setGameMode] = useState<'classic'|'duet'>(() => (localStorage.getItem('host_gameMode') as 'classic'|'duet') || 'classic');
+  const [selectedPacks, setSelectedPacks] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('host_selectedPacks') || '["classic"]'); } catch { return ['classic']; }
   });
+  const [clueType, setClueType] = useState<ClueType>(() => (localStorage.getItem('host_clueType') as ClueType) || 'text');
   
-  // Custom Words Pipeline
-  const [customWordsText, setCustomWordsText] = useState('');
-  const [customWordWeight, setCustomWordWeight] = useState<CustomWordWeight>('none');
+  const [timerSettings, setTimerSettings] = useState<TimerSettings>(() => {
+    try { return JSON.parse(localStorage.getItem('host_timerSettings') || '{"preset":"off","spymasterTime":0,"operativeTime":0,"extraFirstClueTime":0}'); } 
+    catch { return { preset: 'off', spymasterTime: 0, operativeTime: 0, extraFirstClueTime: 0 }; }
+  });
+  const [customWordsText, setCustomWordsText] = useState(() => localStorage.getItem('host_customWordsText') || '');
+  const [customWordWeight, setCustomWordWeight] = useState<CustomWordWeight>(() => (localStorage.getItem('host_customWordWeight') as CustomWordWeight) || 'none');
+
+  useEffect(() => {
+    if (isHost) {
+      localStorage.setItem('host_gameMode', gameMode);
+      localStorage.setItem('host_selectedPacks', JSON.stringify(selectedPacks));
+      localStorage.setItem('host_clueType', clueType);
+      localStorage.setItem('host_customWordsText', customWordsText);
+      localStorage.setItem('host_customWordWeight', customWordWeight);
+      localStorage.setItem('host_timerSettings', JSON.stringify(timerSettings));
+    }
+  }, [isHost, gameMode, selectedPacks, clueType, customWordsText, customWordWeight, timerSettings]);
 
   const customWordsArray = useMemo(() => {
     if (!customWordsText.trim()) return [];
@@ -187,11 +197,12 @@ export default function LANLobby() {
           timerSettings,
           customWordsText,
           customWordWeight,
-          language
+          language,
+          clueType
         }
       });
     }
-  }, [gameMode, selectedPacks, timerSettings, customWordsText, customWordWeight, language, isHost, socket, roomId]);
+  }, [gameMode, selectedPacks, timerSettings, customWordsText, customWordWeight, language, clueType, isHost, socket, roomId]);
 
   // Listen for settings from host
   useEffect(() => {
@@ -206,6 +217,7 @@ export default function LANLobby() {
       setCustomWordsText(settings.customWordsText);
       setCustomWordWeight(settings.customWordWeight);
       setLanguage(settings.language);
+      setClueType(settings.clueType || 'both');
     });
     
     return () => {
@@ -251,7 +263,8 @@ export default function LANLobby() {
         timerSettings,
         selectedPacks,
         customWords: customWordsArray,
-        customWordWeight
+        customWordWeight,
+        clueType
       });
       playLobbyClickSfx();
     }
@@ -506,6 +519,8 @@ export default function LANLobby() {
               customWordsArray={customWordsArray}
               language={language}
               setLanguage={setLanguage}
+              clueType={clueType}
+              setClueType={setClueType}
             />
           </div>
 

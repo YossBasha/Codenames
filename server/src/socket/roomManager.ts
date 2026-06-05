@@ -250,7 +250,7 @@ export function setupRoomManager(io: Server) {
       }
     });
 
-    socket.on('start_game', ({ roomId, language, gameMode, timerSettings, selectedPacks, customWords, customWordWeight }: { roomId: string, language: Language, gameMode: GameMode, timerSettings: TimerSettings, selectedPacks: string[], customWords: string[], customWordWeight: CustomWordWeight }) => {
+    socket.on('start_game', ({ roomId, language, gameMode, timerSettings, selectedPacks, customWords, customWordWeight, clueType }: { roomId: string, language: Language, gameMode: GameMode, timerSettings: TimerSettings, selectedPacks: string[], customWords: string[], customWordWeight: CustomWordWeight, clueType: any }) => {
       const room = rooms[roomId];
       if (room) {
         const { cards, startingTeam } = gameMode === 'duet' 
@@ -281,7 +281,8 @@ export function setupRoomManager(io: Server) {
           blueScore: startingTeam === 'blue' ? 9 : 8,
           language,
           gameLog: [],
-          highlightedCards: {}
+          highlightedCards: {},
+          clueType
         };
 
         startTimer(io, room);

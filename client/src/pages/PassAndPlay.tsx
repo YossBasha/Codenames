@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGameContext } from "../context/GameContext";
 import { generateGrid, generateDuetGrid } from "../../../shared/gameLogic";
-import type { GameState, CustomWordWeight, TimerSettings, Team } from "../../../shared/types";
+import type { GameState, CustomWordWeight, TimerSettings, Team, ClueType } from "../../../shared/types";
 import Grid from "../components/Grid";
 import TopBar from "../components/TopBar";
 import ActiveClueBar from "../components/ActiveClueBar";
@@ -33,16 +33,26 @@ export default function PassAndPlay() {
   const [clueTargets, setClueTargets] = useState<number[]>([]);
 
   // Setup State
-  const [gameMode, setGameMode] = useState<'classic'|'duet'>('classic');
-  const [selectedPacks, setSelectedPacks] = useState<string[]>(['classic']);
-  const [customWordsText, setCustomWordsText] = useState('');
-  const [customWordWeight, setCustomWordWeight] = useState<CustomWordWeight>('none');
-  const [timerSettings, setTimerSettings] = useState<TimerSettings>({
-    preset: 'off',
-    spymasterTime: 0,
-    operativeTime: 0,
-    extraFirstClueTime: 0
+  const [gameMode, setGameMode] = useState<'classic'|'duet'>(() => (localStorage.getItem('host_gameMode') as 'classic'|'duet') || 'classic');
+  const [selectedPacks, setSelectedPacks] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('host_selectedPacks') || '["classic"]'); } catch { return ['classic']; }
   });
+  const [clueType, setClueType] = useState<ClueType>(() => (localStorage.getItem('host_clueType') as ClueType) || 'text');
+  const [customWordsText, setCustomWordsText] = useState(() => localStorage.getItem('host_customWordsText') || '');
+  const [customWordWeight, setCustomWordWeight] = useState<CustomWordWeight>(() => (localStorage.getItem('host_customWordWeight') as CustomWordWeight) || 'none');
+  const [timerSettings, setTimerSettings] = useState<TimerSettings>(() => {
+    try { return JSON.parse(localStorage.getItem('host_timerSettings') || '{"preset":"off","spymasterTime":0,"operativeTime":0,"extraFirstClueTime":0}'); } 
+    catch { return { preset: 'off', spymasterTime: 0, operativeTime: 0, extraFirstClueTime: 0 }; }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('host_gameMode', gameMode);
+    localStorage.setItem('host_selectedPacks', JSON.stringify(selectedPacks));
+    localStorage.setItem('host_clueType', clueType);
+    localStorage.setItem('host_customWordsText', customWordsText);
+    localStorage.setItem('host_customWordWeight', customWordWeight);
+    localStorage.setItem('host_timerSettings', JSON.stringify(timerSettings));
+  }, [gameMode, selectedPacks, clueType, customWordsText, customWordWeight, timerSettings]);
 
   const customWordsArray = useMemo(() => {
     if (!customWordsText.trim()) return [];
@@ -174,6 +184,7 @@ export default function PassAndPlay() {
       language,
       gameLog: [],
       highlightedCards: {},
+      clueType,
     };
 
     setGameState(initialState);
@@ -470,6 +481,8 @@ export default function PassAndPlay() {
               customWordsArray={customWordsArray}
               language={language}
               setLanguage={setLanguage}
+              clueType={clueType}
+              setClueType={setClueType}
             />
           </div>
           
@@ -519,7 +532,7 @@ export default function PassAndPlay() {
   }
 
   return (
-    <div className={`min-h-screen ${bgClass} transition-colors duration-1000 flex flex-col relative overflow-hidden`}>
+    <div className={cn(`min-h-screen ${bgClass} transition-colors duration-1000 flex flex-col relative overflow-hidden`)}>
       <TopBar
         redScore={gameState.redScore}
         blueScore={gameState.blueScore}
@@ -536,6 +549,7 @@ export default function PassAndPlay() {
         showSpymasterToggle={false} 
         isSpymaster={isSpymasterVisible}
         clueTargetCount={clueTargets.length}
+        clueType={gameState.clueType}
       />
 
       <div className="flex-1 flex flex-col items-center p-4 pt-8">
