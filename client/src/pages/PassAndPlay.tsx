@@ -158,6 +158,7 @@ export default function PassAndPlay() {
       blueScore: startingTeam === "blue" ? 9 : 8,
       language,
       gameLog: [],
+      highlightedCards: {},
     };
 
     setGameState(initialState);
@@ -172,6 +173,29 @@ export default function PassAndPlay() {
       return;
     }
 
+    if (localPhase !== "Operative_Guessing") return;
+
+    const maxGuesses = (gameState.activeCueNumber || 0) + 1;
+    if (gameState.successfulGuessesThisTurn >= maxGuesses) return;
+
+    const playerKey = 'local_players';
+    setGameState(prev => {
+      if (!prev) return null;
+      const newHighlights = prev.highlightedCards ? { ...prev.highlightedCards } : {};
+      if (!newHighlights[playerKey]) newHighlights[playerKey] = [];
+      const arr = newHighlights[playerKey];
+      const idx = arr.indexOf(id);
+      if (idx !== -1) {
+        newHighlights[playerKey] = arr.filter(cId => cId !== id);
+      } else {
+        newHighlights[playerKey] = [...arr, id];
+      }
+      return { ...prev, highlightedCards: newHighlights };
+    });
+  };
+
+  const handleGuessCard = (id: number) => {
+    if (!gameState || gameState.winner) return;
     if (localPhase !== "Operative_Guessing") return;
 
     const maxGuesses = (gameState.activeCueNumber || 0) + 1;
@@ -296,10 +320,31 @@ export default function PassAndPlay() {
       timerTokens: newTokens,
       winner,
       isFirstTurnOfGame: false,
-      currentPhase: newPhase === 'Spymaster_Setup' ? 'spymaster' : 'operative'
+      currentPhase: newPhase === 'Spymaster_Setup' ? 'spymaster' : 'operative',
+      highlightedCards: newPhase === 'Spymaster_Setup' ? {} : prev.highlightedCards // clear highlights on turn end
     }) : null);
     
     setLocalPhase(newPhase);
+  };
+
+  const handleCardContextMenu = (e: React.MouseEvent, id: number) => {
+    e.preventDefault();
+    if (!gameState || gameState.winner || localPhase !== "Operative_Guessing") return;
+    
+    const playerKey = 'local_players';
+    setGameState(prev => {
+      if (!prev) return null;
+      const newHighlights = prev.highlightedCards ? { ...prev.highlightedCards } : {};
+      if (!newHighlights[playerKey]) newHighlights[playerKey] = [];
+      const arr = newHighlights[playerKey];
+      const idx = arr.indexOf(id);
+      if (idx !== -1) {
+        newHighlights[playerKey] = arr.filter(cId => cId !== id);
+      } else {
+        newHighlights[playerKey] = [...arr, id];
+      }
+      return { ...prev, highlightedCards: newHighlights };
+    });
   };
 
   const handleSubmitCue = (cue: string, number: number) => {
@@ -520,6 +565,11 @@ export default function PassAndPlay() {
             playerTeam={isSpymasterVisible ? gameState.currentTurn : expectedGuessTeam}
             clueTargets={clueTargets}
             isGivingClue={localPhase === 'Spymaster_Input'}
+            highlightedCards={gameState.highlightedCards || {}}
+            players={[{id: 'local_players', name: 'Operatives', role: 'operative', team: expectedGuessTeam, isHost: false, status: 'connected'}]}
+            currentPlayerId="local_players"
+            onCardContextMenu={handleCardContextMenu}
+            onGuess={handleGuessCard}
           />
           {localPhase === 'Operative_Guessing' && !gameState.winner && (
             <ActiveClueBar 

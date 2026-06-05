@@ -75,4 +75,5 @@ export interface GameState {
   blueScore: number;
   language: Language;
   gameLog: LogEntry[];
+  highlightedCards?: Record<string, number[]>; // Maps player ID to array of card IDs
 }

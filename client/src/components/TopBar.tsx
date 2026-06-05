@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { Team } from '../../../shared/types';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { cn } from '../utils';
 
 interface TopBarProps {
   redScore: number;
@@ -78,12 +79,12 @@ export default function TopBar({
           <ArrowLeft className="w-6 h-6 text-white" />
         </button>
         {gameMode === 'classic' ? (
-          <div className="flex items-center gap-4 bg-slate-800 rounded-lg p-2 font-bold text-lg">
-            <div className={`px-4 py-1 rounded-md ${currentTurn === 'red' ? 'bg-red-500 text-white' : 'text-red-500'}`}>
+          <div className="flex items-center gap-4 bg-slate-800/80 rounded-xl p-2 font-black text-lg shadow-inner ring-1 ring-white/5">
+            <div className={`px-4 py-1 rounded-md transition-all duration-300 ${currentTurn === 'red' ? 'bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/40 scale-110 ring-1 ring-red-400/50' : 'text-red-500 hover:bg-red-500/10'}`}>
               {redScore}
             </div>
-            <span className="text-slate-400">-</span>
-            <div className={`px-4 py-1 rounded-md ${currentTurn === 'blue' ? 'bg-blue-500 text-white' : 'text-blue-500'}`}>
+            <span className="text-slate-500 font-medium">-</span>
+            <div className={`px-4 py-1 rounded-md transition-all duration-300 ${currentTurn === 'blue' ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/40 scale-110 ring-1 ring-blue-400/50' : 'text-blue-500 hover:bg-blue-500/10'}`}>
               {blueScore}
             </div>
           </div>
@@ -101,10 +102,13 @@ export default function TopBar({
             {timeRemaining}s
           </div>
         )}
-        <div className="text-xl font-bold">
+        <div className="text-xl sm:text-2xl font-black tracking-tight">
           {gameMode === 'classic' ? (
             <>
-              <span className={currentTurn === 'red' ? 'text-red-500' : 'text-blue-500'}>
+              <span className={cn(
+                "transition-colors duration-300",
+                currentTurn === 'red' ? 'text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-rose-600 drop-shadow-[0_0_12px_rgba(239,68,68,0.4)]' : 'text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-600 drop-shadow-[0_0_12px_rgba(59,130,246,0.4)]'
+              )}>
                 {currentTurn === 'red' ? 'RED' : 'BLUE'}
               </span> TURN
             </>
@@ -165,7 +169,7 @@ export default function TopBar({
                 (numInput !== 99 && clueTargetCount > 0 && clueTargetCount !== numInput) || 
                 (numInput === 99 && clueTargetCount === 0)
               }
-              className="px-2 py-1.5 sm:px-4 sm:py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors text-xs sm:text-sm whitespace-nowrap"
+              className="px-2 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-all shadow-lg shadow-emerald-600/20 active:scale-95 text-xs sm:text-sm whitespace-nowrap"
             >
               Give Clue
             </button>

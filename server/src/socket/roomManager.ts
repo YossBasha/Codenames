@@ -279,7 +279,8 @@ export function setupRoomManager(io: Server) {
           redScore: startingTeam === 'red' ? 9 : 8,
           blueScore: startingTeam === 'blue' ? 9 : 8,
           language,
-          gameLog: []
+          gameLog: [],
+          highlightedCards: {}
         };
 
         startTimer(io, room);
@@ -299,12 +300,12 @@ export function setupRoomManager(io: Server) {
         if (room.gameState.currentPhase === 'spymaster' && 
             player.team === room.gameState.currentTurn && 
             (player.role === 'spymaster' || isDuet)) {
-          
           room.gameState.activeCue = cue;
           room.gameState.activeCueNumber = number;
           room.gameState.currentPhase = 'operative';
           room.gameState.successfulGuessesThisTurn = 0;
           room.gameState.isFirstTurnOfGame = false;
+          room.gameState.highlightedCards = {};
           
           room.gameState.gameLog.push({
             id: Math.random().toString(36).substring(7),
@@ -323,6 +324,31 @@ export function setupRoomManager(io: Server) {
           startTimer(io, room);
           io.to(roomId).emit('game_update', room.gameState);
         }
+      }
+    });
+
+    socket.on('highlight_card', ({ roomId, cardId }: { roomId: string, cardId: number | null }) => {
+      const room = rooms[roomId];
+      const player = room?.players.find(p => p.id === socket.id);
+      
+      if (room && room.gameState && !room.gameState.winner && player) {
+        if (room.gameState.currentPhase !== 'operative') return;
+        
+        if (cardId === null) {
+          room.gameState.highlightedCards[player.id] = [];
+        } else {
+          if (!room.gameState.highlightedCards[player.id]) {
+            room.gameState.highlightedCards[player.id] = [];
+          }
+          const arr = room.gameState.highlightedCards[player.id];
+          const idx = arr.indexOf(cardId);
+          if (idx !== -1) {
+            arr.splice(idx, 1);
+          } else {
+            arr.push(cardId);
+          }
+        }
+        io.to(roomId).emit('game_update', room.gameState);
       }
     });
 
@@ -356,10 +382,12 @@ export function setupRoomManager(io: Server) {
             // For Duet, if B is guessing, they are checking A's key (duetTypeA).
             // If A is guessing, they are checking B's key (duetTypeB).
             const keyType = expectedGuessTeam === 'blue' ? card.duetTypeA : card.duetTypeB;
-            
             if (expectedGuessTeam === 'blue') card.revealedByB = true;
             else card.revealedByA = true;
             
+            // Clear highlights since a card was picked
+            room.gameState.highlightedCards = {};
+
             if (keyType === 'green' || keyType === 'assassin' || (card.revealedByA && card.revealedByB)) {
               // Mark globally revealed if it's an objective, assassin, or both sides have guessed it
               card.revealed = true;
@@ -426,10 +454,10 @@ export function setupRoomManager(io: Server) {
               }
             }
           }
-        } else {
           // CLASSIC MODE GUESSING
           if (card && !card.revealed) {
             card.revealed = true;
+            room.gameState.highlightedCards = {};
             
             room.gameState.gameLog.push({
             id: Math.random().toString(36).substring(7),
@@ -463,7 +491,11 @@ export function setupRoomManager(io: Server) {
                 endTurn(); 
               } else {
                 room.gameState.successfulGuessesThisTurn++;
-                if (room.gameState.successfulGuessesThisTurn >= maxGuesses) endTurn();
+                if (room.gameState.successfulGuessesThisTurn >= maxGuesses) {
+                  endTurn();
+                } else if (room.gameState.redScore === 0) {
+                  endTurn();
+                }
               }
             } else if (card.type === 'blue') {
               room.gameState.blueScore--;
@@ -473,7 +505,11 @@ export function setupRoomManager(io: Server) {
                 endTurn();
               } else {
                 room.gameState.successfulGuessesThisTurn++;
-                if (room.gameState.successfulGuessesThisTurn >= maxGuesses) endTurn();
+                if (room.gameState.successfulGuessesThisTurn >= maxGuesses) {
+                  endTurn();
+                } else if (room.gameState.blueScore === 0) {
+                  endTurn();
+                }
               }
             } else if (card.type === 'neutral') {
               endTurn();
@@ -503,6 +539,7 @@ export function setupRoomManager(io: Server) {
           room.gameState.activeCue = null;
           room.gameState.activeCueNumber = null;
           room.gameState.successfulGuessesThisTurn = 0;
+          room.gameState.highlightedCards = {};
           
           if (room.gameState.gameMode === 'duet') {
             room.gameState.timerTokens--;

@@ -147,7 +147,19 @@ export default function LANGame() {
     if (gameState.gameMode !== "duet" && currentPlayer?.role === "spymaster") return; // Spymasters can't guess in classic
     if (gameState.currentPhase === "spymaster") return; // Nobody can guess in spymaster phase
 
+    socket.emit("highlight_card", { roomId, cardId: id });
+  };
+
+  const handleGuessCard = (id: number) => {
+    if (!gameState || gameState.winner || !socket || !roomId) return;
     socket.emit("guess_card", { roomId, cardId: id });
+  };
+
+  const handleCardContextMenu = (e: React.MouseEvent, id: number) => {
+    e.preventDefault();
+    if (!gameState || gameState.winner || !socket || !roomId) return;
+    if (gameState.currentPhase !== "operative") return;
+    socket.emit("highlight_card", { roomId, cardId: id });
   };
 
   const handleSubmitCue = (cue: string, number: number) => {
@@ -423,6 +435,11 @@ export default function LANGame() {
                     isRTL={gameState.isRTL}
                     clueTargets={clueTargets}
                     isGivingClue={isGivingClue || false}
+                    highlightedCards={gameState.highlightedCards || {}}
+                    players={roomPlayers}
+                    currentPlayerId={player?.id}
+                    onCardContextMenu={handleCardContextMenu}
+                    onGuess={handleGuessCard}
                   />
                   {gameState.currentPhase === 'operative' && !gameState.winner && (
                     <ActiveClueBar 

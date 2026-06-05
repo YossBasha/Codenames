@@ -1,6 +1,8 @@
 import type { Card as CardType } from "../../../shared/types";
 import Card from "./Card";
 
+import type { Player } from "../../../shared/types";
+
 interface GridProps {
   cards: CardType[];
   isSpymaster: boolean;
@@ -10,10 +12,15 @@ interface GridProps {
   isRTL?: boolean;
   clueTargets?: number[];
   isGivingClue?: boolean;
+  highlightedCards?: Record<string, number[]>;
+  players?: Player[];
+  currentPlayerId?: string;
   onCardClick: (id: number) => void;
+  onCardContextMenu?: (e: React.MouseEvent, id: number) => void;
+  onGuess?: (id: number) => void;
 }
 
-export default function Grid({ cards, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, clueTargets = [], isGivingClue = false, onCardClick }: GridProps) {
+export default function Grid({ cards, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, clueTargets = [], isGivingClue = false, highlightedCards = {}, players = [], currentPlayerId, onCardClick, onCardContextMenu, onGuess }: GridProps) {
   if (!cards || cards.length === 0) return null;
 
   return (
@@ -29,7 +36,14 @@ export default function Grid({ cards, isSpymaster, disabled, playerTeam, gameMod
           isRTL={isRTL}
           isClueTarget={clueTargets.includes(card.id)}
           isGivingClue={isGivingClue}
+          highlightedBy={Object.entries(highlightedCards)
+            .filter(([_, cIds]) => cIds.includes(card.id))
+            .map(([pId, _]) => players.find(p => p.id === pId))
+            .filter((p): p is Player => p !== undefined)}
+          currentPlayerId={currentPlayerId}
           onClick={onCardClick}
+          onContextMenu={onCardContextMenu}
+          onGuess={onGuess}
         />
       ))}
     </div>

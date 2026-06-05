@@ -19,8 +19,8 @@ export default function TeamColumn({ team, score, operatives, spymasters, gameMo
     return (
       <div className={cn("flex flex-col gap-2 flex-1 lg:flex-none lg:w-48 xl:w-56 lg:flex-shrink-0", className)}>
         <div className={cn(
-          "rounded-xl lg:rounded-2xl p-4 flex flex-col items-center shadow-lg",
-          isSideA ? "bg-lime-500/20 border-2 border-lime-500/50" : "bg-green-500/20 border-2 border-green-500/50"
+          "rounded-xl lg:rounded-2xl p-4 flex flex-col items-center shadow-xl ring-1",
+          isSideA ? "bg-gradient-to-b from-lime-500/20 to-lime-500/5 ring-lime-500/30" : "bg-gradient-to-b from-green-500/20 to-green-500/5 ring-green-500/30"
         )}>
           <h3 className={cn("text-sm lg:text-xl font-black tracking-widest mb-4", isSideA ? "text-lime-400" : "text-green-400")}>
             {isSideA ? "SIDE A" : "SIDE B"}
@@ -31,7 +31,7 @@ export default function TeamColumn({ team, score, operatives, spymasters, gameMo
             ) : (
               allPlayers.map(p => (
                 <div key={p.id} className={cn(
-                  "text-white text-sm lg:text-base font-bold bg-black/40 px-4 py-2 rounded-xl text-center w-full whitespace-nowrap overflow-hidden text-ellipsis border border-white/10 shadow-md transition-opacity",
+                  "text-white text-sm lg:text-base font-bold bg-black/40 px-4 py-2 rounded-xl text-center w-full whitespace-nowrap overflow-hidden text-ellipsis border-t border-white/10 shadow-lg transition-opacity",
                   p.connected === false && "opacity-50 grayscale"
                 )}>
                   {p.name} {p.connected === false && "(Offline)"}
@@ -48,8 +48,8 @@ export default function TeamColumn({ team, score, operatives, spymasters, gameMo
     <div className={cn("flex flex-col gap-2 flex-1 lg:flex-none lg:w-48 xl:w-56 lg:flex-shrink-0", className)}>
       {/* OPERATIVES BOX */}
       <div className={cn(
-        "rounded-xl lg:rounded-2xl p-2 lg:p-4 flex flex-col items-center",
-        isRed ? "bg-red-500/20 border-2 border-red-500/50" : "bg-blue-500/20 border-2 border-blue-500/50"
+        "rounded-xl lg:rounded-2xl p-2 lg:p-4 flex flex-col items-center shadow-lg ring-1",
+        isRed ? "bg-gradient-to-b from-red-500/20 to-red-500/5 ring-red-500/30 shadow-red-500/10" : "bg-gradient-to-b from-blue-500/20 to-blue-500/5 ring-blue-500/30 shadow-blue-500/10"
       )}>
         <h3 className={cn("text-[9px] lg:text-sm font-black tracking-widest mb-1 lg:mb-2 leading-none", isRed ? "text-red-400" : "text-blue-400")}>
           OPERATIVES
@@ -71,10 +71,10 @@ export default function TeamColumn({ team, score, operatives, spymasters, gameMo
       </div>
 
       {/* SCORE BOX */}
-      <div className="flex justify-center items-center py-1 lg:py-2">
+      <div className="flex justify-center items-center py-2 lg:py-4">
         <div className={cn(
-          "text-4xl lg:text-6xl font-black drop-shadow-lg",
-          isRed ? "text-red-500" : "text-blue-500"
+          "text-5xl lg:text-7xl font-black drop-shadow-[0_0_15px_rgba(0,0,0,0.5)]",
+          isRed ? "text-transparent bg-clip-text bg-gradient-to-br from-red-400 to-red-600 drop-shadow-[0_0_20px_rgba(239,68,68,0.3)]" : "text-transparent bg-clip-text bg-gradient-to-br from-blue-400 to-blue-600 drop-shadow-[0_0_20px_rgba(59,130,246,0.3)]"
         )}>
           {score}
         </div>
@@ -82,8 +82,8 @@ export default function TeamColumn({ team, score, operatives, spymasters, gameMo
 
       {/* SPYMASTERS BOX */}
       <div className={cn(
-        "rounded-xl lg:rounded-2xl p-2 lg:p-4 flex flex-col items-center",
-        isRed ? "bg-red-500/20 border-2 border-red-500/50" : "bg-blue-500/20 border-2 border-blue-500/50"
+        "rounded-xl lg:rounded-2xl p-2 lg:p-4 flex flex-col items-center shadow-lg ring-1",
+        isRed ? "bg-gradient-to-b from-red-500/20 to-red-500/5 ring-red-500/30 shadow-red-500/10" : "bg-gradient-to-b from-blue-500/20 to-blue-500/5 ring-blue-500/30 shadow-blue-500/10"
       )}>
         <h3 className={cn("text-[9px] lg:text-sm font-black tracking-widest mb-1 lg:mb-2 leading-none", isRed ? "text-red-400" : "text-blue-400")}>
           SPYMASTERS
