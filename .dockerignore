@@ -1,0 +1,10 @@
+node_modules
+.git
+.idea
+.vscode
+client
+client-rn
+dist
+dist-electron
+build
+*.log
