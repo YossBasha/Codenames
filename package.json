@@ -1,0 +1,11 @@
+{
+  "name": "codenames-glitch",
+  "version": "1.0.0",
+  "description": "Root package for Glitch.com deployment",
+  "scripts": {
+    "start": "cd server && npm install && npm run build && npm start"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
