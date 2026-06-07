@@ -183,7 +183,8 @@ function startTimer(io: Server, room: Room) {
   if (!room.gameState) return;
   
   const isHaste = room.gameState.activeModifier === 'haste' && room.gameState.currentPhase === 'operative';
-  if (room.gameState.timerSettings.preset === 'off' && !isHaste) return;
+  const isCriticalHit = room.gameState.activeModifier === 'critical-hit' && room.gameState.currentPhase === 'operative';
+  if (room.gameState.timerSettings.preset === 'off' && !isHaste && !isCriticalHit) return;
   
   let duration = 0;
   if (isHaste) {
@@ -194,7 +195,11 @@ function startTimer(io: Server, room: Room) {
       duration += room.gameState.timerSettings.extraFirstClueTime;
     }
   } else {
-    duration = room.gameState.timerSettings.operativeTime;
+    if (isCriticalHit && room.gameState.timerSettings.preset === 'off') {
+      duration = 60;
+    } else {
+      duration = room.gameState.timerSettings.operativeTime;
+    }
   }
   
   room.gameState.timeRemaining = duration;
@@ -280,7 +285,7 @@ function processGuess(io: Server, room: Room, player: Player, cardId: number) {
 
   if (player.team !== expectedGuessTeam || (!isDuet && player.role !== 'operative')) return;
   
-  const maxGuesses = room.gameState.activeCueNumber === 0 ? Infinity : (room.gameState.activeCueNumber || 0) + 1;
+  const maxGuesses = room.gameState.activeCueNumber === 99 ? Infinity : (room.gameState.activeCueNumber || 0) + 1;
   if (room.gameState.successfulGuessesThisTurn >= maxGuesses) return;
 
   const card = room.gameState.cards.find(c => c.id === cardId);
@@ -334,7 +339,7 @@ function processGuess(io: Server, room: Room, player: Player, cardId: number) {
       endTurnDuet();
     } else if (keyType === 'green') {
       if (room.gameState.activeModifier === 'critical-hit' && room.gameState.successfulGuessesThisTurn === 0) {
-        const duration = room.gameState.timerSettings.operativeTime;
+        const duration = room.gameState.timerSettings.preset === 'off' ? 60 : room.gameState.timerSettings.operativeTime;
         if (room.gameState.timeRemaining >= duration - 5) {
           if (!room.gameState.modifierState) room.gameState.modifierState = {};
           room.gameState.modifierState.timerFrozen = true;
@@ -396,7 +401,7 @@ function processGuess(io: Server, room: Room, player: Player, cardId: number) {
           endTurn(); 
         } else {
           if (room.gameState.activeModifier === 'critical-hit' && room.gameState.successfulGuessesThisTurn === 0) {
-            const duration = room.gameState.timerSettings.operativeTime;
+            const duration = room.gameState.timerSettings.preset === 'off' ? 60 : room.gameState.timerSettings.operativeTime;
             if (room.gameState.timeRemaining >= duration - 5) {
               if (!room.gameState.modifierState) room.gameState.modifierState = {};
               room.gameState.modifierState.timerFrozen = true;
@@ -418,7 +423,7 @@ function processGuess(io: Server, room: Room, player: Player, cardId: number) {
           endTurn();
         } else {
           if (room.gameState.activeModifier === 'critical-hit' && room.gameState.successfulGuessesThisTurn === 0) {
-            const duration = room.gameState.timerSettings.operativeTime;
+            const duration = room.gameState.timerSettings.preset === 'off' ? 60 : room.gameState.timerSettings.operativeTime;
             if (room.gameState.timeRemaining >= duration - 5) {
               if (!room.gameState.modifierState) room.gameState.modifierState = {};
               room.gameState.modifierState.timerFrozen = true;
@@ -736,6 +741,7 @@ export function setupRoomManager(io: Server) {
         if (room.gameState.currentPhase !== 'operative') return;
         if (room.gameState.activeModifier !== 'blood-pact') return;
         if (room.gameState.modifierState?.bloodPactStatus !== 'available') return;
+        if (room.gameState.successfulGuessesThisTurn > 0) return;
         
         const isDuet = room.gameState.gameMode === 'duet';
         const expectedGuessTeam = isDuet ? 

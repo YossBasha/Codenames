@@ -79,13 +79,26 @@ export default function Card({ card, isSpymaster, disabled, playerTeam, gameMode
 
   let isValidClueTarget = false;
   if (isGivingClue) {
-    if (gameMode === 'classic') {
-      isValidClueTarget = card.type === playerTeam && !card.revealed;
+    const isSensoryFaded = activeModifier === 'sensory-deprivation' && currentPhase === 'spymaster' && !isSpymaster;
+    if (isSensoryFaded) {
+      if (gameMode === 'classic') {
+        isValidClueTarget = !card.revealed;
+      } else {
+        if (playerTeam === 'red') {
+          isValidClueTarget = !card.revealedByB;
+        } else if (playerTeam === 'blue') {
+          isValidClueTarget = !card.revealedByA;
+        }
+      }
     } else {
-      if (playerTeam === 'red') {
-        isValidClueTarget = card.duetTypeA === 'green' && !card.revealedByB;
-      } else if (playerTeam === 'blue') {
-        isValidClueTarget = card.duetTypeB === 'green' && !card.revealedByA;
+      if (gameMode === 'classic') {
+        isValidClueTarget = card.type === playerTeam && !card.revealed;
+      } else {
+        if (playerTeam === 'red') {
+          isValidClueTarget = card.duetTypeA === 'green' && !card.revealedByB;
+        } else if (playerTeam === 'blue') {
+          isValidClueTarget = card.duetTypeB === 'green' && !card.revealedByA;
+        }
       }
     }
   }
@@ -218,7 +231,7 @@ export default function Card({ card, isSpymaster, disabled, playerTeam, gameMode
       )}
 
       {/* Glow Layer (Always animating, toggles opacity) */}
-      {isGivingClue && isValidClueTarget && (
+      {isGivingClue && isValidClueTarget && !(activeModifier === 'sensory-deprivation' && currentPhase === 'spymaster' && !isSpymaster) && (
         <div 
           className={cn(
             "absolute inset-0 rounded-lg sm:rounded-xl ring-2 ring-emerald-400 ring-offset-1 ring-offset-slate-900 animate-pulse pointer-events-none transition-opacity duration-200 z-20",

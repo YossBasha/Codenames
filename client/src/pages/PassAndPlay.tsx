@@ -203,7 +203,7 @@ export default function PassAndPlay() {
 
     if (localPhase !== "Operative_Guessing") return;
 
-    const maxGuesses = (gameState.activeCueNumber || 0) + 1;
+    const maxGuesses = gameState.activeCueNumber === 99 ? Infinity : (gameState.activeCueNumber || 0) + 1;
     if (gameState.successfulGuessesThisTurn >= maxGuesses) return;
 
     const playerKey = 'local_players';
@@ -226,7 +226,7 @@ export default function PassAndPlay() {
     if (!gameState || gameState.winner) return;
     if (localPhase !== "Operative_Guessing") return;
 
-    const maxGuesses = gameState.activeCueNumber === 0 ? Infinity : (gameState.activeCueNumber || 0) + 1;
+    const maxGuesses = gameState.activeCueNumber === 99 ? Infinity : (gameState.activeCueNumber || 0) + 1;
     if (gameState.successfulGuessesThisTurn >= maxGuesses) return;
 
     const newCards = [...gameState.cards];

@@ -77,45 +77,45 @@ export default function GameSettingsPanel({
 
   return (
     <>
-      <div className="flex flex-col gap-4 flex-1">
-        <div className="grid grid-cols-2 gap-4">
+      <div className="flex flex-col gap-2.5 flex-1">
+        <div className="grid grid-cols-2 gap-2.5">
           <button 
             onClick={() => isHost && setGameMode('classic')}
-            className={cn("flex items-center justify-center gap-2 rounded-2xl py-3 border-b-4 transition-all", 
+            className={cn("flex items-center justify-center gap-2 rounded-2xl py-2 border-b-4 transition-all", 
               gameMode === 'classic' ? "bg-[#0ea5e9] border-blue-700 cursor-default" : "bg-[#333] border-[#222] opacity-50 hover:opacity-80"
             )}
           >
             <div className="text-center">
-              <div className="font-black text-xl tracking-wider">CLASSIC</div>
-              <div className="text-xs opacity-80">4+ PLAYERS</div>
+              <div className="font-black text-base lg:text-lg tracking-wider">CLASSIC</div>
+              <div className="text-[10px] opacity-80">4+ PLAYERS</div>
             </div>
           </button>
           <button 
             onClick={() => isHost && setGameMode('duet')}
-            className={cn("flex items-center justify-center gap-2 rounded-2xl py-3 border-b-4 transition-all", 
+            className={cn("flex items-center justify-center gap-2 rounded-2xl py-2 border-b-4 transition-all", 
               gameMode === 'duet' ? "bg-green-600 border-green-800 cursor-default" : "bg-[#333] border-[#222] opacity-50 hover:opacity-80"
             )}
           >
             <div className="text-center">
-              <div className="font-black text-xl tracking-wider">DUET</div>
-              <div className="text-xs opacity-80">2+ PLAYERS</div>
+              <div className="font-black text-base lg:text-lg tracking-wider">DUET</div>
+              <div className="text-[10px] opacity-80">2+ PLAYERS</div>
             </div>
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 h-full">
           <button 
             onClick={() => setShowWordPacksModal(true)}
-            className={cn("flex flex-col items-center justify-center gap-2 rounded-2xl p-3 border transition-all h-full min-h-[90px]", 
+            className={cn("flex flex-col items-center justify-center gap-1 rounded-2xl p-2 border transition-all h-full min-h-[72px]", 
               "bg-[#333] border-[#444] hover:border-indigo-500 hover:shadow-[0_0_15px_rgba(99,102,241,0.2)]"
             )}
           >
-            <div className="p-2 rounded-full bg-indigo-500 text-white mb-1">
-              <BookOpen className="w-6 h-6" />
+            <div className="p-1.5 rounded-full bg-indigo-500 text-white">
+              <BookOpen className="w-5 h-5" />
             </div>
             <div className="text-center">
-              <div className="font-black text-lg tracking-widest text-white mb-1">WORD PACKS</div>
-              <div className="text-xs font-bold text-slate-400">
+              <div className="font-black text-sm lg:text-base tracking-widest text-white">WORD PACKS</div>
+              <div className="text-[10px] font-bold text-slate-400 leading-tight">
                 {language.toUpperCase()} • {selectedPacks.length} packs
                 {customWordsArray.length > 0 && ` • ${customWordWeight} custom`}
               </div>
@@ -124,48 +124,46 @@ export default function GameSettingsPanel({
 
           <button 
             onClick={() => setShowTimerModal(true)}
-            className={cn("flex flex-col items-center justify-center gap-2 rounded-2xl p-3 border transition-all h-full min-h-[90px]", 
+            className={cn("flex flex-col items-center justify-center gap-1 rounded-2xl p-2 border transition-all h-full min-h-[72px]", 
               timerSettings.preset !== 'off' ? "bg-[#333] border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.2)]" : "bg-[#333] border-[#444] opacity-80 hover:opacity-100"
             )}
           >
-            <div className={cn("p-2 rounded-full text-white mb-1", timerSettings.preset !== 'off' ? "bg-orange-500" : "bg-slate-600")}>
-              <Clock className="w-6 h-6" />
+            <div className={cn("p-1.5 rounded-full text-white", timerSettings.preset !== 'off' ? "bg-orange-500" : "bg-slate-600")}>
+              <Clock className="w-5 h-5" />
             </div>
             <div className="text-center">
-              <div className="font-black text-lg tracking-widest text-white mb-1">TIMER</div>
-              <div className="text-xs font-bold text-slate-400 tracking-wider">
+              <div className="font-black text-sm lg:text-base tracking-widest text-white">TIMER</div>
+              <div className="text-[10px] font-bold text-slate-400 tracking-wider leading-tight">
                 {timerSettings.preset === 'off' ? 'OFF' : timerSettings.preset.toUpperCase()}
               </div>
             </div>
           </button>
 
-
-
           <button 
             onClick={() => setShowClueModal(true)}
-            className={cn("flex flex-col items-center justify-center gap-2 rounded-2xl p-3 border transition-all h-full min-h-[90px]", 
+            className={cn("flex flex-col items-center justify-center gap-1 rounded-2xl p-2 border transition-all h-full min-h-[72px]", 
               clueType !== 'text' ? "bg-[#333] border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.2)]" : "bg-[#333] border-[#444] hover:border-emerald-500"
             )}
           >
-            <div className={cn("p-2 rounded-full text-white mb-1", clueType !== 'text' ? "bg-emerald-500" : "bg-slate-600")}>
-              <PenTool className="w-6 h-6" />
+            <div className={cn("p-1.5 rounded-full text-white", clueType !== 'text' ? "bg-emerald-500" : "bg-slate-600")}>
+              <PenTool className="w-5 h-5" />
             </div>
             <div className="text-center">
-              <div className="font-black text-lg tracking-widest text-white mb-1">CLUES</div>
-              <div className="text-xs font-bold text-slate-400 tracking-wider">
+              <div className="font-black text-sm lg:text-base tracking-widest text-white">CLUES</div>
+              <div className="text-[10px] font-bold text-slate-400 tracking-wider leading-tight">
                 {clueType === 'both' ? 'TEXT & DOODLES' : clueType === 'doodle' ? 'DOODLES ONLY' : 'TEXT ONLY'}
               </div>
             </div>
           </button>
         </div>
-        <div className="bg-[#2a2a2a] rounded-2xl p-4 border border-[#444] shadow-inner mt-2 flex items-center gap-4">
-          <div className="p-2 rounded-full bg-slate-700 text-white flex-shrink-0">
-            {volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+        <div className="bg-[#2a2a2a] rounded-2xl p-2.5 border border-[#444] shadow-inner mt-1.5 flex items-center gap-2.5">
+          <div className="p-1.5 rounded-full bg-slate-700 text-white flex-shrink-0">
+            {volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </div>
           <div className="flex-1">
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-xs font-bold text-slate-400 tracking-wider">SFX VOLUME</span>
-              <span className="text-xs font-mono font-bold text-slate-300">{Math.round(volume * 100)}%</span>
+            <div className="flex justify-between items-center mb-0.5">
+              <span className="text-[10px] font-bold text-slate-400 tracking-wider">SFX VOLUME</span>
+              <span className="text-[10px] font-mono font-bold text-slate-300">{Math.round(volume * 100)}%</span>
             </div>
             <input 
               type="range" 
@@ -174,23 +172,23 @@ export default function GameSettingsPanel({
               step="0.05"
               value={volume}
               onChange={(e) => setVolume(parseFloat(e.target.value))}
-              className="w-full accent-indigo-500 h-2 bg-[#1a1a1a] rounded-lg appearance-none cursor-pointer"
+              className="w-full accent-indigo-500 h-1.5 bg-[#1a1a1a] rounded-lg appearance-none cursor-pointer"
             />
           </div>
         </div>
 
         {/* Chaos Mode Toggle */}
         <div className={cn(
-          "bg-[#2a2a2a] rounded-2xl p-4 border transition-all mt-2 flex items-center justify-between",
+          "bg-[#2a2a2a] rounded-2xl p-2.5 border transition-all mt-1.5 flex items-center justify-between",
           chaosMode ? "border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.15)] bg-red-950/10" : "border-[#444]"
         )}>
           <div className="flex items-center gap-3">
-            <div className={cn("p-2 rounded-full text-white", chaosMode ? "bg-red-500" : "bg-slate-600")}>
-              <span className="text-sm font-bold">🌀</span>
+            <div className={cn("p-1.5 rounded-full text-white", chaosMode ? "bg-red-500" : "bg-slate-600")}>
+              <span className="text-xs font-bold">🌀</span>
             </div>
             <div className="text-left">
-              <span className="block text-sm font-black tracking-widest text-white uppercase leading-none">Chaos Mode</span>
-              <span className="block text-[10px] font-bold text-slate-400 mt-1 leading-tight">Random global modifier applied each turn</span>
+              <span className="block text-xs font-black tracking-widest text-white uppercase leading-none">Chaos Mode</span>
+              <span className="block text-[9px] font-bold text-slate-400 mt-1 leading-tight">Random global modifier applied each turn</span>
             </div>
           </div>
           <label className={cn("relative inline-flex items-center group", isHost ? "cursor-pointer" : "opacity-50 cursor-not-allowed")}>

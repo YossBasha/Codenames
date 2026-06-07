@@ -58,9 +58,25 @@ export default function TopBar({
 
   useEffect(() => {
     if (clueTargetCount > 0) {
-      setNumInput(clueTargetCount);
+      if (activeModifier === 'off-by-one') {
+        setNumInput(clueTargetCount + 1);
+      } else {
+        setNumInput(clueTargetCount);
+      }
     }
-  }, [clueTargetCount]);
+  }, [clueTargetCount, activeModifier]);
+
+  const isNumberValid = () => {
+    if (numInput === '') return false;
+    if (numInput === 99) return clueTargetCount === 0;
+    if (clueTargetCount > 0) {
+      if (activeModifier === 'off-by-one') {
+        return numInput === clueTargetCount - 1 || numInput === clueTargetCount + 1;
+      }
+      return numInput === clueTargetCount;
+    }
+    return true;
+  };
 
   const handleSubmitCue = (e: React.FormEvent) => {
     e.preventDefault();
@@ -210,13 +226,14 @@ export default function TopBar({
                 onChange={(e) => {
                   let val = e.target.value;
                   if (activeModifier === 'oracle-riddle') {
-                    const words = val.split(/\s+/);
+                    const cleanVal = val.replace(/[^a-zA-Z0-9\u0600-\u06FF\s]/g, '');
+                    const words = cleanVal.trim().split(/\s+/).filter(Boolean);
                     if (words.length > 2) {
                       return;
                     }
-                    setCueInput(val.replace(/[^a-zA-Z0-9\u0600-\u06FF\s]/g, ''));
+                    setCueInput(cleanVal);
                   } else {
-                    setCueInput(val.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, ''));
+                    setCueInput(val.replace(/[^a-zA-Z0-9\u0600-\u06FF\s]/g, ''));
                   }
                 }}
                 className="bg-slate-900 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg outline-none w-24 sm:w-48 text-xs sm:text-sm"
@@ -236,9 +253,7 @@ export default function TopBar({
               type="submit"
               disabled={
                 cueInput.trim().length === 0 || 
-                numInput === '' || 
-                (numInput !== 99 && clueTargetCount > 0 && clueTargetCount !== numInput) || 
-                (numInput === 99 && clueTargetCount === 0)
+                !isNumberValid()
               }
               className="px-2 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-all shadow-lg shadow-emerald-600/20 active:scale-95 text-xs sm:text-sm whitespace-nowrap"
             >

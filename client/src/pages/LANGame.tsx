@@ -211,6 +211,17 @@ export default function LANGame() {
     previousWinner.current = gameState?.winner || null;
   }, [gameState?.winner]);
 
+  const prevTimerFrozenRef = useRef<boolean>(false);
+  useEffect(() => {
+    const isFrozen = !!gameState?.modifierState?.timerFrozen;
+    if (isFrozen && !prevTimerFrozenRef.current) {
+      import("../utils/sfx").then(({ playTimerFreezeSfx }) => {
+        playTimerFreezeSfx();
+      });
+    }
+    prevTimerFrozenRef.current = isFrozen;
+  }, [gameState?.modifierState?.timerFrozen]);
+
   const handlePrank = (targetPlayerId: string) => {
     if (!socket || !roomId) return;
     socket.emit("prank_vibrate", { roomId, targetPlayerId });
@@ -250,13 +261,26 @@ export default function LANGame() {
       if (!card) return;
       
       let isValidClueTarget = false;
-      if (gameState.gameMode === 'classic') {
-        isValidClueTarget = card.type === currentPlayer?.team && !card.revealed;
+      const isSensoryFaded = gameState.activeModifier === 'sensory-deprivation' && !shouldShowColors;
+      if (isSensoryFaded) {
+        if (gameState.gameMode === 'classic') {
+          isValidClueTarget = !card.revealed;
+        } else {
+          if (currentPlayer?.team === 'red') {
+            isValidClueTarget = !card.revealedByB;
+          } else if (currentPlayer?.team === 'blue') {
+            isValidClueTarget = !card.revealedByA;
+          }
+        }
       } else {
-        if (currentPlayer?.team === 'red') {
-          isValidClueTarget = card.duetTypeA === 'green' && !card.revealedByB;
-        } else if (currentPlayer?.team === 'blue') {
-          isValidClueTarget = card.duetTypeB === 'green' && !card.revealedByA;
+        if (gameState.gameMode === 'classic') {
+          isValidClueTarget = card.type === currentPlayer?.team && !card.revealed;
+        } else {
+          if (currentPlayer?.team === 'red') {
+            isValidClueTarget = card.duetTypeA === 'green' && !card.revealedByB;
+          } else if (currentPlayer?.team === 'blue') {
+            isValidClueTarget = card.duetTypeB === 'green' && !card.revealedByA;
+          }
         }
       }
       
@@ -309,6 +333,8 @@ export default function LANGame() {
     );
 
   const isSpymaster = player.role === "spymaster";
+  const isSensoryDepActive = gameState?.activeModifier === 'sensory-deprivation' && gameState?.currentPhase === 'spymaster';
+  const shouldShowColors = !isSensoryDepActive || (sensoryTimeLeft === null || sensoryTimeLeft > 0);
 
   const bgClass = !gameState
     ? "bg-slate-900"
@@ -396,7 +422,10 @@ export default function LANGame() {
         timerTokens={gameState.timerTokens}
         remainingGreens={remainingGreens}
         timeRemaining={gameState.timeRemaining}
-        isTimerEnabled={gameState.timerSettings?.preset !== 'off'}
+        isTimerEnabled={
+          gameState.timerSettings?.preset !== 'off' ||
+          ((gameState.activeModifier === 'haste' || gameState.activeModifier === 'critical-hit') && gameState.currentPhase === 'operative')
+        }
         onSubmitCue={handleSubmitCue}
         showSpymasterToggle={false}
         clueTargetCount={clueTargets.length}
@@ -560,8 +589,6 @@ export default function LANGame() {
                 gameState.currentTurn;
               
               const isLagSpikeActive = lagSpikeSecondsLeft !== null && lagSpikeSecondsLeft > 0;
-              const isSensoryDepActive = gameState?.activeModifier === 'sensory-deprivation' && gameState.currentPhase === 'spymaster';
-              const shouldShowColors = !isSensoryDepActive || (sensoryTimeLeft === null || sensoryTimeLeft > 0);
               
               const isDisabled = (gameState.currentPhase === 'spymaster' && !isGivingClue) || 
                                  currentPlayer!.team !== expectedGuessTeam || 
@@ -592,7 +619,7 @@ export default function LANGame() {
                   {/* Chaos Modifiers Operative Action Buttons */}
                   {gameState.currentPhase === 'operative' && !gameState.winner && isMyTurnToGuess && (
                     <div className="flex flex-wrap items-center justify-center gap-2 mt-4 z-20">
-                      {gameState.activeModifier === 'blood-pact' && gameState.modifierState?.bloodPactStatus === 'available' && (
+                      {gameState.activeModifier === 'blood-pact' && gameState.modifierState?.bloodPactStatus === 'available' && gameState.successfulGuessesThisTurn === 0 && (
                         <button
                           onClick={() => {
                             setIsBloodPactToggleActive(!isBloodPactToggleActive);

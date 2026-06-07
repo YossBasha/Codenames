@@ -214,3 +214,39 @@ export const playCardRevealSfx = (type: 'red' | 'blue' | 'green' | 'neutral' | '
     }
   } catch (e) {}
 };
+
+export const playTimerFreezeSfx = () => {
+  try {
+    const { ctx, destination } = getAudioContext();
+    if (currentVolume === 0) return;
+    
+    const now = ctx.currentTime;
+    
+    // Create oscillator for a tech chime/laser sweep
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(600, now);
+    osc1.frequency.exponentialRampToValueAtTime(1200, now + 0.15);
+    
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(300, now);
+    osc2.frequency.exponentialRampToValueAtTime(600, now + 0.15);
+    
+    gainNode.gain.setValueAtTime(0.0, now);
+    gainNode.gain.linearRampToValueAtTime(0.15, now + 0.03);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+    
+    osc1.connect(gainNode);
+    osc2.connect(gainNode);
+    gainNode.connect(destination);
+    
+    osc1.start(now);
+    osc2.start(now);
+    
+    osc1.stop(now + 0.4);
+    osc2.stop(now + 0.4);
+  } catch (e) {}
+};
