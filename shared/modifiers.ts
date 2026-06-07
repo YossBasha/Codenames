@@ -99,3 +99,64 @@ export const MODIFIERS: Modifier[] = [
     icon: 'Flame'
   }
 ];
+
+export function checkRhyme(word1: string, word2: string, isArabic: boolean): boolean {
+  const w1 = word1.toLowerCase().trim();
+  const w2 = word2.toLowerCase().trim();
+  
+  if (w1 === w2) return false;
+  if (w1.length === 0 || w2.length === 0) return false;
+
+  if (isArabic) {
+    const minLen = Math.min(w1.length, w2.length);
+    const matchLen = minLen >= 3 ? 2 : 1;
+    return w1.slice(-matchLen) === w2.slice(-matchLen);
+  }
+
+  const getRhymeSuffix = (word: string) => {
+    const isVowel = (char: string) => /[aeiouy]/.test(char);
+    
+    let endIdx = word.length - 1;
+    if (word.endsWith('e') && word.length > 2) {
+      let hasOtherVowel = false;
+      for (let i = 0; i < word.length - 1; i++) {
+        if (isVowel(word[i])) {
+          hasOtherVowel = true;
+          break;
+        }
+      }
+      if (hasOtherVowel) {
+        endIdx = word.length - 2;
+      }
+    }
+    
+    let lastVowelIdx = -1;
+    for (let i = endIdx; i >= 0; i--) {
+      if (isVowel(word[i])) {
+        lastVowelIdx = i;
+        break;
+      }
+    }
+    
+    if (lastVowelIdx === -1) {
+      return word.slice(-2);
+    }
+    
+    let startOfCluster = lastVowelIdx;
+    while (startOfCluster > 0 && isVowel(word[startOfCluster - 1])) {
+      startOfCluster--;
+    }
+    
+    return word.slice(startOfCluster);
+  };
+
+  const suffix1 = getRhymeSuffix(w1);
+  const suffix2 = getRhymeSuffix(w2);
+
+  if (suffix1 === suffix2) return true;
+
+  const matchLen = Math.min(w1.length, w2.length, 2);
+  if (w1.slice(-matchLen) === w2.slice(-matchLen)) return true;
+
+  return false;
+}

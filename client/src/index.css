@@ -85,6 +85,7 @@ body {
 
 .animate-fade-in {
   animation: fade-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
 }
 
 @keyframes ink-bleed {
@@ -131,14 +132,15 @@ body {
 }
 
 @keyframes reveal-pop {
-  0% { transform: scale(1) translateY(0); box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow); }
-  40% { transform: scale(1.15) translateY(-8px); z-index: 50; box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.5); filter: brightness(1.1); }
-  70% { transform: scale(0.95) translateY(2px); z-index: 50; }
-  100% { transform: scale(1) translateY(0); z-index: 1; box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow); }
+  0% { transform: scale(0.9) translateY(10px); }
+  50% { transform: scale(1.04) translateY(-4px); }
+  75% { transform: scale(0.98) translateY(1px); }
+  100% { transform: scale(1) translateY(0); }
 }
 
 .animate-reveal-pop {
-  animation: reveal-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: reveal-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  will-change: transform;
 }
 
 @keyframes card-flip {
@@ -165,6 +167,18 @@ body {
   0% {
     filter: blur(0px);
     opacity: 1;
+  }
+  50% {
+    filter: blur(1px);
+    opacity: 0.95;
+  }
+  75% {
+    filter: blur(3px);
+    opacity: 0.7;
+  }
+  90% {
+    filter: blur(6px);
+    opacity: 0.3;
   }
   100% {
     filter: blur(10px);

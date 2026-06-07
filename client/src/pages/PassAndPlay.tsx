@@ -554,6 +554,7 @@ export default function PassAndPlay() {
         isSpymaster={isSpymasterVisible}
         clueTargetCount={clueTargets.length}
         clueType={gameState.clueType}
+        isRTL={gameState.language === 'ar'}
       />
 
       <div className="flex-1 flex flex-col items-center p-4 pt-8">

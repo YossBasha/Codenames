@@ -1,4 +1,4 @@
-import { useState, useLayoutEffect, useRef } from "react";
+import { useState, useLayoutEffect, useRef, memo } from "react";
 import type { Card as CardType, Player } from "../../../shared/types";
 import { cn } from "../utils";
 import { playCardHoverSfx, playCardSelectSfx } from "../utils/sfx";
@@ -22,7 +22,7 @@ interface CardProps {
   currentPhase?: 'spymaster' | 'operative';
 }
 
-export default function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, isClueTarget = false, isGivingClue = false, highlightedBy = [], currentPlayerId, onClick, onContextMenu, onGuess, activeModifier, currentPhase }: CardProps) {
+function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, isClueTarget = false, isGivingClue = false, highlightedBy = [], currentPlayerId, onClick, onContextMenu, onGuess, activeModifier, currentPhase }: CardProps) {
   let isRevealedForMe = card.revealed;
   if (gameMode === 'duet' && !card.revealed) {
     if (playerTeam === 'red' && card.revealedByA) {
@@ -257,3 +257,43 @@ export default function Card({ card, isSpymaster, disabled, playerTeam, gameMode
     </div>
   );
 }
+
+function areEqual(prevProps: CardProps, nextProps: CardProps) {
+  if (prevProps.isSpymaster !== nextProps.isSpymaster) return false;
+  if (prevProps.disabled !== nextProps.disabled) return false;
+  if (prevProps.playerTeam !== nextProps.playerTeam) return false;
+  if (prevProps.gameMode !== nextProps.gameMode) return false;
+  if (prevProps.isRTL !== nextProps.isRTL) return false;
+  if (prevProps.isClueTarget !== nextProps.isClueTarget) return false;
+  if (prevProps.isGivingClue !== nextProps.isGivingClue) return false;
+  if (prevProps.currentPlayerId !== nextProps.currentPlayerId) return false;
+  if (prevProps.activeModifier !== nextProps.activeModifier) return false;
+  if (prevProps.currentPhase !== nextProps.currentPhase) return false;
+
+  // Check card fields
+  const c1 = prevProps.card;
+  const c2 = nextProps.card;
+  if (c1.id !== c2.id) return false;
+  if (c1.word !== c2.word) return false;
+  if (c1.type !== c2.type) return false;
+  if (c1.revealed !== c2.revealed) return false;
+  if (c1.revealedByA !== c2.revealedByA) return false;
+  if (c1.revealedByB !== c2.revealedByB) return false;
+  if (c1.duetTypeA !== c2.duetTypeA) return false;
+  if (c1.duetTypeB !== c2.duetTypeB) return false;
+  if (c1.shieldedTurns !== c2.shieldedTurns) return false;
+
+  // Check highlightedBy contents
+  const h1 = prevProps.highlightedBy || [];
+  const h2 = nextProps.highlightedBy || [];
+  if (h1.length !== h2.length) return false;
+  for (let i = 0; i < h1.length; i++) {
+    if (h1[i].id !== h2[i].id || h1[i].team !== h2[i].team || h1[i].name !== h2[i].name) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export default memo(Card, areEqual);

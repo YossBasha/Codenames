@@ -61,6 +61,9 @@ export default function LANGame() {
   const isSensoryDep = gameState?.activeModifier === 'sensory-deprivation';
   useEffect(() => {
     if (isSpymasterTurn && isSensoryDep) {
+      if (showModifierBanner) {
+        return;
+      }
       if (sensoryTimeLeft === null) {
         setSensoryTimeLeft(5);
       } else if (sensoryTimeLeft > 0) {
@@ -70,7 +73,7 @@ export default function LANGame() {
     } else {
       setSensoryTimeLeft(null);
     }
-  }, [isSpymasterTurn, isSensoryDep, sensoryTimeLeft]);
+  }, [isSpymasterTurn, isSensoryDep, sensoryTimeLeft, showModifierBanner]);
 
   // Lag Spike delay countdown timer
   const isOperativeGuessing = gameState?.currentPhase === 'operative';
@@ -424,7 +427,7 @@ export default function LANGame() {
         timeRemaining={gameState.timeRemaining}
         isTimerEnabled={
           gameState.timerSettings?.preset !== 'off' ||
-          ((gameState.activeModifier === 'haste' || gameState.activeModifier === 'critical-hit') && gameState.currentPhase === 'operative')
+          (gameState.activeModifier === 'haste' && gameState.currentPhase === 'operative')
         }
         onSubmitCue={handleSubmitCue}
         showSpymasterToggle={false}
@@ -433,6 +436,7 @@ export default function LANGame() {
         onRestartGame={handleRestartGame}
         clueType={gameState.clueType}
         activeModifier={gameState.activeModifier}
+        isRTL={gameState.isRTL}
       />
 
       {/* Main Content Area */}
@@ -737,7 +741,7 @@ export default function LANGame() {
         const mod = MODIFIERS.find(m => m.id === showModifierBanner);
         if (!mod) return null;
         return (
-          <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[150] flex items-center justify-center p-8 text-center animate-fade-in">
+          <div className="fixed inset-0 bg-slate-950/93 backdrop-blur-none sm:backdrop-blur-sm z-[150] flex items-center justify-center p-8 text-center animate-fade-in">
             <div className="max-w-xl bg-slate-900 border-2 border-red-500/40 rounded-3xl p-8 sm:p-10 shadow-[0_0_60px_rgba(239,68,68,0.3)] animate-reveal-pop flex flex-col items-center">
               <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-red-500/15 border-2 border-red-500/40 flex items-center justify-center text-3xl sm:text-4xl mb-6 animate-pulse">
                 🌀

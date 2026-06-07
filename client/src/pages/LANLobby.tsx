@@ -391,7 +391,7 @@ export default function LANLobby() {
               BLUE TEAM
             </div>
             
-            <div className="flex-1 lg:min-h-0 bg-blue-500/20 border-2 border-blue-400 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(59,130,246,0.3)]">
+            <div className="flex-none lg:flex-1 bg-blue-500/20 border-2 border-blue-400 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(59,130,246,0.3)]">
               <div className="w-full text-center flex-1 flex flex-col lg:min-h-0 mb-3">
                 <h3 className="font-bold mb-1.5 tracking-widest text-xs lg:text-sm">OPERATIVES</h3>
                 <div className="flex flex-col gap-1.5 overflow-y-auto lg:min-h-0 pr-1 scrollbar-thin">
@@ -412,7 +412,7 @@ export default function LANLobby() {
               </button>
             </div>
 
-            <div className="flex-1 lg:min-h-0 bg-blue-400/20 border-2 border-blue-300 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(96,165,250,0.3)]">
+            <div className="flex-none lg:flex-1 bg-blue-400/20 border-2 border-blue-300 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(96,165,250,0.3)]">
               <div className="w-full text-center flex-1 flex flex-col lg:min-h-0 mb-3">
                 <h3 className="font-bold mb-1.5 tracking-widest text-xs lg:text-sm">SPYMASTERS</h3>
                 <div className="flex flex-col gap-1.5 overflow-y-auto lg:min-h-0 pr-1 scrollbar-thin">
@@ -570,7 +570,7 @@ export default function LANLobby() {
               RED TEAM
             </div>
             
-            <div className="flex-1 lg:min-h-0 bg-red-500/20 border-2 border-red-400 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(239,68,68,0.3)]">
+            <div className="flex-none lg:flex-1 bg-red-500/20 border-2 border-red-400 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(239,68,68,0.3)]">
               <div className="w-full text-center flex-1 flex flex-col lg:min-h-0 mb-3">
                 <h3 className="font-bold mb-1.5 tracking-widest text-xs lg:text-sm">OPERATIVES</h3>
                 <div className="flex flex-col gap-1.5 overflow-y-auto lg:min-h-0 pr-1 scrollbar-thin">
@@ -591,7 +591,7 @@ export default function LANLobby() {
               </button>
             </div>
 
-            <div className="flex-1 lg:min-h-0 bg-red-400/20 border-2 border-red-300 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(248,113,113,0.3)]">
+            <div className="flex-none lg:flex-1 bg-red-400/20 border-2 border-red-300 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(248,113,113,0.3)]">
               <div className="w-full text-center flex-1 flex flex-col lg:min-h-0 mb-3">
                 <h3 className="font-bold mb-1.5 tracking-widest text-xs lg:text-sm">SPYMASTERS</h3>
                 <div className="flex flex-col gap-1.5 overflow-y-auto lg:min-h-0 pr-1 scrollbar-thin">
@@ -615,7 +615,7 @@ export default function LANLobby() {
         ) : (
           <div className="flex flex-col gap-2 lg:gap-3 lg:min-h-0 lg:h-full">
             {/* DUET SIDE A */}
-            <div className="flex-1 lg:min-h-0 bg-green-500/20 border-2 border-green-400 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(34,197,94,0.3)] relative overflow-hidden group">
+            <div className="flex-none lg:flex-1 bg-green-500/20 border-2 border-green-400 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(34,197,94,0.3)] relative overflow-hidden group">
               <div className="absolute top-0 w-full h-8 bg-green-600/30 font-black text-center pt-1.5 text-white/80 tracking-widest text-sm z-0">
                 SIDE A
               </div>
@@ -638,7 +638,7 @@ export default function LANLobby() {
             </div>
 
             {/* DUET SIDE B */}
-            <div className="flex-1 lg:min-h-0 bg-teal-500/20 border-2 border-teal-400 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(20,184,166,0.3)] relative overflow-hidden group">
+            <div className="flex-none lg:flex-1 bg-teal-500/20 border-2 border-teal-400 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(20,184,166,0.3)] relative overflow-hidden group">
               <div className="absolute top-0 w-full h-8 bg-teal-600/30 font-black text-center pt-1.5 text-white/80 tracking-widest text-sm z-0">
                 SIDE B
               </div>

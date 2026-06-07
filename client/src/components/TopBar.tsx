@@ -4,7 +4,7 @@ import { ArrowLeft, PenTool } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../utils';
 import DrawingModal from './DrawingModal';
-import { MODIFIERS } from '../../../shared/modifiers';
+import { MODIFIERS, checkRhyme } from '../../../shared/modifiers';
 
 interface TopBarProps {
   redScore: number;
@@ -27,6 +27,7 @@ interface TopBarProps {
   onRestartGame?: () => void;
   clueType?: ClueType;
   activeModifier?: string | null;
+  isRTL?: boolean;
 }
 
 export default function TopBar({
@@ -49,7 +50,8 @@ export default function TopBar({
   amHost = false,
   onRestartGame,
   clueType = 'both',
-  activeModifier
+  activeModifier,
+  isRTL = false
 }: TopBarProps) {
   const navigate = useNavigate();
   const [cueInput, setCueInput] = useState('');
@@ -76,6 +78,13 @@ export default function TopBar({
       return numInput === clueTargetCount;
     }
     return true;
+  };
+
+  const isOracleRiddleValid = () => {
+    if (activeModifier !== 'oracle-riddle') return true;
+    const words = cueInput.trim().split(/\s+/).filter(Boolean);
+    if (words.length !== 2) return false;
+    return checkRhyme(words[0], words[1], !!isRTL);
   };
 
   const handleSubmitCue = (e: React.FormEvent) => {
@@ -206,60 +215,68 @@ export default function TopBar({
           </button>
         )}
         {isActiveSpymaster ? (
-          <form onSubmit={handleSubmitCue} className="flex gap-1 sm:gap-2 bg-slate-800 p-1 sm:p-1.5 rounded-xl">
-            {clueType !== 'text' && (
-              <button
-                type="button"
-                onClick={() => setShowDrawingModal(true)}
-                className="p-1.5 sm:p-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
-                title="Draw a Clue"
-              >
-                <PenTool className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
-            )}
-            {clueType !== 'doodle' && (
-              <input 
-                type="text" 
-                placeholder={activeModifier === 'oracle-riddle' ? "Enter rhyming pair..." : "Enter clue..."}
-                value={cueInput.startsWith('data:image') ? '[Doodle Clue]' : cueInput}
-                readOnly={cueInput.startsWith('data:image')}
-                onChange={(e) => {
-                  let val = e.target.value;
-                  if (activeModifier === 'oracle-riddle') {
-                    const cleanVal = val.replace(/[^a-zA-Z0-9\u0600-\u06FF\s]/g, '');
-                    const words = cleanVal.trim().split(/\s+/).filter(Boolean);
-                    if (words.length > 2) {
-                      return;
+          <div className="flex flex-col items-end gap-1">
+            <form onSubmit={handleSubmitCue} className="flex gap-1 sm:gap-2 bg-slate-800 p-1 sm:p-1.5 rounded-xl">
+              {clueType !== 'text' && (
+                <button
+                  type="button"
+                  onClick={() => setShowDrawingModal(true)}
+                  className="p-1.5 sm:p-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                  title="Draw a Clue"
+                >
+                  <PenTool className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+              )}
+              {clueType !== 'doodle' && (
+                <input 
+                  type="text" 
+                  placeholder={activeModifier === 'oracle-riddle' ? "Enter rhyming pair..." : "Enter clue..."}
+                  value={cueInput.startsWith('data:image') ? '[Doodle Clue]' : cueInput}
+                  readOnly={cueInput.startsWith('data:image')}
+                  onChange={(e) => {
+                    let val = e.target.value;
+                    if (activeModifier === 'oracle-riddle') {
+                      const cleanVal = val.replace(/[^a-zA-Z0-9\u0600-\u06FF\s]/g, '');
+                      const words = cleanVal.trim().split(/\s+/).filter(Boolean);
+                      if (words.length > 2) {
+                        return;
+                      }
+                      setCueInput(cleanVal);
+                    } else {
+                      setCueInput(val.replace(/[^a-zA-Z0-9\u0600-\u06FF\s]/g, ''));
                     }
-                    setCueInput(cleanVal);
-                  } else {
-                    setCueInput(val.replace(/[^a-zA-Z0-9\u0600-\u06FF\s]/g, ''));
-                  }
-                }}
-                className="bg-slate-900 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg outline-none w-24 sm:w-48 text-xs sm:text-sm"
-                maxLength={30}
-              />
+                  }}
+                  className="bg-slate-900 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg outline-none w-24 sm:w-48 text-xs sm:text-sm"
+                  maxLength={30}
+                />
+              )}
+              <select 
+                value={numInput} 
+                onChange={(e) => setNumInput(e.target.value ? Number(e.target.value) : '')}
+                className="bg-slate-900 text-white px-1 py-1.5 sm:px-2 sm:py-2 rounded-lg outline-none text-xs sm:text-sm cursor-pointer"
+              >
+                <option value="" disabled>-</option>
+                {[0,1,2,3,4,5,6,7,8,9].map(n => <option key={n} value={n}>{n}</option>)}
+                <option value={99}>∞</option>
+              </select>
+              <button 
+                type="submit"
+                disabled={
+                  cueInput.trim().length === 0 || 
+                  !isNumberValid() ||
+                  (activeModifier === 'oracle-riddle' && !isOracleRiddleValid())
+                }
+                className="px-2 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-all shadow-lg shadow-emerald-600/20 active:scale-95 text-xs sm:text-sm whitespace-nowrap"
+              >
+                Give Clue
+              </button>
+            </form>
+            {activeModifier === 'oracle-riddle' && cueInput.trim().length > 0 && !isOracleRiddleValid() && (
+              <span className="text-[10px] text-red-400 font-bold tracking-wide animate-pulse mr-2">
+                ⚠️ Must be exactly 2 rhyming words! (e.g. "red bed")
+              </span>
             )}
-            <select 
-              value={numInput} 
-              onChange={(e) => setNumInput(e.target.value ? Number(e.target.value) : '')}
-              className="bg-slate-900 text-white px-1 py-1.5 sm:px-2 sm:py-2 rounded-lg outline-none text-xs sm:text-sm cursor-pointer"
-            >
-              <option value="" disabled>-</option>
-              {[0,1,2,3,4,5,6,7,8,9].map(n => <option key={n} value={n}>{n}</option>)}
-              <option value={99}>∞</option>
-            </select>
-            <button 
-              type="submit"
-              disabled={
-                cueInput.trim().length === 0 || 
-                !isNumberValid()
-              }
-              className="px-2 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-all shadow-lg shadow-emerald-600/20 active:scale-95 text-xs sm:text-sm whitespace-nowrap"
-            >
-              Give Clue
-            </button>
-          </form>
+          </div>
         ) : currentPhase === 'spymaster' ? (
           <div className="px-4 py-2 bg-slate-800 text-slate-400 font-bold rounded-xl text-sm animate-pulse">
             {gameMode === 'classic' 

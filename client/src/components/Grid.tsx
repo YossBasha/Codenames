@@ -25,6 +25,20 @@ interface GridProps {
 export default function Grid({ cards, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, clueTargets = [], isGivingClue = false, highlightedCards = {}, players = [], currentPlayerId, onCardClick, onCardContextMenu, onGuess, activeModifier, currentPhase }: GridProps) {
   if (!cards || cards.length === 0) return null;
 
+  // Pre-calculate highlighting players per card to avoid O(N * M) lookup inside the loop
+  const highlightMap: Record<number, Player[]> = {};
+  for (const [pId, cardIds] of Object.entries(highlightedCards)) {
+    const player = players.find(p => p.id === pId);
+    if (player) {
+      for (const cardId of cardIds) {
+        if (!highlightMap[cardId]) {
+          highlightMap[cardId] = [];
+        }
+        highlightMap[cardId].push(player);
+      }
+    }
+  }
+
   return (
     <div className="grid grid-cols-5 gap-1 sm:gap-2 lg:gap-3 w-full mx-auto px-1 sm:px-4">
       {cards.map((card) => (
@@ -38,10 +52,7 @@ export default function Grid({ cards, isSpymaster, disabled, playerTeam, gameMod
           isRTL={isRTL}
           isClueTarget={clueTargets.includes(card.id)}
           isGivingClue={isGivingClue}
-          highlightedBy={Object.entries(highlightedCards)
-            .filter(([_, cIds]) => cIds.includes(card.id))
-            .map(([pId, _]) => players.find(p => p.id === pId))
-            .filter((p): p is Player => p !== undefined)}
+          highlightedBy={highlightMap[card.id] || []}
           currentPlayerId={currentPlayerId}
           onClick={onCardClick}
           onContextMenu={onCardContextMenu}

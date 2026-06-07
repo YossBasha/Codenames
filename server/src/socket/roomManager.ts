@@ -1,7 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import { GameState, Player, Language, GameMode, TimerSettings, CustomWordWeight } from '../../../shared/types';
 import { generateGrid, generateDuetGrid, shuffleArray } from '../../../shared/gameLogic';
-import { MODIFIERS } from '../../../shared/modifiers';
+import { MODIFIERS, checkRhyme } from '../../../shared/modifiers';
 
 interface Room {
   id: string;
@@ -183,8 +183,7 @@ function startTimer(io: Server, room: Room) {
   if (!room.gameState) return;
   
   const isHaste = room.gameState.activeModifier === 'haste' && room.gameState.currentPhase === 'operative';
-  const isCriticalHit = room.gameState.activeModifier === 'critical-hit' && room.gameState.currentPhase === 'operative';
-  if (room.gameState.timerSettings.preset === 'off' && !isHaste && !isCriticalHit) return;
+  if (room.gameState.timerSettings.preset === 'off' && !isHaste) return;
   
   let duration = 0;
   if (isHaste) {
@@ -195,11 +194,7 @@ function startTimer(io: Server, room: Room) {
       duration += room.gameState.timerSettings.extraFirstClueTime;
     }
   } else {
-    if (isCriticalHit && room.gameState.timerSettings.preset === 'off') {
-      duration = 60;
-    } else {
-      duration = room.gameState.timerSettings.operativeTime;
-    }
+    duration = room.gameState.timerSettings.operativeTime;
   }
   
   room.gameState.timeRemaining = duration;
@@ -338,8 +333,8 @@ function processGuess(io: Server, room: Room, player: Player, cardId: number) {
     } else if (keyType === 'neutral') {
       endTurnDuet();
     } else if (keyType === 'green') {
-      if (room.gameState.activeModifier === 'critical-hit' && room.gameState.successfulGuessesThisTurn === 0) {
-        const duration = room.gameState.timerSettings.preset === 'off' ? 60 : room.gameState.timerSettings.operativeTime;
+      if (room.gameState.activeModifier === 'critical-hit' && room.gameState.successfulGuessesThisTurn === 0 && room.gameState.timerSettings.preset !== 'off') {
+        const duration = room.gameState.timerSettings.operativeTime;
         if (room.gameState.timeRemaining >= duration - 5) {
           if (!room.gameState.modifierState) room.gameState.modifierState = {};
           room.gameState.modifierState.timerFrozen = true;
@@ -400,8 +395,8 @@ function processGuess(io: Server, room: Room, player: Player, cardId: number) {
         } else if (room.gameState.currentTurn === 'blue') {
           endTurn(); 
         } else {
-          if (room.gameState.activeModifier === 'critical-hit' && room.gameState.successfulGuessesThisTurn === 0) {
-            const duration = room.gameState.timerSettings.preset === 'off' ? 60 : room.gameState.timerSettings.operativeTime;
+          if (room.gameState.activeModifier === 'critical-hit' && room.gameState.successfulGuessesThisTurn === 0 && room.gameState.timerSettings.preset !== 'off') {
+            const duration = room.gameState.timerSettings.operativeTime;
             if (room.gameState.timeRemaining >= duration - 5) {
               if (!room.gameState.modifierState) room.gameState.modifierState = {};
               room.gameState.modifierState.timerFrozen = true;
@@ -422,8 +417,8 @@ function processGuess(io: Server, room: Room, player: Player, cardId: number) {
         } else if (room.gameState.currentTurn === 'red') {
           endTurn();
         } else {
-          if (room.gameState.activeModifier === 'critical-hit' && room.gameState.successfulGuessesThisTurn === 0) {
-            const duration = room.gameState.timerSettings.preset === 'off' ? 60 : room.gameState.timerSettings.operativeTime;
+          if (room.gameState.activeModifier === 'critical-hit' && room.gameState.successfulGuessesThisTurn === 0 && room.gameState.timerSettings.preset !== 'off') {
+            const duration = room.gameState.timerSettings.operativeTime;
             if (room.gameState.timeRemaining >= duration - 5) {
               if (!room.gameState.modifierState) room.gameState.modifierState = {};
               room.gameState.modifierState.timerFrozen = true;
@@ -635,8 +630,11 @@ export function setupRoomManager(io: Server) {
             finalCue = cue.replace(/[aeAE]/g, '');
             if (!finalCue) finalCue = '?';
           } else if (room.gameState.activeModifier === 'oracle-riddle') {
-            const words = cue.split(/\s+/).filter(Boolean);
-            finalCue = words.slice(0, 2).join(' ');
+            const words = cue.trim().split(/\s+/).filter(Boolean);
+            if (words.length !== 2 || !checkRhyme(words[0], words[1], !!room.gameState.isRTL)) {
+              return; // Reject invalid clue
+            }
+            finalCue = words.join(' ');
           }
 
           room.gameState.activeCue = finalCue;
