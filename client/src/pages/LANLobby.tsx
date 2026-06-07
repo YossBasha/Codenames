@@ -18,6 +18,7 @@ export default function LANLobby() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isHost = searchParams.get('host') === 'true';
+  const isWan = searchParams.get('wan') === 'true';
 
   const { player, setPlayer, roomId, setRoomId, socket, setSocket, language, setLanguage } = useGameContext();
   
@@ -116,13 +117,18 @@ export default function LANLobby() {
     setIsConnected(false);
     const timeout = setTimeout(() => {
       // Use connectIp (stable, never changes) not serverIp (display only, can update)
-      if (!connectIp || !inputRoom || serverPort === 0) return;
+      if (!isWan && (!connectIp || !inputRoom || serverPort === 0)) return;
+      if (isWan && !inputRoom) return;
 
       if (socket) {
         socket.disconnect();
       }
 
-      const newSocket = io(`http://${connectIp}:${serverPort}`, {
+      const socketUrl = isWan 
+        ? (import.meta.env.VITE_WAN_SERVER_URL || 'http://localhost:3000')
+        : `http://${connectIp}:${serverPort}`;
+
+      const newSocket = io(socketUrl, {
         reconnectionDelayMax: 10000,
         timeout: 10000
       });
@@ -446,7 +452,7 @@ export default function LANLobby() {
           </div>
 
           <div className="text-center font-bold text-lg tracking-widest mt-2 border-b border-white/10 pb-2">
-            LAN MULTIPLAYER & GAME SETTINGS
+            {isWan ? "ONLINE MULTIPLAYER & SETTINGS" : "LAN MULTIPLAYER & GAME SETTINGS"}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -469,15 +475,33 @@ export default function LANLobby() {
                 className="w-full bg-[#1a1a1a] border border-slate-700 rounded-2xl px-3 py-2 outline-none focus:border-slate-500 font-bold"
               />
             </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1 ml-2">Host IP Address</label>
-              <input 
-                type="text" 
-                value={serverIp}
-                readOnly
-                className="w-full bg-[#1a1a1a] border border-slate-700 rounded-2xl px-3 py-2 outline-none font-mono font-bold text-sm opacity-70 cursor-default select-all"
-              />
-            </div>
+            {isWan ? (
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1 ml-2">Invite Link</label>
+                <input 
+                  type="text" 
+                  value={`${window.location.origin}/lan-lobby?wan=true&room=${encodeURIComponent(inputRoom)}`}
+                  readOnly
+                  className="w-full bg-[#1a1a1a] border border-slate-700 rounded-2xl px-3 py-2 outline-none font-mono font-bold text-xs opacity-70 cursor-default select-all text-blue-400 hover:opacity-100 transition-opacity"
+                  onClick={(e) => {
+                    const target = e.target as HTMLInputElement;
+                    target.select();
+                    navigator.clipboard.writeText(target.value);
+                  }}
+                  title="Click to copy invite link"
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1 ml-2">Host IP Address</label>
+                <input 
+                  type="text" 
+                  value={serverIp}
+                  readOnly
+                  className="w-full bg-[#1a1a1a] border border-slate-700 rounded-2xl px-3 py-2 outline-none font-mono font-bold text-sm opacity-70 cursor-default select-all"
+                />
+              </div>
+            )}
             <div>
               <label className="block text-xs font-bold text-slate-400 mb-1 ml-2">Room ID</label>
               <input 
@@ -494,7 +518,7 @@ export default function LANLobby() {
           </div>
 
           {/* Show port for manual joining on laptops */}
-          {isHost && serverPort > 0 && (
+          {isHost && serverPort > 0 && !isWan && (
             <div className="flex items-center gap-2 px-1 mt-1">
               <span className="text-xs text-slate-500 font-bold">PORT:</span>
               <span className="text-xs font-mono text-slate-300 bg-slate-800 px-2 py-0.5 rounded-lg">{serverPort}</span>

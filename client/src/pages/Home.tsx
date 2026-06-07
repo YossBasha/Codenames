@@ -11,6 +11,7 @@ export default function Home() {
   const navigate = useNavigate();
   const { socket, setSocket, theme, setTheme } = useGameContext();
   const [showThemeModal, setShowThemeModal] = useState(false);
+  const [showHostModal, setShowHostModal] = useState(false);
 
   useEffect(() => {
     if (socket) {
@@ -50,14 +51,14 @@ export default function Home() {
           
           <div className="relative flex py-2 items-center">
             <div className="flex-grow border-t border-slate-700"></div>
-            <span className="flex-shrink-0 mx-4 text-slate-500 text-sm font-bold">LAN MULTIPLAYER</span>
+            <span className="flex-shrink-0 mx-4 text-slate-500 text-sm font-bold">MULTIPLAYER</span>
             <div className="flex-grow border-t border-slate-700"></div>
           </div>
 
           <div className="flex gap-4">
             <button
               onMouseEnter={playMenuHoverSfx}
-              onClick={() => { playMenuClickSfx(); navigate('/lan-lobby?host=true'); }}
+              onClick={() => { playMenuClickSfx(); setShowHostModal(true); }}
               className="flex-1 py-4 px-6 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl font-bold text-lg transition-all transform hover:-translate-y-1"
             >
               Host Game
@@ -122,6 +123,39 @@ export default function Home() {
             >
               DONE
             </button>
+          </div>
+        </div>
+      )}
+
+      {showHostModal && (
+        <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[#1a1a1a] rounded-3xl w-full max-w-md p-6 border-2 border-slate-700 shadow-2xl relative">
+            <button 
+              onClick={() => setShowHostModal(false)}
+              className="absolute top-4 right-4 p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition-colors"
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
+
+            <h2 className="text-2xl font-black tracking-widest text-white mb-6">HOST GAME</h2>
+
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => { playMenuClickSfx(); navigate('/lan-lobby?host=true&wan=true'); }}
+                className="w-full text-left p-4 rounded-xl border-2 bg-blue-500/20 border-blue-500 hover:bg-blue-500/30 transition-all flex flex-col gap-1"
+              >
+                <span className="font-black tracking-widest text-white uppercase">Online (Public)</span>
+                <span className="text-sm font-bold text-slate-400">Host on the global internet server</span>
+              </button>
+              
+              <button
+                onClick={() => { playMenuClickSfx(); navigate('/lan-lobby?host=true'); }}
+                className="w-full text-left p-4 rounded-xl border-2 bg-[#222] border-[#333] hover:border-slate-500 transition-all flex flex-col gap-1"
+              >
+                <span className="font-black tracking-widest text-white uppercase">Local Network (LAN)</span>
+                <span className="text-sm font-bold text-slate-400">Host for players on the same Wi-Fi</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

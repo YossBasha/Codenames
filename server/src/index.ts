@@ -2,7 +2,7 @@ import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
-import { setupRoomManager } from './socket/roomManager';
+import { setupRoomManager, getPublicRooms } from './socket/roomManager';
 import { startBroadcasting, stopBroadcasting, startListening, stopListening, getDiscoveredRooms, getLocalIPAddress, getHostingInfo } from './discovery';
 
 const app = express();
@@ -53,6 +53,11 @@ app.post('/api/discovery/stop-listen', (req, res) => {
 
 app.get('/api/discovery/rooms', (req, res) => {
   res.json({ rooms: getDiscoveredRooms() });
+});
+
+// WAN Public Rooms API
+app.get('/api/public-rooms', (req, res) => {
+  res.json({ rooms: getPublicRooms() });
 });
 
 // HTTP-based discovery: joiners probe this endpoint on candidate IPs

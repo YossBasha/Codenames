@@ -12,6 +12,16 @@ interface Room {
 
 const rooms: Record<string, Room> = {};
 
+export function getPublicRooms() {
+  return Object.values(rooms).map(r => ({
+    roomID: r.id,
+    players: r.players.length,
+    hostName: r.players.length > 0 ? r.players[0].name : 'Unknown',
+    gameStarted: !!r.gameState,
+    gameMode: r.gameState?.gameMode || 'classic'
+  }));
+}
+
 function stopTimer(room: Room) {
   if (room.timerInterval) {
     clearInterval(room.timerInterval);
