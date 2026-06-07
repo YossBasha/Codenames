@@ -207,7 +207,7 @@ export default function GameSettingsPanel({
                   </div>
                   
                   <div className="flex bg-[#222] p-1 rounded-lg border border-[#444]">
-                    {(['all', 'en', 'de', 'ar'] as Language[]).map(lang => (
+                    {(['all', 'en', 'ar'] as Language[]).map(lang => (
                       <button
                         key={lang}
                         onClick={() => isHost && setLanguage(lang)}

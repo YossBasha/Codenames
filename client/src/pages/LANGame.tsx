@@ -144,6 +144,12 @@ export default function LANGame() {
     setShowPrankMenu(false);
   };
 
+  useEffect(() => {
+    if (gameState?.currentPhase === "operative") {
+      setClueTargets([]);
+    }
+  }, [gameState?.currentPhase]);
+
   const isGivingClue = gameState && !gameState.winner && 
     gameState.currentPhase === 'spymaster' && 
     (

@@ -31,7 +31,7 @@ export default function TeamColumn({ team, score, operatives, spymasters, gameMo
             ) : (
               allPlayers.map(p => (
                 <div key={p.id} className={cn(
-                  "text-white text-sm lg:text-base font-bold bg-black/40 px-4 py-2 rounded-xl text-center w-full whitespace-nowrap overflow-hidden text-ellipsis border-t border-white/10 shadow-lg transition-opacity",
+                  "text-white text-xs lg:text-base font-bold bg-black/40 px-2 py-1 lg:px-4 lg:py-2 rounded-xl text-center w-full whitespace-nowrap overflow-hidden text-ellipsis border-t border-white/10 shadow-lg transition-opacity",
                   p.connected === false && "opacity-50 grayscale"
                 )}>
                   {p.name} {p.connected === false && "(Offline)"}
