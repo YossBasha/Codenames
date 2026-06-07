@@ -163,7 +163,7 @@ export function setupRoomManager(io: Server) {
       }
     });
 
-    socket.on('join_room', ({ roomId, player }: { roomId: string; player: Player }) => {
+    socket.on('join_room', ({ roomId, player, explicitChange }: { roomId: string; player: Player; explicitChange?: boolean }) => {
       socket.join(roomId);
       
       if (!rooms[roomId]) {
@@ -181,14 +181,13 @@ export function setupRoomManager(io: Server) {
       if (existingPlayerIndex !== -1) {
         // Player reconnecting or switching teams
         const existingPlayer = rooms[roomId].players[existingPlayerIndex];
-        const isDefaultSpectator = player.team === 'spectator' && player.role === 'spectator';
         
         rooms[roomId].players[existingPlayerIndex] = {
           ...existingPlayer,
           id: player.id,
           name: player.name,
-          team: isDefaultSpectator ? existingPlayer.team : player.team,
-          role: isDefaultSpectator ? existingPlayer.role : player.role,
+          team: explicitChange ? player.team : existingPlayer.team,
+          role: explicitChange ? player.role : existingPlayer.role,
           connected: true
         };
       } else {

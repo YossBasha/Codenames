@@ -32,7 +32,7 @@ export async function getLocalServerPort(): Promise<number> {
   }
   
   // Default for normal browser dev environment
-  return 3001; 
+  return 3000; 
 }
 
 export async function getBaseApiUrl(): Promise<string> {

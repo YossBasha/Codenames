@@ -77,7 +77,7 @@ export default function GameSettingsPanel({
         <div className="grid grid-cols-2 gap-4">
           <button 
             onClick={() => isHost && setGameMode('classic')}
-            className={cn("flex items-center justify-center gap-2 rounded-2xl py-6 border-b-4 transition-all", 
+            className={cn("flex items-center justify-center gap-2 rounded-2xl py-3 border-b-4 transition-all", 
               gameMode === 'classic' ? "bg-[#0ea5e9] border-blue-700 cursor-default" : "bg-[#333] border-[#222] opacity-50 hover:opacity-80"
             )}
           >
@@ -88,7 +88,7 @@ export default function GameSettingsPanel({
           </button>
           <button 
             onClick={() => isHost && setGameMode('duet')}
-            className={cn("flex items-center justify-center gap-2 rounded-2xl py-6 border-b-4 transition-all", 
+            className={cn("flex items-center justify-center gap-2 rounded-2xl py-3 border-b-4 transition-all", 
               gameMode === 'duet' ? "bg-green-600 border-green-800 cursor-default" : "bg-[#333] border-[#222] opacity-50 hover:opacity-80"
             )}
           >
@@ -102,12 +102,12 @@ export default function GameSettingsPanel({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
           <button 
             onClick={() => setShowWordPacksModal(true)}
-            className={cn("flex flex-col items-center justify-center gap-2 rounded-2xl p-4 border transition-all h-full min-h-[120px]", 
+            className={cn("flex flex-col items-center justify-center gap-2 rounded-2xl p-3 border transition-all h-full min-h-[90px]", 
               "bg-[#333] border-[#444] hover:border-indigo-500 hover:shadow-[0_0_15px_rgba(99,102,241,0.2)]"
             )}
           >
-            <div className="p-3 rounded-full bg-indigo-500 text-white mb-2">
-              <BookOpen className="w-8 h-8" />
+            <div className="p-2 rounded-full bg-indigo-500 text-white mb-1">
+              <BookOpen className="w-6 h-6" />
             </div>
             <div className="text-center">
               <div className="font-black text-lg tracking-widest text-white mb-1">WORD PACKS</div>
@@ -120,12 +120,12 @@ export default function GameSettingsPanel({
 
           <button 
             onClick={() => setShowTimerModal(true)}
-            className={cn("flex flex-col items-center justify-center gap-2 rounded-2xl p-4 border transition-all h-full min-h-[120px]", 
+            className={cn("flex flex-col items-center justify-center gap-2 rounded-2xl p-3 border transition-all h-full min-h-[90px]", 
               timerSettings.preset !== 'off' ? "bg-[#333] border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.2)]" : "bg-[#333] border-[#444] opacity-80 hover:opacity-100"
             )}
           >
-            <div className={cn("p-3 rounded-full text-white mb-2", timerSettings.preset !== 'off' ? "bg-orange-500" : "bg-slate-600")}>
-              <Clock className="w-8 h-8" />
+            <div className={cn("p-2 rounded-full text-white mb-1", timerSettings.preset !== 'off' ? "bg-orange-500" : "bg-slate-600")}>
+              <Clock className="w-6 h-6" />
             </div>
             <div className="text-center">
               <div className="font-black text-lg tracking-widest text-white mb-1">TIMER</div>
@@ -139,12 +139,12 @@ export default function GameSettingsPanel({
 
           <button 
             onClick={() => setShowClueModal(true)}
-            className={cn("flex flex-col items-center justify-center gap-2 rounded-2xl p-4 border transition-all h-full min-h-[120px]", 
+            className={cn("flex flex-col items-center justify-center gap-2 rounded-2xl p-3 border transition-all h-full min-h-[90px]", 
               clueType !== 'text' ? "bg-[#333] border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.2)]" : "bg-[#333] border-[#444] hover:border-emerald-500"
             )}
           >
-            <div className={cn("p-3 rounded-full text-white mb-2", clueType !== 'text' ? "bg-emerald-500" : "bg-slate-600")}>
-              <PenTool className="w-8 h-8" />
+            <div className={cn("p-2 rounded-full text-white mb-1", clueType !== 'text' ? "bg-emerald-500" : "bg-slate-600")}>
+              <PenTool className="w-6 h-6" />
             </div>
             <div className="text-center">
               <div className="font-black text-lg tracking-widest text-white mb-1">CLUES</div>

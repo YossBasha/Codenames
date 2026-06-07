@@ -238,7 +238,7 @@ export default function LANLobby() {
     };
     
     setPlayer(newPlayer);
-    socket.emit('join_room', { roomId, player: newPlayer });
+    socket.emit('join_room', { roomId, player: newPlayer, explicitChange: true });
     playLobbyClickSfx();
   };
 
@@ -358,7 +358,7 @@ export default function LANLobby() {
           {connectionError}
         </div>
       )}
-      <div className="flex items-center mb-6">
+      <div className="flex items-center mb-2">
         <button onMouseEnter={playMenuHoverSfx} onClick={() => {
           playMenuClickSfx();
           if (isHost) stopHostBroadcast();
@@ -369,7 +369,7 @@ export default function LANLobby() {
       </div>
 
       {/* Main Content Layout */}
-      <div className={cn("flex-1 max-w-[1400px] w-full mx-auto grid gap-4", 
+      <div className={cn("flex-1 max-w-[1400px] w-full mx-auto grid gap-3", 
         gameMode === 'duet' ? "grid-cols-1 lg:grid-cols-[2fr_1fr]" : "grid-cols-1 lg:grid-cols-[1fr_2fr_1fr]"
       )}>
         
@@ -382,8 +382,8 @@ export default function LANLobby() {
             
             <div className="flex-1 bg-blue-500/20 border-2 border-blue-400 rounded-3xl p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(59,130,246,0.3)]">
               <div className="w-full text-center">
-                <h3 className="font-bold mb-4 tracking-widest">OPERATIVES</h3>
-                <div className="flex flex-col gap-2 min-h-[100px]">
+                <h3 className="font-bold mb-2 tracking-widest">OPERATIVES</h3>
+                <div className="flex flex-col gap-2 min-h-[50px]">
                   {blueOperatives.map(p => (
                     <div key={p.id} className="bg-blue-600/50 px-4 py-2 rounded-xl text-center font-bold">
                       {p.name} {p.id === player?.id && '(You)'}
@@ -403,8 +403,8 @@ export default function LANLobby() {
 
             <div className="flex-1 bg-blue-400/20 border-2 border-blue-300 rounded-3xl p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(96,165,250,0.3)]">
               <div className="w-full text-center">
-                <h3 className="font-bold mb-4 tracking-widest">SPYMASTERS</h3>
-                <div className="flex flex-col gap-2 min-h-[100px]">
+                <h3 className="font-bold mb-2 tracking-widest">SPYMASTERS</h3>
+                <div className="flex flex-col gap-2 min-h-[50px]">
                   {blueSpymasters.map(p => (
                     <div key={p.id} className="bg-blue-500/50 px-4 py-2 rounded-xl text-center font-bold">
                       {p.name} {p.id === player?.id && '(You)'}
@@ -425,7 +425,7 @@ export default function LANLobby() {
         )}
 
         {/* MIDDLE COLUMN: SETTINGS & SPECTATORS */}
-        <div className="bg-[#242424] rounded-3xl p-6 lg:p-8 flex flex-col gap-6 shadow-xl relative">
+        <div className="bg-[#242424] rounded-3xl p-4 lg:p-6 flex flex-col gap-4 shadow-xl relative">
           
           {/* SPECTATORS POOL */}
           <div className="flex flex-col gap-2">
@@ -449,7 +449,7 @@ export default function LANLobby() {
             LAN MULTIPLAYER & GAME SETTINGS
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-400 mb-1 ml-2">Display Name</label>
               <input 
@@ -466,7 +466,7 @@ export default function LANLobby() {
                     socket.emit('join_room', { roomId: inputRoom, player: updatedPlayer });
                   }
                 }}
-                className="w-full bg-[#1a1a1a] border border-slate-700 rounded-2xl px-4 py-3 outline-none focus:border-slate-500 font-bold"
+                className="w-full bg-[#1a1a1a] border border-slate-700 rounded-2xl px-3 py-2 outline-none focus:border-slate-500 font-bold"
               />
             </div>
             <div>
@@ -475,7 +475,7 @@ export default function LANLobby() {
                 type="text" 
                 value={serverIp}
                 readOnly
-                className="w-full bg-[#1a1a1a] border border-slate-700 rounded-2xl px-4 py-3 outline-none font-mono font-bold text-sm opacity-70 cursor-default select-all"
+                className="w-full bg-[#1a1a1a] border border-slate-700 rounded-2xl px-3 py-2 outline-none font-mono font-bold text-sm opacity-70 cursor-default select-all"
               />
             </div>
             <div>
@@ -486,7 +486,7 @@ export default function LANLobby() {
                 onChange={(e) => setInputRoom(e.target.value)}
                 disabled={!isHost}
                 className={cn(
-                  "w-full bg-[#1a1a1a] border border-slate-700 rounded-2xl px-4 py-3 outline-none font-mono font-bold text-sm",
+                  "w-full bg-[#1a1a1a] border border-slate-700 rounded-2xl px-3 py-2 outline-none font-mono font-bold text-sm",
                   isHost ? "focus:border-slate-500" : "opacity-50 cursor-not-allowed"
                 )}
               />
@@ -503,7 +503,7 @@ export default function LANLobby() {
           )}
 
           {/* Settings Boxes (Visuals) */}
-          <div className="flex flex-col gap-4 mt-2 flex-1">
+          <div className="flex flex-col gap-3 mt-1 flex-1">
             <GameSettingsPanel
               isHost={isHost}
               gameMode={gameMode}
@@ -541,8 +541,8 @@ export default function LANLobby() {
             
             <div className="flex-1 bg-red-500/20 border-2 border-red-400 rounded-3xl p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(239,68,68,0.3)]">
               <div className="w-full text-center">
-                <h3 className="font-bold mb-4 tracking-widest">OPERATIVES</h3>
-                <div className="flex flex-col gap-2 min-h-[100px]">
+                <h3 className="font-bold mb-2 tracking-widest">OPERATIVES</h3>
+                <div className="flex flex-col gap-2 min-h-[50px]">
                   {redOperatives.map(p => (
                     <div key={p.id} className="bg-red-600/50 px-4 py-2 rounded-xl text-center font-bold">
                       {p.name} {p.id === player?.id && '(You)'}
@@ -562,8 +562,8 @@ export default function LANLobby() {
 
             <div className="flex-1 bg-red-400/20 border-2 border-red-300 rounded-3xl p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(248,113,113,0.3)]">
               <div className="w-full text-center">
-                <h3 className="font-bold mb-4 tracking-widest">SPYMASTERS</h3>
-                <div className="flex flex-col gap-2 min-h-[100px]">
+                <h3 className="font-bold mb-2 tracking-widest">SPYMASTERS</h3>
+                <div className="flex flex-col gap-2 min-h-[50px]">
                   {redSpymasters.map(p => (
                     <div key={p.id} className="bg-red-500/50 px-4 py-2 rounded-xl text-center font-bold">
                       {p.name} {p.id === player?.id && '(You)'}
@@ -584,7 +584,7 @@ export default function LANLobby() {
         ) : (
           <div className="flex flex-col gap-4 h-full">
             {/* DUET SIDE A */}
-            <div className="flex-1 bg-green-500/20 border-2 border-green-400 rounded-3xl p-4 flex flex-col items-center shadow-[0_0_20px_rgba(34,197,94,0.3)] min-h-[250px] relative overflow-hidden group">
+            <div className="flex-1 bg-green-500/20 border-2 border-green-400 rounded-3xl p-4 flex flex-col items-center shadow-[0_0_20px_rgba(34,197,94,0.3)] min-h-[150px] relative overflow-hidden group">
               <div className="absolute top-0 w-full h-10 bg-green-600/30 font-black text-center pt-2 text-white/80 tracking-widest text-sm z-0">
                 SIDE A
               </div>
@@ -600,14 +600,14 @@ export default function LANLobby() {
               <button 
                 onMouseEnter={playLobbyHoverSfx}
                 onClick={() => handleJoinTeam('red', 'spymaster')}
-                className="mt-auto w-full py-3 bg-[#e67e22] hover:bg-[#d35400] border-b-4 border-[#a04000] rounded-2xl font-black text-white shadow-lg transition-all hover:translate-y-[2px] hover:border-b-2 active:border-b-0 active:translate-y-1 tracking-widest z-10"
+                className="mt-auto w-full py-2 bg-[#e67e22] hover:bg-[#d35400] border-b-4 border-[#a04000] rounded-2xl font-black text-white shadow-lg transition-all hover:translate-y-[2px] hover:border-b-2 active:border-b-0 active:translate-y-1 tracking-widest z-10"
               >
                 JOIN TEAM
               </button>
             </div>
 
             {/* DUET SIDE B */}
-            <div className="flex-1 bg-teal-500/20 border-2 border-teal-400 rounded-3xl p-4 flex flex-col items-center shadow-[0_0_20px_rgba(20,184,166,0.3)] min-h-[250px] relative overflow-hidden group">
+            <div className="flex-1 bg-teal-500/20 border-2 border-teal-400 rounded-3xl p-4 flex flex-col items-center shadow-[0_0_20px_rgba(20,184,166,0.3)] min-h-[150px] relative overflow-hidden group">
               <div className="absolute top-0 w-full h-10 bg-teal-600/30 font-black text-center pt-2 text-white/80 tracking-widest text-sm z-0">
                 SIDE B
               </div>
@@ -623,7 +623,7 @@ export default function LANLobby() {
               <button 
                 onMouseEnter={playLobbyHoverSfx}
                 onClick={() => handleJoinTeam('blue', 'spymaster')}
-                className="mt-auto w-full py-3 bg-[#e67e22] hover:bg-[#d35400] border-b-4 border-[#a04000] rounded-2xl font-black text-white shadow-lg transition-all hover:translate-y-[2px] hover:border-b-2 active:border-b-0 active:translate-y-1 tracking-widest z-10"
+                className="mt-auto w-full py-2 bg-[#e67e22] hover:bg-[#d35400] border-b-4 border-[#a04000] rounded-2xl font-black text-white shadow-lg transition-all hover:translate-y-[2px] hover:border-b-2 active:border-b-0 active:translate-y-1 tracking-widest z-10"
               >
                 JOIN TEAM
               </button>
@@ -634,17 +634,17 @@ export default function LANLobby() {
       </div>
 
       {/* BOTTOM START BUTTON */}
-      <div className="w-full max-w-[1400px] mx-auto mt-6">
+      <div className="w-full max-w-[1400px] mx-auto mt-4">
         {isHost ? (
           <button 
             onMouseEnter={playLobbyHoverSfx}
             onClick={handleStartGame}
-            className="w-full py-4 bg-[#22c55e] hover:bg-[#16a34a] rounded-full font-black text-2xl tracking-widest text-white shadow-[0_10px_0_#15803d] hover:translate-y-1 hover:shadow-[0_5px_0_#15803d] transition-all"
+            className="w-full py-3 bg-[#22c55e] hover:bg-[#16a34a] rounded-full font-black text-xl tracking-widest text-white shadow-[0_10px_0_#15803d] hover:translate-y-1 hover:shadow-[0_5px_0_#15803d] transition-all"
           >
             START GAME
           </button>
         ) : (
-          <div className="w-full py-4 bg-slate-800 rounded-full font-black text-2xl tracking-widest text-slate-400 text-center shadow-inner cursor-not-allowed">
+          <div className="w-full py-3 bg-slate-800 rounded-full font-black text-xl tracking-widest text-slate-400 text-center shadow-inner cursor-not-allowed">
             WAITING FOR HOST TO START...
           </div>
         )}
