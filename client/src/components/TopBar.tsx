@@ -1,10 +1,8 @@
-import { useState, useEffect } from 'react';
 import type { Team, ClueType } from '../../../shared/types';
-import { ArrowLeft, PenTool } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../utils';
-import DrawingModal from './DrawingModal';
-import { MODIFIERS, checkRhyme } from '../../../shared/modifiers';
+import { MODIFIERS } from '../../../shared/modifiers';
 
 interface TopBarProps {
   redScore: number;
@@ -42,72 +40,14 @@ export default function TopBar({
   remainingGreens,
   timeRemaining = 0,
   isTimerEnabled = false,
-  onSubmitCue,
   showSpymasterToggle,
   onToggleSpymaster,
   isSpymaster,
-  clueTargetCount = 0,
   amHost = false,
   onRestartGame,
-  clueType = 'both',
-  activeModifier,
-  isRTL = false
+  activeModifier
 }: TopBarProps) {
   const navigate = useNavigate();
-  const [cueInput, setCueInput] = useState('');
-  const [numInput, setNumInput] = useState<number | ''>('');
-  const [showDrawingModal, setShowDrawingModal] = useState(false);
-
-  useEffect(() => {
-    if (clueTargetCount > 0) {
-      if (activeModifier === 'off-by-one') {
-        setNumInput(clueTargetCount + 1);
-      } else {
-        setNumInput(clueTargetCount);
-      }
-    }
-  }, [clueTargetCount, activeModifier]);
-
-  const isNumberValid = () => {
-    if (numInput === '') return false;
-    if (numInput === 99) return clueTargetCount === 0;
-    if (clueTargetCount > 0) {
-      if (activeModifier === 'off-by-one') {
-        return numInput === clueTargetCount - 1 || numInput === clueTargetCount + 1;
-      }
-      return numInput === clueTargetCount;
-    }
-    return true;
-  };
-
-  const isOracleRiddleValid = () => {
-    if (activeModifier !== 'oracle-riddle') return true;
-    const words = cueInput.trim().split(/\s+/).filter(Boolean);
-    if (words.length !== 2) return false;
-    return checkRhyme(words[0], words[1], !!isRTL);
-  };
-
-  const handleSubmitCue = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (cueInput.trim().length > 0 && numInput !== '' && onSubmitCue) {
-      onSubmitCue(cueInput, Number(numInput));
-      setCueInput('');
-      setNumInput('');
-    }
-  };
-
-  const handleDrawingSubmit = (dataUrl: string) => {
-    if (numInput !== '' && onSubmitCue) {
-      onSubmitCue(dataUrl, Number(numInput));
-      setCueInput('');
-      setNumInput('');
-      setShowDrawingModal(false);
-    } else {
-      // Just set it to the input so they can submit later
-      setCueInput(dataUrl);
-      setShowDrawingModal(false);
-    }
-  };
 
   const isActiveSpymaster = currentPhase === 'spymaster' && (
     (gameMode === 'classic' && playerTeam === currentTurn && playerRole === 'spymaster') ||
@@ -115,37 +55,38 @@ export default function TopBar({
   );
 
   return (
-    <>
-    <div className="w-full flex flex-col sm:flex-row items-center justify-between p-4 bg-slate-900/50 backdrop-blur-md shadow-md gap-4">
-      <div className="flex items-center gap-4">
+    <div className="w-full shrink-0 flex flex-row items-center justify-between py-1 px-2.5 sm:py-1.5 sm:px-4 bg-slate-900/50 backdrop-blur-md shadow-md gap-2 sm:gap-4">
+      <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
         <button 
           onClick={() => navigate('/')}
-          className="p-2 rounded-full hover:bg-white/10 transition-colors"
+          className="p-1 sm:p-1.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
         >
-          <ArrowLeft className="w-6 h-6 text-white" />
+          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
         </button>
         {gameMode === 'classic' ? (
-          <div className="flex items-center gap-4 bg-slate-800/80 rounded-xl p-2 font-black text-lg shadow-inner ring-1 ring-white/5">
-            <div className={`px-4 py-1 rounded-md transition-all duration-300 ${currentTurn === 'red' ? 'bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/40 scale-110 ring-1 ring-red-400/50' : 'text-red-500 hover:bg-red-500/10'}`}>
+          <div className="flex items-center gap-2 sm:gap-4 bg-slate-800/80 rounded-xl p-1 sm:p-1.5 font-black text-xs sm:text-sm shadow-inner ring-1 ring-white/5">
+            <div className={`px-2 py-0.5 sm:px-3 sm:py-1 rounded-md transition-all duration-300 ${currentTurn === 'red' ? 'bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/40 scale-105 sm:scale-110 ring-1 ring-red-400/50' : 'text-red-500 hover:bg-red-500/10'}`}>
               {redScore}
             </div>
             <span className="text-slate-500 font-medium">-</span>
-            <div className={`px-4 py-1 rounded-md transition-all duration-300 ${currentTurn === 'blue' ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/40 scale-110 ring-1 ring-blue-400/50' : 'text-blue-500 hover:bg-blue-500/10'}`}>
+            <div className={`px-2 py-0.5 sm:px-3 sm:py-1 rounded-md transition-all duration-300 ${currentTurn === 'blue' ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/40 scale-105 sm:scale-110 ring-1 ring-blue-400/50' : 'text-blue-500 hover:bg-blue-500/10'}`}>
               {blueScore}
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-2 bg-slate-800 rounded-lg p-2 font-bold text-lg text-lime-400">
-            <div className="w-4 h-4 rounded-full bg-lime-500 shadow-[0_0_10px_#84cc16]"></div>
-            {remainingGreens !== undefined ? `${remainingGreens} GREEN` : `TOKENS: ${timerTokens}`}
+          <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-800 rounded-lg p-1 sm:p-1.5 font-bold text-xs sm:text-sm text-lime-400">
+            <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-lime-500 shadow-[0_0_10px_#84cc16]"></div>
+            <span className="whitespace-nowrap">
+              {remainingGreens !== undefined ? `${remainingGreens} GREEN` : `TOKENS: ${timerTokens}`}
+            </span>
           </div>
         )}
       </div>
 
-      <div className="flex flex-col items-center gap-1">
-        <div className="flex items-center gap-3">
+      <div className="flex-1 min-w-0 flex flex-col items-center gap-0.5 text-center px-1">
+        <div className="flex items-center gap-1 sm:gap-2">
           {isTimerEnabled && (
-            <div className="text-3xl font-black text-orange-500 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]">
+            <div className="text-sm sm:text-xl lg:text-2xl font-black text-orange-500 drop-shadow-[0_0_8px_rgba(249,115,22,0.5)]">
               {timeRemaining}s
             </div>
           )}
@@ -155,9 +96,9 @@ export default function TopBar({
             if (!mod) return null;
             return (
               <div className="relative group cursor-pointer z-50">
-                <div className="flex items-center gap-1.5 bg-red-500/20 border border-red-500/40 hover:bg-red-500/30 transition-all rounded-full px-3 py-1 shadow-[0_0_10px_rgba(239,68,68,0.2)]">
-                  <span className="text-xs">🌀</span>
-                  <span className="text-[10px] font-black tracking-widest text-red-400 uppercase">{mod.name}</span>
+                <div className="flex items-center gap-1 bg-red-500/20 border border-red-500/40 hover:bg-red-500/30 transition-all rounded-full px-2 py-0.5 shadow-[0_0_10px_rgba(239,68,68,0.2)]">
+                  <span className="text-[9px] sm:text-xs">🌀</span>
+                  <span className="text-[7px] sm:text-[9px] font-black tracking-widest text-red-400 uppercase">{mod.name}</span>
                 </div>
                 
                 <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-slate-950/95 border border-red-500/30 rounded-2xl p-4 shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50">
@@ -174,12 +115,12 @@ export default function TopBar({
             );
           })()}
         </div>
-        <div className="text-xl sm:text-2xl font-black tracking-tight">
+        <div className="text-xs xs:text-sm sm:text-base lg:text-lg font-black tracking-tight truncate max-w-full">
           {gameMode === 'classic' ? (
             <>
               <span className={cn(
                 "transition-colors duration-300",
-                currentTurn === 'red' ? 'text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-rose-600 drop-shadow-[0_0_12px_rgba(239,68,68,0.4)]' : 'text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-600 drop-shadow-[0_0_12px_rgba(59,130,246,0.4)]'
+                currentTurn === 'red' ? 'text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-rose-600' : 'text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-600'
               )}>
                 {currentTurn === 'red' ? 'RED' : 'BLUE'}
               </span> TURN
@@ -187,108 +128,44 @@ export default function TopBar({
           ) : (
             <>
               <span className={currentTurn === 'red' ? 'text-lime-400' : 'text-green-400'}>
-                {currentTurn === 'red' ? 'SIDE A (Gives Clue)' : 'SIDE B (Gives Clue)'}
+                {currentTurn === 'red' ? 'SIDE A' : 'SIDE B'}
               </span>
+              <span className="hidden sm:inline"> (Gives Clue)</span>
             </>
           )}
         </div>
         {gameMode !== 'duet' && (
-          currentPhase === 'spymaster' ? (
-            <div className="text-sm font-bold text-slate-400 mt-1 uppercase tracking-widest">
-              Spymaster Phase
-            </div>
-          ) : (
-            <div className="text-sm font-bold text-slate-400 mt-1 uppercase tracking-widest">
-              Operative Phase
-            </div>
-          )
+          <div className="text-[8px] sm:text-[10px] font-bold text-slate-400 mt-0 uppercase tracking-widest whitespace-nowrap">
+            {currentPhase === 'spymaster' ? 'Spymaster' : 'Operative'}
+          </div>
         )}
       </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 w-full sm:w-auto">
+      <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-3 shrink-0">
         {amHost && (
           <button
             onClick={onRestartGame}
-            className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold bg-amber-600 hover:bg-amber-500 text-white transition-all shadow-lg shadow-amber-600/20 whitespace-nowrap text-xs sm:text-base"
+            className="px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg font-bold bg-amber-600 hover:bg-amber-500 text-white transition-all shadow-lg shadow-amber-600/20 whitespace-nowrap text-[10px] sm:text-xs cursor-pointer"
           >
             New Game
           </button>
         )}
         {isActiveSpymaster ? (
-          <div className="flex flex-col items-end gap-1">
-            <form onSubmit={handleSubmitCue} className="flex gap-1 sm:gap-2 bg-slate-800 p-1 sm:p-1.5 rounded-xl">
-              {clueType !== 'text' && (
-                <button
-                  type="button"
-                  onClick={() => setShowDrawingModal(true)}
-                  className="p-1.5 sm:p-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
-                  title="Draw a Clue"
-                >
-                  <PenTool className="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
-              )}
-              {clueType !== 'doodle' && (
-                <input 
-                  type="text" 
-                  placeholder={activeModifier === 'oracle-riddle' ? "Enter rhyming pair..." : "Enter clue..."}
-                  value={cueInput.startsWith('data:image') ? '[Doodle Clue]' : cueInput}
-                  readOnly={cueInput.startsWith('data:image')}
-                  onChange={(e) => {
-                    let val = e.target.value;
-                    if (activeModifier === 'oracle-riddle') {
-                      const cleanVal = val.replace(/[^a-zA-Z0-9\u0600-\u06FF\s]/g, '');
-                      const words = cleanVal.trim().split(/\s+/).filter(Boolean);
-                      if (words.length > 2) {
-                        return;
-                      }
-                      setCueInput(cleanVal);
-                    } else {
-                      setCueInput(val.replace(/[^a-zA-Z0-9\u0600-\u06FF\s]/g, ''));
-                    }
-                  }}
-                  className="bg-slate-900 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg outline-none w-24 sm:w-48 text-xs sm:text-sm"
-                  maxLength={30}
-                />
-              )}
-              <select 
-                value={numInput} 
-                onChange={(e) => setNumInput(e.target.value ? Number(e.target.value) : '')}
-                className="bg-slate-900 text-white px-1 py-1.5 sm:px-2 sm:py-2 rounded-lg outline-none text-xs sm:text-sm cursor-pointer"
-              >
-                <option value="" disabled>-</option>
-                {[0,1,2,3,4,5,6,7,8,9].map(n => <option key={n} value={n}>{n}</option>)}
-                <option value={99}>∞</option>
-              </select>
-              <button 
-                type="submit"
-                disabled={
-                  cueInput.trim().length === 0 || 
-                  !isNumberValid() ||
-                  (activeModifier === 'oracle-riddle' && !isOracleRiddleValid())
-                }
-                className="px-2 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-all shadow-lg shadow-emerald-600/20 active:scale-95 text-xs sm:text-sm whitespace-nowrap"
-              >
-                Give Clue
-              </button>
-            </form>
-            {activeModifier === 'oracle-riddle' && cueInput.trim().length > 0 && !isOracleRiddleValid() && (
-              <span className="text-[10px] text-red-400 font-bold tracking-wide animate-pulse mr-2">
-                ⚠️ Must be exactly 2 rhyming words! (e.g. "red bed")
-              </span>
-            )}
+          <div className="px-2.5 py-1 sm:px-3 sm:py-1.5 bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 font-bold rounded-lg text-[9px] sm:text-xs whitespace-nowrap animate-pulse">
+            Giving Clue...
           </div>
         ) : currentPhase === 'spymaster' ? (
-          <div className="px-4 py-2 bg-slate-800 text-slate-400 font-bold rounded-xl text-sm animate-pulse">
+          <div className="px-2.5 py-1 sm:px-3 sm:py-1.5 bg-slate-800 text-slate-400 font-bold rounded-lg text-[9px] sm:text-xs animate-pulse whitespace-nowrap">
             {gameMode === 'classic' 
               ? 'Waiting for Spymaster...' 
               : `Waiting for Side ${currentTurn === 'red' ? 'A' : 'B'}...`}
           </div>
         ) : (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {showSpymasterToggle && (
               <button
                 onClick={onToggleSpymaster}
-                className={`px-4 py-2 rounded-lg font-bold transition-all ${
+                className={`px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg font-bold transition-all text-[10px] sm:text-xs cursor-pointer ${
                   isSpymaster 
                     ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-500/50' 
                     : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600'
@@ -301,9 +178,5 @@ export default function TopBar({
         )}
       </div>
     </div>
-    {showDrawingModal && (
-      <DrawingModal onClose={() => setShowDrawingModal(false)} onSubmit={handleDrawingSubmit} />
-    )}
-    </>
   );
 }

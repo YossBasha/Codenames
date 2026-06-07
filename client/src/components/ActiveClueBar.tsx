@@ -26,7 +26,7 @@ export default function ActiveClueBar({
 
   return (
     <>
-      <div className="w-full max-w-3xl mx-auto mt-4 sm:mt-6 lg:mt-2 flex items-center justify-center gap-3 sm:gap-4 px-2 sm:px-4 animate-fade-in">
+      <div className="w-full shrink-0 max-w-3xl mx-auto mt-4 sm:mt-6 lg:mt-2 flex items-center justify-center gap-3 sm:gap-4 px-2 sm:px-4 animate-fade-in">
         <div className="flex-1 bg-gradient-to-r from-slate-100 to-white rounded-full py-2 sm:py-3 px-4 sm:px-6 flex items-center justify-between shadow-xl ring-1 ring-slate-200">
           {activeCue.startsWith('data:image') ? (
             <img 

@@ -1,8 +1,29 @@
 import { useState } from 'react';
-import { BookOpen, Clock, X, Globe, Check, Keyboard, Upload, Volume2, VolumeX, PenTool } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { 
+  BookOpen, Clock, X, Globe, Check, Keyboard, Upload, Volume2, VolumeX, PenTool,
+  Binary, FileText, HelpCircle, EyeOff, Shuffle, Ghost, Wind, Zap, HeartHandshake, Dices, Shield, WifiOff, Flame
+} from 'lucide-react';
 import { cn } from '../utils';
 import type { Language, CustomWordWeight, TimerSettings, ClueType } from '../../../shared/types';
 import { useGameContext } from '../context/GameContext';
+import { MODIFIERS } from '../../../shared/modifiers';
+
+const MODIFIER_ICONS: Record<string, React.ComponentType<any>> = {
+  'Binary': Binary,
+  'FileText': FileText,
+  'HelpCircle': HelpCircle,
+  'EyeOff': EyeOff,
+  'Shuffle': Shuffle,
+  'Ghost': Ghost,
+  'Wind': Wind,
+  'Zap': Zap,
+  'HeartHandshake': HeartHandshake,
+  'Dices': Dices,
+  'Shield': Shield,
+  'WifiOff': WifiOff,
+  'Flame': Flame
+};
 
 interface GameSettingsPanelProps {
   isHost: boolean;
@@ -23,6 +44,8 @@ interface GameSettingsPanelProps {
   setClueType: (clueType: ClueType) => void;
   chaosMode: boolean;
   setChaosMode: (val: boolean) => void;
+  enabledModifiers?: string[];
+  setEnabledModifiers?: (modifiers: string[]) => void;
 }
 
 export default function GameSettingsPanel({
@@ -43,11 +66,14 @@ export default function GameSettingsPanel({
   clueType,
   setClueType,
   chaosMode,
-  setChaosMode
+  setChaosMode,
+  enabledModifiers = [],
+  setEnabledModifiers
 }: GameSettingsPanelProps) {
   const [showTimerModal, setShowTimerModal] = useState(false);
   const [showWordPacksModal, setShowWordPacksModal] = useState(false);
   const [showClueModal, setShowClueModal] = useState(false);
+  const [showChaosModal, setShowChaosModal] = useState(false);
   const [customWordsTab, setCustomWordsTab] = useState<'type'|'upload'>('type');
   
   const { volume, setVolume } = useGameContext();
@@ -179,32 +205,46 @@ export default function GameSettingsPanel({
 
         {/* Chaos Mode Toggle */}
         <div className={cn(
-          "bg-[#2a2a2a] rounded-2xl p-2.5 border transition-all mt-1.5 flex items-center justify-between",
+          "bg-[#2a2a2a] rounded-2xl p-2.5 border transition-all mt-1.5 flex flex-col gap-2.5",
           chaosMode ? "border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.15)] bg-red-950/10" : "border-[#444]"
         )}>
-          <div className="flex items-center gap-3">
-            <div className={cn("p-1.5 rounded-full text-white", chaosMode ? "bg-red-500" : "bg-slate-600")}>
-              <span className="text-xs font-bold">🌀</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={cn("p-1.5 rounded-full text-white", chaosMode ? "bg-red-500" : "bg-slate-600")}>
+                <span className="text-xs font-bold">🌀</span>
+              </div>
+              <div className="text-left">
+                <span className="block text-xs font-black tracking-widest text-white uppercase leading-none">Chaos Mode</span>
+                <span className="block text-[9px] font-bold text-slate-400 mt-1 leading-tight">Random global modifier applied each turn</span>
+              </div>
             </div>
-            <div className="text-left">
-              <span className="block text-xs font-black tracking-widest text-white uppercase leading-none">Chaos Mode</span>
-              <span className="block text-[9px] font-bold text-slate-400 mt-1 leading-tight">Random global modifier applied each turn</span>
-            </div>
+            <label className={cn("relative inline-flex items-center group", isHost ? "cursor-pointer" : "opacity-50 cursor-not-allowed")}>
+              <input 
+                type="checkbox" 
+                checked={chaosMode} 
+                disabled={!isHost}
+                onChange={(e) => setChaosMode(e.target.checked)} 
+                className="sr-only peer" 
+              />
+              <div className="w-11 h-6 bg-slate-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-red-300 dark:peer-focus:ring-red-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
+            </label>
           </div>
-          <label className={cn("relative inline-flex items-center group", isHost ? "cursor-pointer" : "opacity-50 cursor-not-allowed")}>
-            <input 
-              type="checkbox" 
-              checked={chaosMode} 
-              disabled={!isHost}
-              onChange={(e) => setChaosMode(e.target.checked)} 
-              className="sr-only peer" 
-            />
-            <div className="w-11 h-6 bg-slate-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-red-300 dark:peer-focus:ring-red-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
-          </label>
+
+          {chaosMode && (
+            <button
+              onClick={() => setShowChaosModal(true)}
+              className="w-full py-1.5 bg-red-950/40 hover:bg-red-900/30 border border-red-500/30 rounded-xl font-bold tracking-wider text-[10px] text-red-400 hover:text-red-300 transition-colors flex items-center justify-center gap-1.5"
+            >
+              <span>CONFIGURE EVENTS</span>
+              <span className="px-1.5 py-0.5 bg-red-500/20 text-red-300 text-[8px] font-black rounded-md leading-none">
+                {enabledModifiers.length} / {MODIFIERS.length}
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
-      {showWordPacksModal && (
+      {showWordPacksModal && createPortal(
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200 overflow-y-auto">
           <div className="bg-[#1a1a1a] rounded-3xl w-full max-w-xl p-6 border-2 border-slate-700 shadow-2xl relative my-8">
             <button 
@@ -369,10 +409,11 @@ export default function GameSettingsPanel({
               DONE
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {showTimerModal && (
+      {showTimerModal && createPortal(
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-[#1a1a1a] rounded-3xl w-full max-w-md p-6 border-2 border-slate-700 shadow-2xl relative">
             <button 
@@ -469,9 +510,10 @@ export default function GameSettingsPanel({
               DONE
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-    {showClueModal && (
+      {showClueModal && createPortal(
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-[#1a1a1a] rounded-3xl w-full max-w-md p-6 border-2 border-slate-700 shadow-2xl relative">
             <button 
@@ -525,7 +567,145 @@ export default function GameSettingsPanel({
               DONE
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
+      )}
+
+      {showChaosModal && createPortal(
+        <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[#1a1a1a] rounded-3xl w-full max-w-2xl p-6 border-2 border-red-500/50 shadow-2xl relative flex flex-col max-h-[85vh]">
+            <button 
+              onClick={() => setShowChaosModal(false)}
+              className="absolute top-4 right-4 p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition-colors z-10"
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
+
+            <div className="flex items-center gap-4 mb-4">
+              <div className="bg-red-500 p-3 rounded-full text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]">
+                <span className="text-xl font-bold leading-none">🌀</span>
+              </div>
+              <div>
+                <h2 className="text-2xl font-black tracking-widest text-white">CHAOS EVENTS</h2>
+                <p className="text-xs font-bold text-slate-400">Configure which event modifiers can occur</p>
+              </div>
+            </div>
+
+            {/* Quick Actions (Select/Deselect All) */}
+            {isHost && (
+              <div className="flex gap-3 mb-4 shrink-0">
+                <button
+                  onClick={() => setEnabledModifiers?.(MODIFIERS.map(m => m.id))}
+                  className="px-4 py-1.5 bg-[#333] hover:bg-[#444] border border-[#555] rounded-xl text-xs font-black tracking-wider text-slate-200 transition-all"
+                >
+                  SELECT ALL
+                </button>
+                <button
+                  onClick={() => setEnabledModifiers?.([])}
+                  className="px-4 py-1.5 bg-[#333] hover:bg-[#444] border border-[#555] rounded-xl text-xs font-black tracking-wider text-slate-200 transition-all"
+                >
+                  DESELECT ALL
+                </button>
+              </div>
+            )}
+
+            {/* Modifiers List grouped by category */}
+            <div className="flex-1 overflow-y-auto pr-1 space-y-5 scrollbar-thin bg-[#1a1a1a] [transform:translateZ(0)] will-change-transform">
+              {(['spymaster', 'board', 'guesser'] as const).map(category => {
+                const categoryModifiers = MODIFIERS.filter(m => m.category === category);
+                const categoryTitle = category === 'spymaster' 
+                  ? 'SPYMASTER MODIFIERS' 
+                  : category === 'board' 
+                    ? 'BOARD MODIFIERS' 
+                    : 'GUESSER MODIFIERS';
+                const categoryColor = category === 'spymaster' 
+                  ? 'border-indigo-500/30 text-indigo-400 bg-indigo-500/5' 
+                  : category === 'board' 
+                    ? 'border-amber-500/30 text-amber-400 bg-amber-500/5' 
+                    : 'border-rose-500/30 text-rose-400 bg-rose-500/5';
+                
+                const iconBgColor = category === 'spymaster' 
+                  ? 'bg-indigo-500/20 text-indigo-400' 
+                  : category === 'board' 
+                    ? 'bg-amber-500/20 text-amber-400' 
+                    : 'bg-rose-500/20 text-rose-400';
+
+                return (
+                  <div key={category} className="space-y-2.5">
+                    <div className={cn("px-3 py-1.5 border rounded-xl font-black text-[10px] tracking-widest leading-none w-max uppercase", categoryColor)}>
+                      {categoryTitle}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                      {categoryModifiers.map(mod => {
+                        const isEnabled = enabledModifiers.includes(mod.id);
+                        const IconComponent = MODIFIER_ICONS[mod.icon] || HelpCircle;
+
+                        const handleRowToggle = () => {
+                          if (!isHost || !setEnabledModifiers) return;
+                          if (isEnabled) {
+                            setEnabledModifiers(enabledModifiers.filter(id => id !== mod.id));
+                          } else {
+                            setEnabledModifiers([...enabledModifiers, mod.id]);
+                          }
+                        };
+
+                        return (
+                          <div 
+                            key={mod.id}
+                            onClick={handleRowToggle}
+                            className={cn(
+                              "flex items-start gap-3 p-3 rounded-2xl border-2 text-left select-none relative group",
+                              isHost ? "cursor-pointer" : "cursor-default opacity-85",
+                              isEnabled 
+                                ? (category === 'spymaster' 
+                                  ? "bg-[#16162d] border-indigo-600" 
+                                  : category === 'board' 
+                                    ? "bg-[#271b0c] border-amber-600" 
+                                    : "bg-[#271015] border-rose-600")
+                                : "bg-[#222222] border-[#333333] hover:border-slate-600"
+                            )}
+                          >
+                            <div className={cn("p-2 rounded-xl flex-shrink-0 transition-colors", isEnabled ? iconBgColor : "bg-slate-800 text-slate-400")}>
+                              <IconComponent className="w-5 h-5" />
+                            </div>
+                            <div className="flex-1 min-w-0 pr-6">
+                              <div className="font-black tracking-wider text-xs text-white mb-0.5">{mod.name}</div>
+                              <div className="text-[10px] font-bold text-slate-400 leading-normal">{mod.description}</div>
+                            </div>
+                            
+                            {/* Checkbox display */}
+                            <div className="absolute right-3 top-3">
+                              <div className={cn(
+                                "w-4.5 h-4.5 rounded flex items-center justify-center border transition-colors",
+                                isEnabled 
+                                  ? (category === 'spymaster' 
+                                    ? "bg-indigo-500 border-indigo-500 text-white" 
+                                    : category === 'board' 
+                                      ? "bg-amber-500 border-amber-500 text-white" 
+                                      : "bg-rose-500 border-rose-500 text-white")
+                                  : "border-slate-600 text-transparent"
+                              )}>
+                                {isEnabled && <Check className="w-3 h-3 stroke-[3]" />}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <button 
+              onClick={() => setShowChaosModal(false)}
+              className="mt-6 w-full py-3 bg-red-500 hover:bg-red-400 rounded-xl font-black tracking-widest text-white shadow-lg shadow-red-950/50 transition-colors shrink-0"
+            >
+              DONE
+            </button>
+          </div>
+        </div>,
+        document.body
       )}
     </>
   );

@@ -7,9 +7,10 @@ import TopBar from "../components/TopBar";
 import TeamColumn from "../components/TeamColumn";
 import GameLog from "../components/GameLog";
 import ActiveClueBar from "../components/ActiveClueBar";
+import GiveClueBar from "../components/GiveClueBar";
 import { cn } from "../utils";
 import type { Player } from "../../../shared/types";
-import { playCardRevealSfx } from "../utils/sfx";
+import { playCardRevealSfx, playCardHoverSfx, playCardSelectSfx } from "../utils/sfx";
 import { MODIFIERS } from "../../../shared/modifiers";
 
 export default function LANGame() {
@@ -28,6 +29,8 @@ export default function LANGame() {
   const [lagSpikeSecondsLeft, setLagSpikeSecondsLeft] = useState<number | null>(null);
   const [isLockToggleActive, setIsLockToggleActive] = useState(false);
   const [isBloodPactToggleActive, setIsBloodPactToggleActive] = useState(false);
+  const [scrambleActive, setScrambleActive] = useState(false);
+  const [gachaHighlightCardId, setGachaHighlightCardId] = useState<number | null>(null);
 
   // Trigger announcement banner on turn / modifier change
   const prevModifierRef = useRef<string | null>(null);
@@ -37,7 +40,14 @@ export default function LANGame() {
       const isNewModifier = gameState.activeModifier !== prevModifierRef.current || gameState.currentTurn !== prevTurnRef.current;
       if (isNewModifier) {
         setShowModifierBanner(gameState.activeModifier);
-        const timer = setTimeout(() => setShowModifierBanner(null), 3500);
+        setScrambleActive(false);
+        const timer = setTimeout(() => {
+          setShowModifierBanner(null);
+          if (gameState.activeModifier === 'dimensional-scramble') {
+            setScrambleActive(true);
+            setTimeout(() => setScrambleActive(false), 2000);
+          }
+        }, 3500);
         
         setIsLockToggleActive(false);
         setIsBloodPactToggleActive(false);
@@ -48,6 +58,7 @@ export default function LANGame() {
       }
     } else {
       setShowModifierBanner(null);
+      setScrambleActive(false);
     }
     
     if (gameState) {
@@ -117,8 +128,47 @@ export default function LANGame() {
       }
     };
 
+    const handleGachaStartAnimation = ({ highlightSequence, targetCardId }: { highlightSequence: number[], targetCardId: number }) => {
+      if (!highlightSequence || highlightSequence.length === 0) return;
+      let currentDelay = 50; // starts fast
+      let step = 0;
+      const maxSteps = highlightSequence.length;
+
+      const tick = () => {
+        if (step >= maxSteps) {
+          setGachaHighlightCardId(targetCardId);
+          playCardSelectSfx();
+          setTimeout(() => {
+            setGachaHighlightCardId(null);
+          }, 1200);
+          return;
+        }
+
+        setGachaHighlightCardId(highlightSequence[step]);
+        playCardHoverSfx();
+
+        step++;
+        // Ease-out: starts fast, slows down toward the end
+        currentDelay = 50 + (step / maxSteps) * (step / maxSteps) * 200;
+        setTimeout(tick, currentDelay);
+      };
+
+      tick();
+    };
+
+    // Pre-clear any old duplicate event listeners to prevent leaks on component re-mount/Vite hot-reloading
+    socket.off("game_update");
+    socket.off("room_update");
+    socket.off("gacha_start_animation");
+    socket.off("timer_tick");
+    socket.off("trigger_prank");
+    socket.off("return_to_lobby");
+    socket.off("host_disconnected");
+    socket.off("disconnect");
+
     socket.on("game_update", handleGameUpdate);
     socket.on("room_update", handleRoomUpdate);
+    socket.on("gacha_start_animation", handleGachaStartAnimation);
     socket.on("timer_tick", async (timeRemaining: number) => {
       if (timeRemaining <= 10 && timeRemaining > 0) {
         const { triggerHeartbeatVibration } = await import("../utils/haptics");
@@ -178,7 +228,9 @@ export default function LANGame() {
     return () => {
       socket.off("game_update", handleGameUpdate);
       socket.off("room_update", handleRoomUpdate);
+      socket.off("gacha_start_animation", handleGachaStartAnimation);
       socket.off("timer_tick");
+      socket.off("trigger_prank");
       socket.off("return_to_lobby");
       socket.off("host_disconnected");
       socket.off("disconnect");
@@ -527,9 +579,9 @@ export default function LANGame() {
 
         {/* CENTER AREA (Grid & Turn Banner) */}
         <div className="flex-1 flex flex-col items-center justify-start min-w-0 lg:min-h-0">
-          <div className="w-full text-center py-2 mb-2 lg:mb-2 lg:py-1">
+          <div className="w-full text-center py-1 mb-1 lg:py-0.5">
             <h2
-              className={`text-xl lg:text-3xl font-black tracking-widest ${
+              className={`text-lg lg:text-xl xl:text-2xl font-black tracking-widest ${
                 gameState.gameMode === 'duet'
                   ? (gameState.currentTurn === 'red' ? "text-lime-400" : "text-green-400")
                   : (gameState.currentTurn === "red" ? "text-red-500" : "text-blue-500")
@@ -541,7 +593,7 @@ export default function LANGame() {
                 gameState.currentTurn === 'red' ? "SIDE A GIVES CLUE -> SIDE B GUESSES" : "SIDE B GIVES CLUE -> SIDE A GUESSES"
               )}
             </h2>
-            <div className="text-slate-400 font-bold mt-1 text-sm lg:text-base">
+            <div className="text-slate-400 font-bold mt-0.5 text-xs lg:text-xs xl:text-sm">
               Playing as: {player.name} ({gameState.gameMode === 'duet' ? (player.team === 'red' ? 'Side A' : 'Side B') : player.role})
             </div>
           </div>
@@ -573,7 +625,7 @@ export default function LANGame() {
           <div className="w-full max-w-4xl mx-auto flex-1 flex flex-col items-center justify-start pb-8 lg:pb-0 lg:min-h-0">
             {/* Sensory Deprivation Warning */}
             {sensoryTimeLeft !== null && sensoryTimeLeft > 0 && (
-              <div className="w-full max-w-md bg-purple-950/40 border border-purple-500/50 rounded-2xl p-3 mb-3 text-center animate-pulse shadow-[0_0_15px_rgba(168,85,247,0.15)]">
+              <div className="w-full max-w-md bg-purple-950/40 border border-purple-500/50 rounded-xl p-2 mb-2 text-center animate-pulse shadow-[0_0_15px_rgba(168,85,247,0.15)]">
                 <span className="block text-xs font-black text-purple-400 uppercase tracking-widest">⚠️ Sensory Deprivation Active ⚠️</span>
                 <span className="block text-[11px] text-purple-200 mt-1 font-bold">Colors fade in {sensoryTimeLeft}s! Memorize the target cards!</span>
               </div>
@@ -581,7 +633,7 @@ export default function LANGame() {
 
             {/* Lag Spike Warning */}
             {lagSpikeSecondsLeft !== null && lagSpikeSecondsLeft > 0 && (
-              <div className="w-full max-w-md bg-yellow-950/40 border border-yellow-500/50 rounded-2xl p-3 mb-3 text-center animate-pulse shadow-[0_0_15px_rgba(234,179,8,0.15)]">
+              <div className="w-full max-w-md bg-yellow-950/40 border border-yellow-500/50 rounded-xl p-2 mb-2 text-center animate-pulse shadow-[0_0_15px_rgba(234,179,8,0.15)]">
                 <span className="block text-xs font-black text-yellow-400 uppercase tracking-widest">⚠️ Network Lag Spike ⚠️</span>
                 <span className="block text-[11px] text-yellow-200 mt-1 font-bold">Connection frozen! Clicks are locked for another {lagSpikeSecondsLeft}s</span>
               </div>
@@ -618,6 +670,10 @@ export default function LANGame() {
                     onGuess={handleGuessCard}
                     activeModifier={gameState.activeModifier}
                     currentPhase={gameState.currentPhase}
+                    scrambleActive={scrambleActive && !!(isSpymaster || isGivingClue)}
+                    originalWords={gameState.modifierState?.originalWords}
+                    isGuesser={!!isMyTurnToGuess}
+                    gachaHighlightId={gachaHighlightCardId}
                   />
 
                   {/* Chaos Modifiers Operative Action Buttons */}
@@ -642,14 +698,20 @@ export default function LANGame() {
                       
                       {gameState.activeModifier === 'gacha-pull' && (
                         <button
+                          disabled={!!gameState.modifierState?.gachaPulling}
                           onClick={() => {
                             if (window.confirm("Leverage pure chance? Clicking this will reveal a random unrevealed card color!")) {
                               socket?.emit("gacha_pull", { roomId });
                             }
                           }}
-                          className="px-4 py-2 rounded-xl font-black text-xs tracking-wider bg-orange-600 border border-orange-500/50 shadow-lg shadow-orange-600/30 hover:bg-orange-500 hover:scale-105 active:scale-95 transition-all text-white cursor-pointer"
+                          className={cn(
+                            "px-4 py-2 rounded-xl font-black text-xs tracking-wider border transition-all text-white",
+                            gameState.modifierState?.gachaPulling
+                              ? "bg-slate-700 border-slate-600 cursor-not-allowed opacity-60"
+                              : "bg-orange-600 border-orange-500/50 shadow-lg shadow-orange-600/30 hover:bg-orange-500 hover:scale-105 active:scale-95 cursor-pointer"
+                          )}
                         >
-                          🕹️ PULL LEVER (GACHA)
+                          {gameState.modifierState?.gachaPulling ? "🎰 PULLING LEVER..." : "🕹️ PULL LEVER (GACHA)"}
                         </button>
                       )}
                       
@@ -679,6 +741,16 @@ export default function LANGame() {
                       successfulGuessesThisTurn={gameState.successfulGuessesThisTurn}
                       onEndTurn={handleEndTurn}
                       canEndTurn={!isDisabled}
+                    />
+                  )}
+
+                  {isGivingClue && (
+                    <GiveClueBar 
+                      onSubmitCue={handleSubmitCue}
+                      clueType={gameState.clueType}
+                      activeModifier={gameState.activeModifier}
+                      clueTargetCount={clueTargets.length}
+                      isRTL={gameState.isRTL}
                     />
                   )}
                 </div>

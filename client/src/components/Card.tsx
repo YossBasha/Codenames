@@ -20,9 +20,13 @@ interface CardProps {
   onGuess?: (id: number) => void;
   activeModifier?: string | null;
   currentPhase?: 'spymaster' | 'operative';
+  scrambleDx?: number;
+  scrambleDy?: number;
+  isGuesser?: boolean;
+  gachaHighlight?: boolean;
 }
 
-function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, isClueTarget = false, isGivingClue = false, highlightedBy = [], currentPlayerId, onClick, onContextMenu, onGuess, activeModifier, currentPhase }: CardProps) {
+function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, isClueTarget = false, isGivingClue = false, highlightedBy = [], currentPlayerId, onClick, onContextMenu, onGuess, activeModifier, currentPhase, scrambleDx, scrambleDy, isGuesser = false, gachaHighlight = false }: CardProps) {
   let isRevealedForMe = card.revealed;
   if (gameMode === 'duet' && !card.revealed) {
     if (playerTeam === 'red' && card.revealedByA) {
@@ -143,7 +147,8 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
       }}
       aria-disabled={isDisabled}
       className={cn(
-        "relative w-full aspect-[4/3] sm:aspect-[3/2] rounded-lg sm:rounded-xl font-black transition-all duration-300 transform overflow-hidden",
+        "relative w-full aspect-[4/3] sm:aspect-[3/2] max-h-[calc((100vh-250px)/5)] sm:max-h-[calc((100vh-300px)/5)] rounded-lg sm:rounded-xl font-black transition-all duration-300 transform",
+        !(scrambleDx !== undefined || scrambleDy !== undefined) && "overflow-hidden",
         isEmoji ? "text-4xl sm:text-5xl lg:text-7xl" : "text-[9px] xs:text-[11px] sm:text-sm lg:text-lg tracking-tighter sm:tracking-tight",
         isDisabled && !isRevealedForMe && !isGivingClue
           ? "cursor-default opacity-80"
@@ -154,6 +159,7 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
         card.revealed && isSpymaster && "opacity-50",
         showColor && shadowClasses[typeToDisplay],
         (isClueTarget || highlightedBy.length > 0) && "scale-[1.02] z-10",
+        gachaHighlight && "z-40",
         justRevealed && !['green', 'red', 'blue'].includes(typeToDisplay) && "animate-reveal-pop",
         justRevealed && ['green', 'red', 'blue'].includes(typeToDisplay) && "animate-card-flip"
       )}
@@ -165,6 +171,23 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
         isClueTarget && "ring-2 sm:ring-4 ring-inset ring-yellow-400 shadow-[inset_0_0_15px_rgba(250,204,21,0.5),0_0_15px_rgba(250,204,21,0.5)]",
         highlightedBy.length > 0 && "ring-2 sm:ring-4 ring-inset ring-white shadow-[inset_0_0_15px_rgba(255,255,255,0.5),0_0_15px_rgba(255,255,255,0.5)]"
       )} />
+
+      {/* Gacha Pull Highlight Overlay */}
+      {gachaHighlight && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: 'inherit',
+            border: '4px solid #f97316',
+            backgroundColor: 'rgba(249, 115, 22, 0.3)',
+            boxShadow: 'inset 0 0 25px rgba(249, 115, 22, 0.6), 0 0 20px rgba(249, 115, 22, 0.5)',
+            zIndex: 50,
+            pointerEvents: 'none',
+            animation: 'gacha-glow 0.5s ease-in-out infinite',
+          }}
+        />
+      )}
 
       {/* Background Revealed Layer (Ink Bleed) */}
       {showColor && (
@@ -179,10 +202,21 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
 
       {/* Base Word - only hide text for globally revealed green/red/blue cards (correct guesses) */}
       {!card.revealed || !['green', 'red', 'blue'].includes(typeToDisplay) ? (
-        <div className={cn(
-          "relative z-10 flex items-center justify-center h-full w-full p-1 sm:p-2 text-center break-words leading-none sm:leading-tight",
-          activeModifier === 'eroding-parchment' && currentPhase === 'operative' && !isRevealedForMe && "animate-eroding-parchment"
-        )}>
+        <div 
+          style={
+            scrambleDx !== undefined || scrambleDy !== undefined
+              ? {
+                  "--scramble-dx": `${(scrambleDx ?? 0) * 108}%`,
+                  "--scramble-dy": `${(scrambleDy ?? 0) * 108}%`,
+                } as React.CSSProperties
+              : undefined
+          }
+          className={cn(
+            "relative z-10 flex items-center justify-center h-full w-full p-1 sm:p-2 text-center break-words leading-none sm:leading-tight transform transition-transform",
+            activeModifier === 'eroding-parchment' && currentPhase === 'operative' && isGuesser && !isRevealedForMe && "animate-eroding-parchment",
+            (scrambleDx !== undefined || scrambleDy !== undefined) && "animate-scramble"
+          )}
+        >
           {card.word}
         </div>
       ) : null}
@@ -269,6 +303,10 @@ function areEqual(prevProps: CardProps, nextProps: CardProps) {
   if (prevProps.currentPlayerId !== nextProps.currentPlayerId) return false;
   if (prevProps.activeModifier !== nextProps.activeModifier) return false;
   if (prevProps.currentPhase !== nextProps.currentPhase) return false;
+  if (prevProps.scrambleDx !== nextProps.scrambleDx) return false;
+  if (prevProps.scrambleDy !== nextProps.scrambleDy) return false;
+  if (prevProps.isGuesser !== nextProps.isGuesser) return false;
+  if (prevProps.gachaHighlight !== nextProps.gachaHighlight) return false;
 
   // Check card fields
   const c1 = prevProps.card;

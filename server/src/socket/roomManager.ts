@@ -64,7 +64,16 @@ function applyRandomModifier(room: Room) {
   const gameState = room.gameState;
   if (!gameState) return;
 
-  const randomModifier = MODIFIERS[Math.floor(Math.random() * MODIFIERS.length)];
+  const enabled = gameState.enabledModifiers || MODIFIERS.map(m => m.id);
+  const availableModifiers = MODIFIERS.filter(m => enabled.includes(m.id));
+
+  if (availableModifiers.length === 0) {
+    gameState.activeModifier = null;
+    gameState.modifierState = null;
+    return;
+  }
+
+  const randomModifier = availableModifiers[Math.floor(Math.random() * availableModifiers.length)];
   gameState.activeModifier = randomModifier.id;
   gameState.modifierState = {};
 
@@ -82,10 +91,14 @@ function applyRandomModifier(room: Room) {
       const idx2 = shuffledIndices[1];
       const idx3 = shuffledIndices[2];
 
-      const temp = gameState.cards[idx1];
-      gameState.cards[idx1] = gameState.cards[idx2];
-      gameState.cards[idx2] = gameState.cards[idx3];
-      gameState.cards[idx3] = temp;
+      gameState.modifierState = {
+        originalWords: gameState.cards.map(c => c.word)
+      };
+
+      const tempWord = gameState.cards[idx1].word;
+      gameState.cards[idx1].word = gameState.cards[idx2].word;
+      gameState.cards[idx2].word = gameState.cards[idx3].word;
+      gameState.cards[idx3].word = tempWord;
     }
   } else if (randomModifier.id === 'the-mimic') {
     const neutralIndices: number[] = [];
@@ -568,7 +581,7 @@ export function setupRoomManager(io: Server) {
       }
     });
 
-    socket.on('start_game', ({ roomId, language, gameMode, timerSettings, selectedPacks, customWords, customWordWeight, clueType, chaosMode }: { roomId: string, language: Language, gameMode: GameMode, timerSettings: TimerSettings, selectedPacks: string[], customWords: string[], customWordWeight: CustomWordWeight, clueType: any, chaosMode?: boolean }) => {
+    socket.on('start_game', ({ roomId, language, gameMode, timerSettings, selectedPacks, customWords, customWordWeight, clueType, chaosMode, enabledModifiers }: { roomId: string, language: Language, gameMode: GameMode, timerSettings: TimerSettings, selectedPacks: string[], customWords: string[], customWordWeight: CustomWordWeight, clueType: any, chaosMode?: boolean, enabledModifiers?: string[] }) => {
       const room = rooms[roomId];
       if (room) {
         const { cards, startingTeam } = gameMode === 'duet' 
@@ -600,7 +613,8 @@ export function setupRoomManager(io: Server) {
           gameLog: [],
           highlightedCards: {},
           clueType,
-          chaosMode: !!chaosMode
+          chaosMode: !!chaosMode,
+          enabledModifiers: enabledModifiers || MODIFIERS.map(m => m.id)
         };
 
         if (chaosMode) {
@@ -617,6 +631,8 @@ export function setupRoomManager(io: Server) {
     socket.on('submit_cue', ({ roomId, cue, number, targets }: { roomId: string, cue: string, number: number, targets?: number[] }) => {
       const room = rooms[roomId];
       const player = room?.players.find(p => p.id === socket.id);
+      
+      console.log('SUBMIT CUE EVENT:', { roomId, cue, number, targets, activeModifier: room?.gameState?.activeModifier });
       
       if (room && room.gameState && !room.gameState.winner && player) {
         const isDuet = room.gameState.gameMode === 'duet';
@@ -637,8 +653,20 @@ export function setupRoomManager(io: Server) {
             finalCue = words.join(' ');
           }
 
+          let finalNumber = number;
+          if (room.gameState.activeModifier === 'off-by-one') {
+            if (number === 99) {
+              finalNumber = 99;
+            } else if (number === 0) {
+              finalNumber = 1;
+            } else {
+              const change = Math.random() < 0.5 ? -1 : 1;
+              finalNumber = number + change;
+            }
+          }
+
           room.gameState.activeCue = finalCue;
-          room.gameState.activeCueNumber = number;
+          room.gameState.activeCueNumber = finalNumber;
           room.gameState.currentPhase = 'operative';
           room.gameState.successfulGuessesThisTurn = 0;
           room.gameState.isFirstTurnOfGame = false;
@@ -653,7 +681,7 @@ export function setupRoomManager(io: Server) {
             },
             team: player.team as 'red' | 'blue',
             cueWord: finalCue,
-            cueNumber: number,
+            cueNumber: finalNumber,
             targets: targets,
             timestamp: Date.now()
           });
@@ -834,6 +862,7 @@ export function setupRoomManager(io: Server) {
       if (room && room.gameState && !room.gameState.winner && player) {
         if (room.gameState.currentPhase !== 'operative') return;
         if (room.gameState.activeModifier !== 'gacha-pull') return;
+        if (room.gameState.modifierState?.gachaPulling) return;
         
         const isDuet = room.gameState.gameMode === 'duet';
         const expectedGuessTeam = isDuet ? 
@@ -851,22 +880,59 @@ export function setupRoomManager(io: Server) {
         });
         
         if (unrevealedCards.length > 0) {
+          // Set pulling state to lock UI
+          if (!room.gameState.modifierState) room.gameState.modifierState = {};
+          room.gameState.modifierState.gachaPulling = true;
+          io.to(roomId).emit('game_update', room.gameState);
+
           const randomCard = unrevealedCards[Math.floor(Math.random() * unrevealedCards.length)];
+          const candidateIds = unrevealedCards.map(c => c.id);
           
-          room.gameState.gameLog.push({
-            id: Math.random().toString(36).substring(7),
-            type: 'guess',
-            player: { 
-              name: `${player.name} (Lever Pull)`, 
-              avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=e67e22` 
-            },
-            guessingTeam: expectedGuessTeam as 'red' | 'blue',
-            cardWord: 'Pulled the Gacha Lever!',
-            revealedColor: 'neutral',
-            timestamp: Date.now()
-          });
+          // Build a pre-computed random highlight sequence so all clients show the exact same random picks
+          const highlightSequence: number[] = [];
+          const steps = 20;
+          for (let i = 0; i < steps; i++) {
+            highlightSequence.push(candidateIds[Math.floor(Math.random() * candidateIds.length)]);
+          }
           
-          processGuess(io, room, player, randomCard.id);
+          // Emit the animation start to all clients
+          io.to(roomId).emit('gacha_start_animation', { highlightSequence, targetCardId: randomCard.id });
+
+          setTimeout(() => {
+            const currentRoom = rooms[roomId];
+            if (currentRoom && currentRoom.gameState) {
+              if (currentRoom.gameState.modifierState) {
+                delete currentRoom.gameState.modifierState.gachaPulling;
+              }
+              
+              if (!currentRoom.gameState.winner) {
+                // Verify card is still unrevealed
+                const stillUnrevealed = isDuet ? 
+                  (expectedGuessTeam === 'blue' ? !randomCard.revealedByB : !randomCard.revealedByA) :
+                  !randomCard.revealed;
+                  
+                if (stillUnrevealed) {
+                  currentRoom.gameState.gameLog.push({
+                    id: Math.random().toString(36).substring(7),
+                    type: 'guess',
+                    player: { 
+                      name: `${player.name} (Lever Pull)`, 
+                      avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=e67e22` 
+                    },
+                    guessingTeam: expectedGuessTeam as 'red' | 'blue',
+                    cardWord: 'Pulled the Gacha Lever!',
+                    revealedColor: 'neutral',
+                    timestamp: Date.now()
+                  });
+                  
+                  processGuess(io, currentRoom, player, randomCard.id);
+                } else {
+                  // Fallback emit if card was somehow revealed
+                  io.to(roomId).emit('game_update', currentRoom.gameState);
+                }
+              }
+            }
+          }, 3800);
         }
       }
     });

@@ -9,6 +9,7 @@ import GameSettingsPanel from '../components/GameSettingsPanel';
 import { twMerge } from 'tailwind-merge';
 import { getLocalServerPort, startHostBroadcast, stopHostBroadcast, getLocalIp } from '../utils/discovery';
 import { playLobbyHoverSfx, playLobbyClickSfx, playMenuClickSfx, playMenuHoverSfx } from '../utils/sfx';
+import { MODIFIERS } from '../../../shared/modifiers';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -63,6 +64,16 @@ export default function LANLobby() {
   const [customWordsText, setCustomWordsText] = useState(() => localStorage.getItem('host_customWordsText') || '');
   const [customWordWeight, setCustomWordWeight] = useState<CustomWordWeight>(() => (localStorage.getItem('host_customWordWeight') as CustomWordWeight) || 'none');
   const [chaosMode, setChaosMode] = useState<boolean>(() => localStorage.getItem('host_chaosMode') === 'true');
+  const [enabledModifiers, setEnabledModifiers] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('host_enabledModifiers');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return MODIFIERS.map(m => m.id);
+  });
 
   useEffect(() => {
     if (isHost) {
@@ -73,8 +84,9 @@ export default function LANLobby() {
       localStorage.setItem('host_customWordWeight', customWordWeight);
       localStorage.setItem('host_timerSettings', JSON.stringify(timerSettings));
       localStorage.setItem('host_chaosMode', String(chaosMode));
+      localStorage.setItem('host_enabledModifiers', JSON.stringify(enabledModifiers));
     }
-  }, [isHost, gameMode, selectedPacks, clueType, customWordsText, customWordWeight, timerSettings, chaosMode]);
+  }, [isHost, gameMode, selectedPacks, clueType, customWordsText, customWordWeight, timerSettings, chaosMode, enabledModifiers]);
 
   const customWordsArray = useMemo(() => {
     if (!customWordsText.trim()) return [];
@@ -207,11 +219,12 @@ export default function LANLobby() {
           customWordWeight,
           language,
           clueType,
-          chaosMode
+          chaosMode,
+          enabledModifiers
         }
       });
     }
-  }, [gameMode, selectedPacks, timerSettings, customWordsText, customWordWeight, language, clueType, isHost, socket, roomId, chaosMode]);
+  }, [gameMode, selectedPacks, timerSettings, customWordsText, customWordWeight, language, clueType, isHost, socket, roomId, chaosMode, enabledModifiers]);
 
   // Listen for settings from host
   useEffect(() => {
@@ -228,6 +241,9 @@ export default function LANLobby() {
       setLanguage(settings.language);
       setClueType(settings.clueType || 'both');
       setChaosMode(!!settings.chaosMode);
+      if (settings.enabledModifiers) {
+        setEnabledModifiers(settings.enabledModifiers);
+      }
     });
     
     return () => {
@@ -275,7 +291,8 @@ export default function LANLobby() {
         customWords: customWordsArray,
         customWordWeight,
         clueType,
-        chaosMode
+        chaosMode,
+        enabledModifiers
       });
       playLobbyClickSfx();
     }
@@ -552,6 +569,8 @@ export default function LANLobby() {
               setClueType={setClueType}
               chaosMode={chaosMode}
               setChaosMode={setChaosMode}
+              enabledModifiers={enabledModifiers}
+              setEnabledModifiers={setEnabledModifiers}
             />
           </div>
 

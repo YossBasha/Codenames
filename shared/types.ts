@@ -85,4 +85,5 @@ export interface GameState {
   chaosMode?: boolean;
   activeModifier?: string | null;
   modifierState?: any;
+  enabledModifiers?: string[];
 }

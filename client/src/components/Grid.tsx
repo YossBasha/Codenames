@@ -20,9 +20,13 @@ interface GridProps {
   onGuess?: (id: number) => void;
   activeModifier?: string | null;
   currentPhase?: 'spymaster' | 'operative';
+  scrambleActive?: boolean;
+  originalWords?: string[];
+  isGuesser?: boolean;
+  gachaHighlightId?: number | null;
 }
 
-export default function Grid({ cards, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, clueTargets = [], isGivingClue = false, highlightedCards = {}, players = [], currentPlayerId, onCardClick, onCardContextMenu, onGuess, activeModifier, currentPhase }: GridProps) {
+export default function Grid({ cards, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, clueTargets = [], isGivingClue = false, highlightedCards = {}, players = [], currentPlayerId, onCardClick, onCardContextMenu, onGuess, activeModifier, currentPhase, scrambleActive = false, originalWords = [], isGuesser = false, gachaHighlightId }: GridProps) {
   if (!cards || cards.length === 0) return null;
 
   // Pre-calculate highlighting players per card to avoid O(N * M) lookup inside the loop
@@ -41,26 +45,46 @@ export default function Grid({ cards, isSpymaster, disabled, playerTeam, gameMod
 
   return (
     <div className="grid grid-cols-5 gap-1 sm:gap-2 lg:gap-3 w-full mx-auto px-1 sm:px-4">
-      {cards.map((card) => (
-        <Card
-          key={card.id}
-          card={card}
-          isSpymaster={isSpymaster}
-          disabled={disabled}
-          playerTeam={playerTeam}
-          gameMode={gameMode}
-          isRTL={isRTL}
-          isClueTarget={clueTargets.includes(card.id)}
-          isGivingClue={isGivingClue}
-          highlightedBy={highlightMap[card.id] || []}
-          currentPlayerId={currentPlayerId}
-          onClick={onCardClick}
-          onContextMenu={onCardContextMenu}
-          onGuess={onGuess}
-          activeModifier={activeModifier}
-          currentPhase={currentPhase}
-        />
-      ))}
+      {cards.map((card, newIdx) => {
+        let dx = 0;
+        let dy = 0;
+        if (scrambleActive && originalWords && originalWords.length > 0) {
+          const oldIdx = originalWords.indexOf(card.word);
+          if (oldIdx !== -1 && oldIdx !== newIdx) {
+            const oldRow = Math.floor(oldIdx / 5);
+            const oldCol = oldIdx % 5;
+            const newRow = Math.floor(newIdx / 5);
+            const newCol = newIdx % 5;
+            dx = oldCol - newCol;
+            dy = oldRow - newRow;
+          }
+        }
+
+        return (
+          <Card
+            key={card.id}
+            card={card}
+            isSpymaster={isSpymaster}
+            disabled={disabled}
+            playerTeam={playerTeam}
+            gameMode={gameMode}
+            isRTL={isRTL}
+            isClueTarget={clueTargets.includes(card.id)}
+            isGivingClue={isGivingClue}
+            highlightedBy={highlightMap[card.id] || []}
+            currentPlayerId={currentPlayerId}
+            onClick={onCardClick}
+            onContextMenu={onCardContextMenu}
+            onGuess={onGuess}
+            activeModifier={activeModifier}
+            currentPhase={currentPhase}
+            scrambleDx={dx !== 0 ? dx : undefined}
+            scrambleDy={dy !== 0 ? dy : undefined}
+            isGuesser={isGuesser}
+            gachaHighlight={gachaHighlightId === card.id}
+          />
+        );
+      })}
     </div>
   );
 }

@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { useGameContext } from "../context/GameContext";
 import { generateGrid, generateDuetGrid } from "../../../shared/gameLogic";
 import type { GameState, CustomWordWeight, TimerSettings, Team, ClueType } from "../../../shared/types";
+import { MODIFIERS } from "../../../shared/modifiers";
 import Grid from "../components/Grid";
 import TopBar from "../components/TopBar";
 import ActiveClueBar from "../components/ActiveClueBar";
+import GiveClueBar from "../components/GiveClueBar";
 import GameLog from '../components/GameLog';
 import { cn } from "../utils";
 import GameSettingsPanel from "../components/GameSettingsPanel";
@@ -45,6 +47,16 @@ export default function PassAndPlay() {
     catch { return { preset: 'off', spymasterTime: 0, operativeTime: 0, extraFirstClueTime: 0 }; }
   });
   const [chaosMode, setChaosMode] = useState<boolean>(() => localStorage.getItem('host_chaosMode') === 'true');
+  const [enabledModifiers, setEnabledModifiers] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('host_enabledModifiers');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return MODIFIERS.map(m => m.id);
+  });
 
   useEffect(() => {
     localStorage.setItem('host_gameMode', gameMode);
@@ -54,7 +66,8 @@ export default function PassAndPlay() {
     localStorage.setItem('host_customWordWeight', customWordWeight);
     localStorage.setItem('host_timerSettings', JSON.stringify(timerSettings));
     localStorage.setItem('host_chaosMode', String(chaosMode));
-  }, [gameMode, selectedPacks, clueType, customWordsText, customWordWeight, timerSettings, chaosMode]);
+    localStorage.setItem('host_enabledModifiers', JSON.stringify(enabledModifiers));
+  }, [gameMode, selectedPacks, clueType, customWordsText, customWordWeight, timerSettings, chaosMode, enabledModifiers]);
 
   const customWordsArray = useMemo(() => {
     if (!customWordsText.trim()) return [];
@@ -487,6 +500,8 @@ export default function PassAndPlay() {
               setClueType={setClueType}
               chaosMode={chaosMode}
               setChaosMode={setChaosMode}
+              enabledModifiers={enabledModifiers}
+              setEnabledModifiers={setEnabledModifiers}
             />
           </div>
           
@@ -557,7 +572,7 @@ export default function PassAndPlay() {
         isRTL={gameState.language === 'ar'}
       />
 
-      <div className="flex-1 flex flex-col items-center p-4 pt-8">
+      <div className="flex-1 flex flex-col items-center p-2 sm:p-4 sm:pt-6">
         {gameState.winner && (
           <div className="mb-8 p-6 glass rounded-2xl text-center shadow-[0_0_50px_rgba(0,0,0,0.5)] z-20 animate-fade-in-up">
             {gameState.gameMode === 'duet' ? (
@@ -629,7 +644,7 @@ export default function PassAndPlay() {
           </div>
         )}
 
-        <div className="w-full max-w-[1600px] mx-auto flex-1 flex flex-col lg:flex-row gap-6 justify-center pb-8 transition-all duration-1000">
+        <div className="w-full max-w-[1600px] mx-auto flex-1 flex flex-col lg:flex-row gap-6 justify-center pb-4 lg:pb-0 transition-all duration-1000">
           <div className="flex-1 flex flex-col justify-center">
             <Grid
               cards={gameState.cards}
@@ -653,6 +668,15 @@ export default function PassAndPlay() {
                 successfulGuessesThisTurn={gameState.successfulGuessesThisTurn}
                 onEndTurn={handleEndTurn}
                 canEndTurn={true}
+              />
+            )}
+
+            {localPhase === 'Spymaster_Input' && !gameState.winner && (
+              <GiveClueBar 
+                onSubmitCue={handleSubmitCue}
+                clueType={gameState.clueType}
+                clueTargetCount={clueTargets.length}
+                isRTL={gameState.language === 'ar'}
               />
             )}
             
