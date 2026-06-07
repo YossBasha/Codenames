@@ -4,6 +4,7 @@ import { ArrowLeft, PenTool } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../utils';
 import DrawingModal from './DrawingModal';
+import { MODIFIERS } from '../../../shared/modifiers';
 
 interface TopBarProps {
   redScore: number;
@@ -25,6 +26,7 @@ interface TopBarProps {
   amHost?: boolean;
   onRestartGame?: () => void;
   clueType?: ClueType;
+  activeModifier?: string | null;
 }
 
 export default function TopBar({
@@ -46,7 +48,8 @@ export default function TopBar({
   clueTargetCount = 0,
   amHost = false,
   onRestartGame,
-  clueType = 'both'
+  clueType = 'both',
+  activeModifier
 }: TopBarProps) {
   const navigate = useNavigate();
   const [cueInput, setCueInput] = useState('');
@@ -114,12 +117,38 @@ export default function TopBar({
         )}
       </div>
 
-      <div className="flex flex-col items-center">
-        {isTimerEnabled && (
-          <div className="text-3xl font-black text-orange-500 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]">
-            {timeRemaining}s
-          </div>
-        )}
+      <div className="flex flex-col items-center gap-1">
+        <div className="flex items-center gap-3">
+          {isTimerEnabled && (
+            <div className="text-3xl font-black text-orange-500 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]">
+              {timeRemaining}s
+            </div>
+          )}
+
+          {activeModifier && (() => {
+            const mod = MODIFIERS.find(m => m.id === activeModifier);
+            if (!mod) return null;
+            return (
+              <div className="relative group cursor-pointer z-50">
+                <div className="flex items-center gap-1.5 bg-red-500/20 border border-red-500/40 hover:bg-red-500/30 transition-all rounded-full px-3 py-1 shadow-[0_0_10px_rgba(239,68,68,0.2)]">
+                  <span className="text-xs">🌀</span>
+                  <span className="text-[10px] font-black tracking-widest text-red-400 uppercase">{mod.name}</span>
+                </div>
+                
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-slate-950/95 border border-red-500/30 rounded-2xl p-4 shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50">
+                  <div className="flex items-center gap-2 mb-2 text-red-400">
+                    <span className="text-base">🌀</span>
+                    <h4 className="font-black tracking-wider text-xs uppercase">{mod.name}</h4>
+                  </div>
+                  <p className="text-[11px] font-bold text-slate-300 leading-normal">{mod.description}</p>
+                  <div className="mt-2 pt-2 border-t border-white/5 text-[9px] font-black text-slate-500 tracking-wider uppercase text-center">
+                    Category: {mod.category}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
         <div className="text-xl sm:text-2xl font-black tracking-tight">
           {gameMode === 'classic' ? (
             <>
@@ -175,12 +204,23 @@ export default function TopBar({
             {clueType !== 'doodle' && (
               <input 
                 type="text" 
-                placeholder="Enter clue..."
+                placeholder={activeModifier === 'oracle-riddle' ? "Enter rhyming pair..." : "Enter clue..."}
                 value={cueInput.startsWith('data:image') ? '[Doodle Clue]' : cueInput}
                 readOnly={cueInput.startsWith('data:image')}
-                onChange={(e) => setCueInput(e.target.value.replace(/[^a-zA-Z0-9\u0600-\u06FF\s]/g, ''))}
+                onChange={(e) => {
+                  let val = e.target.value;
+                  if (activeModifier === 'oracle-riddle') {
+                    const words = val.split(/\s+/);
+                    if (words.length > 2) {
+                      return;
+                    }
+                    setCueInput(val.replace(/[^a-zA-Z0-9\u0600-\u06FF\s]/g, ''));
+                  } else {
+                    setCueInput(val.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, ''));
+                  }
+                }}
                 className="bg-slate-900 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg outline-none w-24 sm:w-48 text-xs sm:text-sm"
-                maxLength={20}
+                maxLength={30}
               />
             )}
             <select 

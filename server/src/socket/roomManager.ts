@@ -1,6 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import { GameState, Player, Language, GameMode, TimerSettings, CustomWordWeight } from '../../../shared/types';
 import { generateGrid, generateDuetGrid, shuffleArray } from '../../../shared/gameLogic';
+import { MODIFIERS } from '../../../shared/modifiers';
 
 interface Room {
   id: string;
@@ -29,12 +30,165 @@ function stopTimer(room: Room) {
   }
 }
 
+function revertActiveModifier(room: Room) {
+  const gameState = room.gameState;
+  if (!gameState || !gameState.activeModifier) return;
+
+  const modifier = gameState.activeModifier;
+  const state = gameState.modifierState;
+
+  if (modifier === 'the-mimic') {
+    if (state && state.mimicCardId !== undefined) {
+      const card = gameState.cards.find(c => c.id === state.mimicCardId);
+      if (card) {
+        if (gameState.gameMode === 'duet') {
+          if (state.originalType) {
+            if (state.guesserTeam === 'blue') {
+              card.duetTypeA = state.originalType;
+            } else {
+              card.duetTypeB = state.originalType;
+            }
+          }
+        } else {
+          card.type = 'neutral';
+        }
+      }
+    }
+  }
+
+  gameState.activeModifier = null;
+  gameState.modifierState = null;
+}
+
+function applyRandomModifier(room: Room) {
+  const gameState = room.gameState;
+  if (!gameState) return;
+
+  const randomModifier = MODIFIERS[Math.floor(Math.random() * MODIFIERS.length)];
+  gameState.activeModifier = randomModifier.id;
+  gameState.modifierState = {};
+
+  if (randomModifier.id === 'dimensional-scramble') {
+    const unrevealedIndices: number[] = [];
+    gameState.cards.forEach((c, idx) => {
+      if (!c.revealed) {
+        unrevealedIndices.push(idx);
+      }
+    });
+
+    if (unrevealedIndices.length >= 3) {
+      const shuffledIndices = shuffleArray([...unrevealedIndices]);
+      const idx1 = shuffledIndices[0];
+      const idx2 = shuffledIndices[1];
+      const idx3 = shuffledIndices[2];
+
+      const temp = gameState.cards[idx1];
+      gameState.cards[idx1] = gameState.cards[idx2];
+      gameState.cards[idx2] = gameState.cards[idx3];
+      gameState.cards[idx3] = temp;
+    }
+  } else if (randomModifier.id === 'the-mimic') {
+    const neutralIndices: number[] = [];
+    const isDuet = gameState.gameMode === 'duet';
+    const expectedGuessTeam = isDuet ? 
+      (gameState.currentTurn === 'red' ? 'blue' : 'red') : 
+      gameState.currentTurn;
+
+    gameState.cards.forEach((c, idx) => {
+      if (isDuet) {
+        const keyType = expectedGuessTeam === 'blue' ? c.duetTypeA : c.duetTypeB;
+        const alreadyRevealed = expectedGuessTeam === 'blue' ? c.revealedByB : c.revealedByA;
+        if (!alreadyRevealed && keyType === 'neutral') {
+          neutralIndices.push(idx);
+        }
+      } else {
+        if (!c.revealed && c.type === 'neutral') {
+          neutralIndices.push(idx);
+        }
+      }
+    });
+
+    if (neutralIndices.length > 0) {
+      const randomIdx = neutralIndices[Math.floor(Math.random() * neutralIndices.length)];
+      const card = gameState.cards[randomIdx];
+      if (isDuet) {
+        gameState.modifierState = {
+          mimicCardId: card.id,
+          originalType: 'neutral',
+          guesserTeam: expectedGuessTeam
+        };
+        if (expectedGuessTeam === 'blue') {
+          card.duetTypeA = 'assassin';
+        } else {
+          card.duetTypeB = 'assassin';
+        }
+      } else {
+        gameState.modifierState = {
+          mimicCardId: card.id,
+          originalType: 'neutral'
+        };
+        card.type = 'assassin';
+      }
+    }
+  } else if (randomModifier.id === 'blood-pact') {
+    gameState.modifierState = {
+      bloodPactStatus: 'available'
+    };
+  } else if (randomModifier.id === 'shield-wall') {
+    gameState.modifierState = {
+      shieldActive: true
+    };
+  }
+}
+
+function transitionToNewTurn(io: Server, room: Room) {
+  const gameState = room.gameState;
+  if (!gameState) return;
+
+  revertActiveModifier(room);
+
+  const nextTurn = gameState.gameMode === 'duet'
+    ? getNextTurnDuet(gameState)
+    : (gameState.currentTurn === 'red' ? 'blue' : 'red');
+  
+  gameState.currentTurn = nextTurn;
+  gameState.currentPhase = 'spymaster';
+  gameState.activeCue = null;
+  gameState.activeCueNumber = null;
+  gameState.successfulGuessesThisTurn = 0;
+  gameState.highlightedCards = {};
+
+  gameState.cards.forEach(card => {
+    if (card.shieldedTurns && card.shieldedTurns > 0) {
+      card.shieldedTurns--;
+    }
+  });
+
+  if (gameState.gameMode === 'duet') {
+    gameState.timerTokens--;
+    if (gameState.timerTokens <= 0) {
+      gameState.winner = 'spectator';
+    }
+  }
+
+  if (gameState.chaosMode) {
+    applyRandomModifier(room);
+  }
+
+  startTimer(io, room);
+}
+
 function startTimer(io: Server, room: Room) {
   stopTimer(room);
-  if (!room.gameState || room.gameState.timerSettings.preset === 'off') return;
+  if (!room.gameState) return;
+  
+  const isHaste = room.gameState.activeModifier === 'haste' && room.gameState.currentPhase === 'operative';
+  if (room.gameState.timerSettings.preset === 'off' && !isHaste) return;
   
   let duration = 0;
-  if (room.gameState.currentPhase === 'spymaster') {
+  if (isHaste) {
+    duration = 15;
+  } else if (room.gameState.currentPhase === 'spymaster') {
     duration = room.gameState.timerSettings.spymasterTime;
     if (room.gameState.isFirstTurnOfGame) {
       duration += room.gameState.timerSettings.extraFirstClueTime;
@@ -52,15 +206,17 @@ function startTimer(io: Server, room: Room) {
       return;
     }
     
-    room.gameState.timeRemaining--;
+    const isTimerFrozen = room.gameState.activeModifier === 'critical-hit' && room.gameState.modifierState?.timerFrozen;
+    
+    if (!isTimerFrozen) {
+      room.gameState.timeRemaining--;
+    }
     io.to(room.id).emit('timer_tick', room.gameState.timeRemaining);
     
     if (room.gameState.timeRemaining <= 0) {
-      // Timer expired!
       stopTimer(room);
       
       if (room.gameState.currentPhase === 'spymaster') {
-        // Auto transition to operative
         room.gameState.activeCue = "";
         room.gameState.activeCueNumber = 0;
         room.gameState.currentPhase = 'operative';
@@ -77,29 +233,8 @@ function startTimer(io: Server, room: Room) {
         });
         
         io.to(room.id).emit('game_update', room.gameState);
-        startTimer(io, room); // Restart timer for operative phase
+        startTimer(io, room);
       } else {
-        // Auto end turn
-        if (room.gameState.gameMode === 'duet') {
-          room.gameState.timerTokens--;
-          if (room.gameState.timerTokens <= 0) {
-            room.gameState.winner = 'red'; // Wait, in duet red/blue winner means game over cooperative loss vs win. 
-            // Let's use 'red' or 'blue' as normal loss. Actually, winner='spectator' or we just set winner='spectator' as loss, or we keep it null and add game_over. 
-            // We can just set winner='spectator' to represent a cooperative loss, and 'red' to represent cooperative win. But let's just do winner='red' for now and fix client.
-            // Wait, we need a way to distinguish win/loss. 
-            // Let's use 'blue' as Loss, 'red' as Win for Duet.
-          }
-        }
-        
-        room.gameState.currentTurn = room.gameState.gameMode === 'duet' 
-          ? getNextTurnDuet(room.gameState) 
-          : (room.gameState.currentTurn === 'red' ? 'blue' : 'red');
-        room.gameState.currentPhase = 'spymaster';
-        room.gameState.activeCue = null;
-        room.gameState.activeCueNumber = null;
-        room.gameState.successfulGuessesThisTurn = 0;
-        room.gameState.highlightedCards = {};
-        
         room.gameState.gameLog.push({
           id: Math.random().toString(36).substring(7),
           type: 'guess',
@@ -110,13 +245,12 @@ function startTimer(io: Server, room: Room) {
           timestamp: Date.now()
         });
         
+        transitionToNewTurn(io, room);
         io.to(room.id).emit('game_update', room.gameState);
-        startTimer(io, room);
       }
     }
   }, 1000);
 }
-
 
 function getSafeRoom(room: Room) {
   const { timerInterval, ...safeRoom } = room;
@@ -133,6 +267,184 @@ function getNextTurnDuet(gameState: GameState): 'red' | 'blue' {
     if (bRemaining === 0) return 'red';
   }
   return nextTurn;
+}
+
+function processGuess(io: Server, room: Room, player: Player, cardId: number) {
+  if (!room.gameState || room.gameState.winner) return;
+  if (room.gameState.currentPhase !== 'operative') return;
+
+  const isDuet = room.gameState.gameMode === 'duet';
+  const expectedGuessTeam = isDuet ? 
+    (room.gameState.currentTurn === 'red' ? 'blue' : 'red') : 
+    room.gameState.currentTurn;
+
+  if (player.team !== expectedGuessTeam || (!isDuet && player.role !== 'operative')) return;
+  
+  const maxGuesses = room.gameState.activeCueNumber === 0 ? Infinity : (room.gameState.activeCueNumber || 0) + 1;
+  if (room.gameState.successfulGuessesThisTurn >= maxGuesses) return;
+
+  const card = room.gameState.cards.find(c => c.id === cardId);
+  if (!card) return;
+  
+  if (card.shieldedTurns && card.shieldedTurns > 0) return;
+
+  const endTurn = () => {
+    transitionToNewTurn(io, room);
+  };
+
+  const endTurnDuet = () => {
+    transitionToNewTurn(io, room);
+  };
+
+  if (isDuet) {
+    const alreadyRevealed = expectedGuessTeam === 'blue' ? card.revealedByB : card.revealedByA;
+    if (alreadyRevealed) return;
+    
+    const keyType = expectedGuessTeam === 'blue' ? card.duetTypeA : card.duetTypeB;
+    if (expectedGuessTeam === 'blue') card.revealedByB = true;
+    else card.revealedByA = true;
+    
+    if (room.gameState.highlightedCards) {
+      for (const playerId of Object.keys(room.gameState.highlightedCards)) {
+        room.gameState.highlightedCards[playerId] = room.gameState.highlightedCards[playerId].filter(cId => cId !== cardId);
+      }
+    }
+
+    if (keyType === 'green' || keyType === 'assassin' || (card.revealedByA && card.revealedByB)) {
+      card.revealed = true;
+      card.type = keyType!;
+    }
+    
+    room.gameState.gameLog.push({
+      id: Math.random().toString(36).substring(7),
+      type: 'guess',
+      player: { 
+        name: player.name, 
+        avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=${player.team === 'red' ? 'ef4444' : '3b82f6'}` 
+      },
+      guessingTeam: expectedGuessTeam as 'red' | 'blue',
+      cardWord: card.word,
+      revealedColor: keyType!,
+      timestamp: Date.now()
+    });
+
+    if (keyType === 'assassin') {
+      room.gameState.winner = 'spectator';
+    } else if (keyType === 'neutral') {
+      endTurnDuet();
+    } else if (keyType === 'green') {
+      if (room.gameState.activeModifier === 'critical-hit' && room.gameState.successfulGuessesThisTurn === 0) {
+        const duration = room.gameState.timerSettings.operativeTime;
+        if (room.gameState.timeRemaining >= duration - 5) {
+          if (!room.gameState.modifierState) room.gameState.modifierState = {};
+          room.gameState.modifierState.timerFrozen = true;
+        }
+      }
+
+      room.gameState.successfulGuessesThisTurn++;
+      
+      let foundGreens = 0;
+      room.gameState.cards.forEach(c => {
+        if (c.duetTypeA === 'green' && c.revealedByB) foundGreens++;
+        if (c.duetTypeB === 'green' && c.revealedByA) foundGreens++;
+      });
+      
+      if (foundGreens >= 15) {
+        room.gameState.winner = 'red';
+      } else {
+        let remainingTargetsForCurrentTeam = 0;
+        if (expectedGuessTeam === 'blue') {
+          remainingTargetsForCurrentTeam = room.gameState.cards.filter(c => c.duetTypeA === 'green' && !c.revealedByB).length;
+        } else {
+          remainingTargetsForCurrentTeam = room.gameState.cards.filter(c => c.duetTypeB === 'green' && !c.revealedByA).length;
+        }
+
+        if (remainingTargetsForCurrentTeam === 0 || room.gameState.successfulGuessesThisTurn >= maxGuesses) {
+          endTurnDuet();
+        }
+      }
+    }
+  } else {
+    if (!card.revealed) {
+      card.revealed = true;
+      if (room.gameState.highlightedCards) {
+        for (const playerId of Object.keys(room.gameState.highlightedCards)) {
+          room.gameState.highlightedCards[playerId] = room.gameState.highlightedCards[playerId].filter(cId => cId !== cardId);
+        }
+      }
+      
+      room.gameState.gameLog.push({
+        id: Math.random().toString(36).substring(7),
+        type: 'guess',
+        player: { 
+          name: player.name, 
+          avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=${player.team === 'red' ? 'ef4444' : '3b82f6'}` 
+        },
+        guessingTeam: expectedGuessTeam as 'red' | 'blue',
+        cardWord: card.word,
+        revealedColor: card.type,
+        timestamp: Date.now()
+      });
+
+      if (card.type === 'assassin') {
+        room.gameState.winner = room.gameState.currentTurn === 'red' ? 'blue' : 'red';
+      } else if (card.type === 'red') {
+        room.gameState.redScore--;
+        if (room.gameState.redScore === 0) {
+          room.gameState.winner = 'red';
+        } else if (room.gameState.currentTurn === 'blue') {
+          endTurn(); 
+        } else {
+          if (room.gameState.activeModifier === 'critical-hit' && room.gameState.successfulGuessesThisTurn === 0) {
+            const duration = room.gameState.timerSettings.operativeTime;
+            if (room.gameState.timeRemaining >= duration - 5) {
+              if (!room.gameState.modifierState) room.gameState.modifierState = {};
+              room.gameState.modifierState.timerFrozen = true;
+            }
+          }
+
+          room.gameState.successfulGuessesThisTurn++;
+          if (room.gameState.successfulGuessesThisTurn >= maxGuesses) {
+            endTurn();
+          } else if (room.gameState.redScore === 0) {
+            endTurn();
+          }
+        }
+      } else if (card.type === 'blue') {
+        room.gameState.blueScore--;
+        if (room.gameState.blueScore === 0) {
+          room.gameState.winner = 'blue';
+        } else if (room.gameState.currentTurn === 'red') {
+          endTurn();
+        } else {
+          if (room.gameState.activeModifier === 'critical-hit' && room.gameState.successfulGuessesThisTurn === 0) {
+            const duration = room.gameState.timerSettings.operativeTime;
+            if (room.gameState.timeRemaining >= duration - 5) {
+              if (!room.gameState.modifierState) room.gameState.modifierState = {};
+              room.gameState.modifierState.timerFrozen = true;
+            }
+          }
+
+          room.gameState.successfulGuessesThisTurn++;
+          if (room.gameState.successfulGuessesThisTurn >= maxGuesses) {
+            endTurn();
+          } else if (room.gameState.blueScore === 0) {
+            endTurn();
+          }
+        }
+      } else if (card.type === 'neutral') {
+        endTurn();
+      }
+    }
+  }
+
+  if (room.gameState && !room.gameState.winner && room.gameState.modifierState?.bloodPactOneGuessLeft) {
+    if (room.gameState.currentPhase === 'operative') {
+      transitionToNewTurn(io, room);
+    }
+  }
+
+  io.to(room.id).emit('game_update', room.gameState);
 }
 
 export function setupRoomManager(io: Server) {
@@ -189,7 +501,6 @@ export function setupRoomManager(io: Server) {
       );
       
       if (existingPlayerIndex !== -1) {
-        // Player reconnecting or switching teams
         const existingPlayer = rooms[roomId].players[existingPlayerIndex];
         
         rooms[roomId].players[existingPlayerIndex] = {
@@ -201,7 +512,6 @@ export function setupRoomManager(io: Server) {
           connected: true
         };
       } else {
-        // Brand new player
         rooms[roomId].players.push({
           ...player,
           connected: true
@@ -247,7 +557,6 @@ export function setupRoomManager(io: Server) {
           else { p.team = 'blue'; p.role = 'operative'; }
         });
         
-        // Apply back to room
         room.players.forEach(rp => {
           const matched = shuffled.find(sp => sp.id === rp.id);
           if (matched) {
@@ -259,14 +568,13 @@ export function setupRoomManager(io: Server) {
       }
     });
 
-    socket.on('start_game', ({ roomId, language, gameMode, timerSettings, selectedPacks, customWords, customWordWeight, clueType }: { roomId: string, language: Language, gameMode: GameMode, timerSettings: TimerSettings, selectedPacks: string[], customWords: string[], customWordWeight: CustomWordWeight, clueType: any }) => {
+    socket.on('start_game', ({ roomId, language, gameMode, timerSettings, selectedPacks, customWords, customWordWeight, clueType, chaosMode }: { roomId: string, language: Language, gameMode: GameMode, timerSettings: TimerSettings, selectedPacks: string[], customWords: string[], customWordWeight: CustomWordWeight, clueType: any, chaosMode?: boolean }) => {
       const room = rooms[roomId];
       if (room) {
         const { cards, startingTeam } = gameMode === 'duet' 
           ? generateDuetGrid(language, selectedPacks, customWords, customWordWeight) 
           : generateGrid(language, selectedPacks, customWords, customWordWeight);
         
-        // Calculate initial time limit based on new timer settings
         let initialTimeRemaining = 0;
         if (timerSettings.preset !== 'off') {
           initialTimeRemaining = timerSettings.spymasterTime + timerSettings.extraFirstClueTime;
@@ -291,8 +599,13 @@ export function setupRoomManager(io: Server) {
           language,
           gameLog: [],
           highlightedCards: {},
-          clueType
+          clueType,
+          chaosMode: !!chaosMode
         };
+
+        if (chaosMode) {
+          applyRandomModifier(room);
+        }
 
         startTimer(io, room);
 
@@ -311,7 +624,17 @@ export function setupRoomManager(io: Server) {
         if (room.gameState.currentPhase === 'spymaster' && 
             player.team === room.gameState.currentTurn && 
             (player.role === 'spymaster' || isDuet)) {
-          room.gameState.activeCue = cue;
+          
+          let finalCue = cue;
+          if (room.gameState.activeModifier === 'vowel-void') {
+            finalCue = cue.replace(/[aeAE]/g, '');
+            if (!finalCue) finalCue = '?';
+          } else if (room.gameState.activeModifier === 'oracle-riddle') {
+            const words = cue.split(/\s+/).filter(Boolean);
+            finalCue = words.slice(0, 2).join(' ');
+          }
+
+          room.gameState.activeCue = finalCue;
           room.gameState.activeCueNumber = number;
           room.gameState.currentPhase = 'operative';
           room.gameState.successfulGuessesThisTurn = 0;
@@ -326,7 +649,7 @@ export function setupRoomManager(io: Server) {
               avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=${player.team === 'red' ? 'ef4444' : '3b82f6'}` 
             },
             team: player.team as 'red' | 'blue',
-            cueWord: cue,
+            cueWord: finalCue,
             cueNumber: number,
             targets: targets,
             timestamp: Date.now()
@@ -370,181 +693,8 @@ export function setupRoomManager(io: Server) {
     socket.on('guess_card', ({ roomId, cardId }: { roomId: string, cardId: number }) => {
       const room = rooms[roomId];
       const player = room?.players.find(p => p.id === socket.id);
-      
-      if (room && room.gameState && !room.gameState.winner && player) {
-        if (room.gameState.currentPhase !== 'operative') return;
-        
-        // In duet mode, if it's Side A's cue (currentTurn='red'), then Side B (team='blue') must guess.
-        const isDuet = room.gameState.gameMode === 'duet';
-        const expectedGuessTeam = isDuet ? 
-          (room.gameState.currentTurn === 'red' ? 'blue' : 'red') : 
-          room.gameState.currentTurn;
-
-        if (player.team !== expectedGuessTeam || (!isDuet && player.role !== 'operative')) return;
-        
-        const maxGuesses = room.gameState.activeCueNumber === 0 ? Infinity : (room.gameState.activeCueNumber || 0) + 1;
-        if (room.gameState.successfulGuessesThisTurn >= maxGuesses) return;
-
-        const card = room.gameState.cards.find(c => c.id === cardId);
-        
-        if (room.gameState.gameMode === 'duet') {
-          // DUET MODE GUESSING
-          if (card) {
-            // Did the guessing team already reveal this card for themselves?
-            const alreadyRevealed = expectedGuessTeam === 'blue' ? card.revealedByB : card.revealedByA;
-            if (alreadyRevealed) return;
-            
-            // For Duet, if B is guessing, they are checking A's key (duetTypeA).
-            // If A is guessing, they are checking B's key (duetTypeB).
-            const keyType = expectedGuessTeam === 'blue' ? card.duetTypeA : card.duetTypeB;
-            if (expectedGuessTeam === 'blue') card.revealedByB = true;
-            else card.revealedByA = true;
-            
-            // Remove only the guessed card from highlights (keep other highlights)
-            if (room.gameState.highlightedCards) {
-              for (const playerId of Object.keys(room.gameState.highlightedCards)) {
-                room.gameState.highlightedCards[playerId] = room.gameState.highlightedCards[playerId].filter(cId => cId !== cardId);
-              }
-            }
-
-            if (keyType === 'green' || keyType === 'assassin' || (card.revealedByA && card.revealedByB)) {
-              // Mark globally revealed if it's an objective, assassin, or both sides have guessed it
-              card.revealed = true;
-              card.type = keyType!; // temporarily override visual type for log/client
-            }
-            
-            room.gameState.gameLog.push({
-              id: Math.random().toString(36).substring(7),
-              type: 'guess',
-              player: { 
-                name: player.name, 
-                avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=${player.team === 'red' ? 'ef4444' : '3b82f6'}` 
-              },
-              guessingTeam: expectedGuessTeam as 'red' | 'blue',
-              cardWord: card.word,
-              revealedColor: keyType!,
-              timestamp: Date.now()
-            });
-
-            const endTurnDuet = () => {
-              room.gameState!.currentTurn = getNextTurnDuet(room.gameState!);
-              room.gameState!.currentPhase = 'spymaster';
-              room.gameState!.activeCue = null;
-              room.gameState!.activeCueNumber = null;
-              room.gameState!.successfulGuessesThisTurn = 0;
-              room.gameState!.highlightedCards = {};
-              room.gameState!.timerTokens--;
-              if (room.gameState!.timerTokens <= 0) {
-                 room.gameState!.winner = 'spectator'; // LOSS
-              }
-              startTimer(io, room);
-            };
-
-            if (keyType === 'assassin') {
-              room.gameState.winner = 'spectator'; // Loss
-            } else if (keyType === 'neutral') {
-              endTurnDuet();
-            } else if (keyType === 'green') {
-              room.gameState.successfulGuessesThisTurn++;
-              
-              // Check for win: Are there 15 unique cards where either revealedByA or revealedByB was true and its keyType for the guesser was green?
-              // Actually simpler: Are there 15 total green reveals across both sides? No, green targets are 15 distinct cards.
-              // A card is "found" if it was guessed correctly. Wait, a card might be Green for A but Neutral for B.
-              // So we need to check if 15 total "greens" have been found.
-              // Let's count cards where (duetTypeA==='green' && revealedByB) OR (duetTypeB==='green' && revealedByA).
-              let foundGreens = 0;
-              room.gameState.cards.forEach(c => {
-                if (c.duetTypeA === 'green' && c.revealedByB) foundGreens++;
-                if (c.duetTypeB === 'green' && c.revealedByA) foundGreens++;
-              });
-              
-              if (foundGreens >= 15) {
-                room.gameState.winner = 'red'; // WIN (using 'red' to signal win in Duet, will fix frontend)
-              } else {
-                let remainingTargetsForCurrentTeam = 0;
-                if (expectedGuessTeam === 'blue') {
-                  remainingTargetsForCurrentTeam = room.gameState.cards.filter(c => c.duetTypeA === 'green' && !c.revealedByB).length;
-                } else {
-                  remainingTargetsForCurrentTeam = room.gameState.cards.filter(c => c.duetTypeB === 'green' && !c.revealedByA).length;
-                }
-
-                if (remainingTargetsForCurrentTeam === 0 || room.gameState.successfulGuessesThisTurn >= maxGuesses) {
-                  endTurnDuet();
-                }
-              }
-            }
-          }
-        } else {
-          // CLASSIC MODE GUESSING
-          if (card && !card.revealed) {
-            card.revealed = true;
-            // Remove only the guessed card from highlights
-            if (room.gameState.highlightedCards) {
-              for (const playerId of Object.keys(room.gameState.highlightedCards)) {
-                room.gameState.highlightedCards[playerId] = room.gameState.highlightedCards[playerId].filter(cId => cId !== cardId);
-              }
-            }
-            
-            room.gameState.gameLog.push({
-            id: Math.random().toString(36).substring(7),
-            type: 'guess',
-            player: { 
-              name: player.name, 
-              avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=${player.team === 'red' ? 'ef4444' : '3b82f6'}` 
-            },
-            guessingTeam: expectedGuessTeam as 'red' | 'blue',
-            cardWord: card.word,
-            revealedColor: card.type,
-            timestamp: Date.now()
-          });
-            
-            const endTurn = () => {
-              room.gameState!.currentTurn = room.gameState!.currentTurn === 'red' ? 'blue' : 'red';
-              room.gameState!.currentPhase = 'spymaster';
-              room.gameState!.activeCue = null;
-              room.gameState!.activeCueNumber = null;
-              room.gameState!.successfulGuessesThisTurn = 0;
-              room.gameState!.highlightedCards = {};
-              startTimer(io, room);
-            };
-
-            if (card.type === 'assassin') {
-              room.gameState.winner = room.gameState.currentTurn === 'red' ? 'blue' : 'red';
-            } else if (card.type === 'red') {
-              room.gameState.redScore--;
-              if (room.gameState.redScore === 0) {
-                room.gameState.winner = 'red';
-              } else if (room.gameState.currentTurn === 'blue') {
-                endTurn(); 
-              } else {
-                room.gameState.successfulGuessesThisTurn++;
-                if (room.gameState.successfulGuessesThisTurn >= maxGuesses) {
-                  endTurn();
-                } else if (room.gameState.redScore === 0) {
-                  endTurn();
-                }
-              }
-            } else if (card.type === 'blue') {
-              room.gameState.blueScore--;
-              if (room.gameState.blueScore === 0) {
-                room.gameState.winner = 'blue';
-              } else if (room.gameState.currentTurn === 'red') {
-                endTurn();
-              } else {
-                room.gameState.successfulGuessesThisTurn++;
-                if (room.gameState.successfulGuessesThisTurn >= maxGuesses) {
-                  endTurn();
-                } else if (room.gameState.blueScore === 0) {
-                  endTurn();
-                }
-              }
-            } else if (card.type === 'neutral') {
-              endTurn();
-            }
-          }
-        }
-        
-        io.to(roomId).emit('game_update', room.gameState);
+      if (room && player) {
+        processGuess(io, room, player, cardId);
       }
     });
     
@@ -559,20 +709,6 @@ export function setupRoomManager(io: Server) {
           room.gameState.currentTurn;
 
         if (room.gameState.currentPhase === 'operative' && player.team === expectedGuessTeam && (player.role === 'operative' || isDuet)) {
-          room.gameState.currentTurn = room.gameState.gameMode === 'duet'
-            ? getNextTurnDuet(room.gameState)
-            : (room.gameState.currentTurn === 'red' ? 'blue' : 'red');
-          room.gameState.currentPhase = 'spymaster';
-          room.gameState.activeCue = null;
-          room.gameState.activeCueNumber = null;
-          room.gameState.successfulGuessesThisTurn = 0;
-          room.gameState.highlightedCards = {};
-          
-          if (room.gameState.gameMode === 'duet') {
-            room.gameState.timerTokens--;
-            if (room.gameState.timerTokens <= 0) room.gameState.winner = 'spectator';
-          }
-          
           room.gameState.gameLog.push({
             id: Math.random().toString(36).substring(7),
             type: 'guess',
@@ -586,7 +722,186 @@ export function setupRoomManager(io: Server) {
             timestamp: Date.now()
           });
           
-          startTimer(io, room);
+          transitionToNewTurn(io, room);
+          io.to(roomId).emit('game_update', room.gameState);
+        }
+      }
+    });
+
+    socket.on('use_blood_pact', ({ roomId, cardId }: { roomId: string, cardId: number }) => {
+      const room = rooms[roomId];
+      const player = room?.players.find(p => p.id === socket.id);
+      
+      if (room && room.gameState && !room.gameState.winner && player) {
+        if (room.gameState.currentPhase !== 'operative') return;
+        if (room.gameState.activeModifier !== 'blood-pact') return;
+        if (room.gameState.modifierState?.bloodPactStatus !== 'available') return;
+        
+        const isDuet = room.gameState.gameMode === 'duet';
+        const expectedGuessTeam = isDuet ? 
+          (room.gameState.currentTurn === 'red' ? 'blue' : 'red') : 
+          room.gameState.currentTurn;
+          
+        if (player.team !== expectedGuessTeam || (!isDuet && player.role !== 'operative')) return;
+        
+        const card = room.gameState.cards.find(c => c.id === cardId);
+        if (!card) return;
+        
+        if (isDuet) {
+          const alreadyRevealed = expectedGuessTeam === 'blue' ? card.revealedByB : card.revealedByA;
+          if (alreadyRevealed) return;
+          
+          if (expectedGuessTeam === 'blue') card.revealedByB = true;
+          else card.revealedByA = true;
+          
+          const keyType = expectedGuessTeam === 'blue' ? card.duetTypeA : card.duetTypeB;
+          
+          if (keyType === 'green' || keyType === 'assassin' || (card.revealedByA && card.revealedByB)) {
+            card.revealed = true;
+            card.type = keyType!;
+          }
+          
+          room.gameState.gameLog.push({
+            id: Math.random().toString(36).substring(7),
+            type: 'guess',
+            player: { 
+              name: `${player.name} (Blood Pact)`, 
+              avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=882222` 
+            },
+            guessingTeam: expectedGuessTeam as 'red' | 'blue',
+            cardWord: card.word,
+            revealedColor: keyType!,
+            timestamp: Date.now()
+          });
+        } else {
+          if (card.revealed) return;
+          card.revealed = true;
+          
+          room.gameState.gameLog.push({
+            id: Math.random().toString(36).substring(7),
+            type: 'guess',
+            player: { 
+              name: `${player.name} (Blood Pact)`, 
+              avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=882222` 
+            },
+            guessingTeam: expectedGuessTeam as 'red' | 'blue',
+            cardWord: card.word,
+            revealedColor: card.type,
+            timestamp: Date.now()
+          });
+        }
+        
+        if (!isDuet) {
+          if (card.type === 'red') {
+            room.gameState.redScore--;
+            if (room.gameState.redScore === 0) room.gameState.winner = 'red';
+          } else if (card.type === 'blue') {
+            room.gameState.blueScore--;
+            if (room.gameState.blueScore === 0) room.gameState.winner = 'blue';
+          }
+        } else {
+          let foundGreens = 0;
+          room.gameState.cards.forEach(c => {
+            if (c.duetTypeA === 'green' && c.revealedByB) foundGreens++;
+            if (c.duetTypeB === 'green' && c.revealedByA) foundGreens++;
+          });
+          if (foundGreens >= 15) {
+            room.gameState.winner = 'red';
+          }
+        }
+        
+        if (room.gameState.highlightedCards) {
+          for (const playerId of Object.keys(room.gameState.highlightedCards)) {
+            room.gameState.highlightedCards[playerId] = room.gameState.highlightedCards[playerId].filter(cId => cId !== cardId);
+          }
+        }
+        
+        room.gameState.modifierState.bloodPactStatus = 'used';
+        room.gameState.modifierState.bloodPactOneGuessLeft = true;
+        
+        io.to(roomId).emit('game_update', room.gameState);
+      }
+    });
+
+    socket.on('gacha_pull', ({ roomId }: { roomId: string }) => {
+      const room = rooms[roomId];
+      const player = room?.players.find(p => p.id === socket.id);
+      
+      if (room && room.gameState && !room.gameState.winner && player) {
+        if (room.gameState.currentPhase !== 'operative') return;
+        if (room.gameState.activeModifier !== 'gacha-pull') return;
+        
+        const isDuet = room.gameState.gameMode === 'duet';
+        const expectedGuessTeam = isDuet ? 
+          (room.gameState.currentTurn === 'red' ? 'blue' : 'red') : 
+          room.gameState.currentTurn;
+          
+        if (player.team !== expectedGuessTeam || (!isDuet && player.role !== 'operative')) return;
+        
+        const unrevealedCards = room.gameState.cards.filter(c => {
+          if (isDuet) {
+            return expectedGuessTeam === 'blue' ? !c.revealedByB : !c.revealedByA;
+          } else {
+            return !c.revealed;
+          }
+        });
+        
+        if (unrevealedCards.length > 0) {
+          const randomCard = unrevealedCards[Math.floor(Math.random() * unrevealedCards.length)];
+          
+          room.gameState.gameLog.push({
+            id: Math.random().toString(36).substring(7),
+            type: 'guess',
+            player: { 
+              name: `${player.name} (Lever Pull)`, 
+              avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=e67e22` 
+            },
+            guessingTeam: expectedGuessTeam as 'red' | 'blue',
+            cardWord: 'Pulled the Gacha Lever!',
+            revealedColor: 'neutral',
+            timestamp: Date.now()
+          });
+          
+          processGuess(io, room, player, randomCard.id);
+        }
+      }
+    });
+
+    socket.on('lock_card', ({ roomId, cardId }: { roomId: string, cardId: number }) => {
+      const room = rooms[roomId];
+      const player = room?.players.find(p => p.id === socket.id);
+      
+      if (room && room.gameState && !room.gameState.winner && player) {
+        if (room.gameState.currentPhase !== 'operative') return;
+        if (room.gameState.activeModifier !== 'shield-wall') return;
+        if (!room.gameState.modifierState?.shieldActive) return;
+        
+        const isDuet = room.gameState.gameMode === 'duet';
+        const expectedGuessTeam = isDuet ? 
+          (room.gameState.currentTurn === 'red' ? 'blue' : 'red') : 
+          room.gameState.currentTurn;
+          
+        if (player.team !== expectedGuessTeam || (!isDuet && player.role !== 'operative')) return;
+        
+        const card = room.gameState.cards.find(c => c.id === cardId);
+        if (card) {
+          card.shieldedTurns = 2;
+          
+          room.gameState.gameLog.push({
+            id: Math.random().toString(36).substring(7),
+            type: 'guess',
+            player: { 
+              name: player.name, 
+              avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=64748b` 
+            },
+            guessingTeam: expectedGuessTeam as 'red' | 'blue',
+            cardWord: `Locked card: ${card.word}`,
+            revealedColor: 'neutral',
+            timestamp: Date.now()
+          });
+          
+          room.gameState.modifierState.shieldActive = false;
+          
           io.to(roomId).emit('game_update', room.gameState);
         }
       }
@@ -594,7 +909,6 @@ export function setupRoomManager(io: Server) {
 
     socket.on('prank_vibrate', ({ roomId, targetPlayerId }: { roomId: string, targetPlayerId: string }) => {
       const room = rooms[roomId];
-      // Only host can trigger prank (index 0)
       if (room && room.players.length > 0 && room.players[0].id === socket.id) {
         io.to(roomId).emit('trigger_prank', { targetPlayerId });
       }
@@ -602,7 +916,6 @@ export function setupRoomManager(io: Server) {
 
     socket.on('play_again', ({ roomId }: { roomId: string }) => {
       const room = rooms[roomId];
-      // Allow host to restart. The host is the first player in the room array.
       if (room && room.players.length > 0 && room.players[0].id === socket.id) {
         room.gameState = null;
         io.to(roomId).emit('return_to_lobby');
@@ -617,11 +930,9 @@ export function setupRoomManager(io: Server) {
         const playerIndex = room.players.findIndex(p => p.id === socket.id);
         if (playerIndex !== -1) {
           if (playerIndex === 0) {
-            // The host disconnected, kick everyone else
             io.to(roomId).emit('host_disconnected');
             delete rooms[roomId];
           } else {
-            // Instead of removing the player, mark them as disconnected so they can rejoin and reclaim their spot
             room.players[playerIndex].connected = false;
             io.to(roomId).emit('room_update', getSafeRoom(room));
           }

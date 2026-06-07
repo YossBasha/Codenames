@@ -18,9 +18,11 @@ interface GridProps {
   onCardClick: (id: number) => void;
   onCardContextMenu?: (e: React.MouseEvent, id: number) => void;
   onGuess?: (id: number) => void;
+  activeModifier?: string | null;
+  currentPhase?: 'spymaster' | 'operative';
 }
 
-export default function Grid({ cards, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, clueTargets = [], isGivingClue = false, highlightedCards = {}, players = [], currentPlayerId, onCardClick, onCardContextMenu, onGuess }: GridProps) {
+export default function Grid({ cards, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, clueTargets = [], isGivingClue = false, highlightedCards = {}, players = [], currentPlayerId, onCardClick, onCardContextMenu, onGuess, activeModifier, currentPhase }: GridProps) {
   if (!cards || cards.length === 0) return null;
 
   return (
@@ -44,6 +46,8 @@ export default function Grid({ cards, isSpymaster, disabled, playerTeam, gameMod
           onClick={onCardClick}
           onContextMenu={onCardContextMenu}
           onGuess={onGuess}
+          activeModifier={activeModifier}
+          currentPhase={currentPhase}
         />
       ))}
     </div>

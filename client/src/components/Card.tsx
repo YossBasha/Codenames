@@ -2,6 +2,7 @@ import { useState, useLayoutEffect, useRef } from "react";
 import type { Card as CardType, Player } from "../../../shared/types";
 import { cn } from "../utils";
 import { playCardHoverSfx, playCardSelectSfx } from "../utils/sfx";
+import { Lock } from "lucide-react";
 
 interface CardProps {
   card: CardType;
@@ -17,9 +18,11 @@ interface CardProps {
   onClick: (id: number) => void;
   onContextMenu?: (e: React.MouseEvent, id: number) => void;
   onGuess?: (id: number) => void;
+  activeModifier?: string | null;
+  currentPhase?: 'spymaster' | 'operative';
 }
 
-export default function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, isClueTarget = false, isGivingClue = false, highlightedBy = [], currentPlayerId, onClick, onContextMenu, onGuess }: CardProps) {
+export default function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, isClueTarget = false, isGivingClue = false, highlightedBy = [], currentPlayerId, onClick, onContextMenu, onGuess, activeModifier, currentPhase }: CardProps) {
   let isRevealedForMe = card.revealed;
   if (gameMode === 'duet' && !card.revealed) {
     if (playerTeam === 'red' && card.revealedByA) {
@@ -94,6 +97,10 @@ export default function Card({ card, isSpymaster, disabled, playerTeam, gameMode
     isDisabled = isRevealedForMe || (isSpymaster && gameMode !== 'duet') || disabled;
   }
 
+  if (card.shieldedTurns && card.shieldedTurns > 0) {
+    isDisabled = true;
+  }
+
   const isEmoji = /\p{Extended_Pictographic}/u.test(card.word);
 
   return (
@@ -159,7 +166,10 @@ export default function Card({ card, isSpymaster, disabled, playerTeam, gameMode
 
       {/* Base Word - only hide text for globally revealed green/red/blue cards (correct guesses) */}
       {!card.revealed || !['green', 'red', 'blue'].includes(typeToDisplay) ? (
-        <div className="relative z-10 flex items-center justify-center h-full w-full p-1 sm:p-2 text-center break-words leading-none sm:leading-tight">
+        <div className={cn(
+          "relative z-10 flex items-center justify-center h-full w-full p-1 sm:p-2 text-center break-words leading-none sm:leading-tight",
+          activeModifier === 'eroding-parchment' && currentPhase === 'operative' && !isRevealedForMe && "animate-eroding-parchment"
+        )}>
           {card.word}
         </div>
       ) : null}
@@ -222,7 +232,15 @@ export default function Card({ card, isSpymaster, disabled, playerTeam, gameMode
         <div className="absolute inset-0 bg-white/20 z-10" />
       )}
       
-
+      {/* Shield Wall Lock Overlay */}
+      {card.shieldedTurns !== undefined && card.shieldedTurns > 0 && (
+        <div className="absolute inset-0 bg-slate-950/75 flex flex-col items-center justify-center gap-1 z-35 animate-fade-in pointer-events-none">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-800 border-2 border-slate-500 shadow-md flex items-center justify-center text-slate-300">
+            <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </div>
+          <span className="text-[8px] sm:text-[10px] font-black text-slate-300 tracking-widest uppercase">LOCKED ({card.shieldedTurns}T)</span>
+        </div>
+      )}
     </div>
   );
 }

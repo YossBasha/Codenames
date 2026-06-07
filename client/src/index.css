@@ -160,3 +160,18 @@ body {
 .animate-screen-shake {
   animation: screen-shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
 }
+
+@keyframes eroding-parchment {
+  0% {
+    filter: blur(0px);
+    opacity: 1;
+  }
+  100% {
+    filter: blur(10px);
+    opacity: 0.05;
+  }
+}
+
+.animate-eroding-parchment {
+  animation: eroding-parchment 30s linear forwards;
+}

@@ -44,6 +44,7 @@ export default function PassAndPlay() {
     try { return JSON.parse(localStorage.getItem('host_timerSettings') || '{"preset":"off","spymasterTime":0,"operativeTime":0,"extraFirstClueTime":0}'); } 
     catch { return { preset: 'off', spymasterTime: 0, operativeTime: 0, extraFirstClueTime: 0 }; }
   });
+  const [chaosMode, setChaosMode] = useState<boolean>(() => localStorage.getItem('host_chaosMode') === 'true');
 
   useEffect(() => {
     localStorage.setItem('host_gameMode', gameMode);
@@ -52,7 +53,8 @@ export default function PassAndPlay() {
     localStorage.setItem('host_customWordsText', customWordsText);
     localStorage.setItem('host_customWordWeight', customWordWeight);
     localStorage.setItem('host_timerSettings', JSON.stringify(timerSettings));
-  }, [gameMode, selectedPacks, clueType, customWordsText, customWordWeight, timerSettings]);
+    localStorage.setItem('host_chaosMode', String(chaosMode));
+  }, [gameMode, selectedPacks, clueType, customWordsText, customWordWeight, timerSettings, chaosMode]);
 
   const customWordsArray = useMemo(() => {
     if (!customWordsText.trim()) return [];
@@ -483,6 +485,8 @@ export default function PassAndPlay() {
               setLanguage={setLanguage}
               clueType={clueType}
               setClueType={setClueType}
+              chaosMode={chaosMode}
+              setChaosMode={setChaosMode}
             />
           </div>
           

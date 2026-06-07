@@ -13,6 +13,7 @@ export interface Card {
   duetTypeB?: CardType;
   revealedByA?: boolean;
   revealedByB?: boolean;
+  shieldedTurns?: number;
 }
 
 export interface Player {
@@ -81,4 +82,7 @@ export interface GameState {
   gameLog: LogEntry[];
   highlightedCards?: Record<string, number[]>; // Maps player ID to array of card IDs
   clueType: ClueType;
+  chaosMode?: boolean;
+  activeModifier?: string | null;
+  modifierState?: any;
 }

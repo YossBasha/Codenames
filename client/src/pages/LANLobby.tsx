@@ -62,6 +62,7 @@ export default function LANLobby() {
   });
   const [customWordsText, setCustomWordsText] = useState(() => localStorage.getItem('host_customWordsText') || '');
   const [customWordWeight, setCustomWordWeight] = useState<CustomWordWeight>(() => (localStorage.getItem('host_customWordWeight') as CustomWordWeight) || 'none');
+  const [chaosMode, setChaosMode] = useState<boolean>(() => localStorage.getItem('host_chaosMode') === 'true');
 
   useEffect(() => {
     if (isHost) {
@@ -71,8 +72,9 @@ export default function LANLobby() {
       localStorage.setItem('host_customWordsText', customWordsText);
       localStorage.setItem('host_customWordWeight', customWordWeight);
       localStorage.setItem('host_timerSettings', JSON.stringify(timerSettings));
+      localStorage.setItem('host_chaosMode', String(chaosMode));
     }
-  }, [isHost, gameMode, selectedPacks, clueType, customWordsText, customWordWeight, timerSettings]);
+  }, [isHost, gameMode, selectedPacks, clueType, customWordsText, customWordWeight, timerSettings, chaosMode]);
 
   const customWordsArray = useMemo(() => {
     if (!customWordsText.trim()) return [];
@@ -204,11 +206,12 @@ export default function LANLobby() {
           customWordsText,
           customWordWeight,
           language,
-          clueType
+          clueType,
+          chaosMode
         }
       });
     }
-  }, [gameMode, selectedPacks, timerSettings, customWordsText, customWordWeight, language, clueType, isHost, socket, roomId]);
+  }, [gameMode, selectedPacks, timerSettings, customWordsText, customWordWeight, language, clueType, isHost, socket, roomId, chaosMode]);
 
   // Listen for settings from host
   useEffect(() => {
@@ -224,6 +227,7 @@ export default function LANLobby() {
       setCustomWordWeight(settings.customWordWeight);
       setLanguage(settings.language);
       setClueType(settings.clueType || 'both');
+      setChaosMode(!!settings.chaosMode);
     });
     
     return () => {
@@ -270,7 +274,8 @@ export default function LANLobby() {
         selectedPacks,
         customWords: customWordsArray,
         customWordWeight,
-        clueType
+        clueType,
+        chaosMode
       });
       playLobbyClickSfx();
     }
@@ -545,6 +550,8 @@ export default function LANLobby() {
               setLanguage={setLanguage}
               clueType={clueType}
               setClueType={setClueType}
+              chaosMode={chaosMode}
+              setChaosMode={setChaosMode}
             />
           </div>
 

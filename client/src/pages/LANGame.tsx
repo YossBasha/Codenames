@@ -10,6 +10,7 @@ import ActiveClueBar from "../components/ActiveClueBar";
 import { cn } from "../utils";
 import type { Player } from "../../../shared/types";
 import { playCardRevealSfx } from "../utils/sfx";
+import { MODIFIERS } from "../../../shared/modifiers";
 
 export default function LANGame() {
   const navigate = useNavigate();
@@ -20,6 +21,78 @@ export default function LANGame() {
   const [clueTargets, setClueTargets] = useState<number[]>([]);
   const [hostDisconnected, setHostDisconnected] = useState(false);
   const [showPrankMenu, setShowPrankMenu] = useState(false);
+
+  // Chaos Modifiers Local States
+  const [showModifierBanner, setShowModifierBanner] = useState<string | null>(null);
+  const [sensoryTimeLeft, setSensoryTimeLeft] = useState<number | null>(null);
+  const [lagSpikeSecondsLeft, setLagSpikeSecondsLeft] = useState<number | null>(null);
+  const [isLockToggleActive, setIsLockToggleActive] = useState(false);
+  const [isBloodPactToggleActive, setIsBloodPactToggleActive] = useState(false);
+
+  // Trigger announcement banner on turn / modifier change
+  const prevModifierRef = useRef<string | null>(null);
+  const prevTurnRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (gameState?.activeModifier) {
+      const isNewModifier = gameState.activeModifier !== prevModifierRef.current || gameState.currentTurn !== prevTurnRef.current;
+      if (isNewModifier) {
+        setShowModifierBanner(gameState.activeModifier);
+        const timer = setTimeout(() => setShowModifierBanner(null), 3500);
+        
+        setIsLockToggleActive(false);
+        setIsBloodPactToggleActive(false);
+        setSensoryTimeLeft(null);
+        setLagSpikeSecondsLeft(null);
+        
+        return () => clearTimeout(timer);
+      }
+    } else {
+      setShowModifierBanner(null);
+    }
+    
+    if (gameState) {
+      prevModifierRef.current = gameState.activeModifier || null;
+      prevTurnRef.current = gameState.currentTurn;
+    }
+  }, [gameState?.activeModifier, gameState?.currentTurn]);
+
+  // Sensory Deprivation color fade timer
+  const isSpymasterTurn = gameState?.currentPhase === 'spymaster';
+  const isSensoryDep = gameState?.activeModifier === 'sensory-deprivation';
+  useEffect(() => {
+    if (isSpymasterTurn && isSensoryDep) {
+      if (sensoryTimeLeft === null) {
+        setSensoryTimeLeft(5);
+      } else if (sensoryTimeLeft > 0) {
+        const timer = setTimeout(() => setSensoryTimeLeft(sensoryTimeLeft - 1), 1000);
+        return () => clearTimeout(timer);
+      }
+    } else {
+      setSensoryTimeLeft(null);
+    }
+  }, [isSpymasterTurn, isSensoryDep, sensoryTimeLeft]);
+
+  // Lag Spike delay countdown timer
+  const isOperativeGuessing = gameState?.currentPhase === 'operative';
+  const isLagSpike = gameState?.activeModifier === 'lag-spike';
+  const expectedGuessTeam = gameState?.gameMode === 'duet' ? 
+    (gameState.currentTurn === 'red' ? 'blue' : 'red') : 
+    gameState?.currentTurn;
+  const isMyTurnToGuess = gameState && player && (roomPlayers.find(p => p.id === player?.id) || player).team === expectedGuessTeam && (
+    gameState.gameMode === 'duet' || (roomPlayers.find(p => p.id === player?.id) || player).role === 'operative'
+  );
+  useEffect(() => {
+    if (isOperativeGuessing && isLagSpike && isMyTurnToGuess) {
+      if (lagSpikeSecondsLeft === null) {
+        setLagSpikeSecondsLeft(15);
+      } else if (lagSpikeSecondsLeft > 0) {
+        const timer = setTimeout(() => setLagSpikeSecondsLeft(lagSpikeSecondsLeft - 1), 1000);
+        return () => clearTimeout(timer);
+      }
+    } else {
+      setLagSpikeSecondsLeft(null);
+    }
+  }, [isOperativeGuessing, isLagSpike, isMyTurnToGuess, lagSpikeSecondsLeft]);
 
   useEffect(() => {
     if (!socket || !roomId || !player) {
@@ -160,6 +233,18 @@ export default function LANGame() {
   const handleCardClick = (id: number) => {
     if (!gameState || gameState.winner || !socket || !roomId) return;
     
+    if (isLockToggleActive) {
+      socket.emit("lock_card", { roomId, cardId: id });
+      setIsLockToggleActive(false);
+      return;
+    }
+
+    if (isBloodPactToggleActive) {
+      socket.emit("use_blood_pact", { roomId, cardId: id });
+      setIsBloodPactToggleActive(false);
+      return;
+    }
+
     if (isGivingClue) {
       const card = gameState.cards.find(c => c.id === id);
       if (!card) return;
@@ -318,6 +403,7 @@ export default function LANGame() {
         amHost={amHost}
         onRestartGame={handleRestartGame}
         clueType={gameState.clueType}
+        activeModifier={gameState.activeModifier}
       />
 
       {/* Main Content Area */}
@@ -451,21 +537,42 @@ export default function LANGame() {
             </div>
           )}
 
-          <div className="w-full max-w-4xl mx-auto flex-1 flex justify-center pb-8 lg:pb-0 lg:min-h-0">
+          <div className="w-full max-w-4xl mx-auto flex-1 flex flex-col items-center justify-start pb-8 lg:pb-0 lg:min-h-0">
+            {/* Sensory Deprivation Warning */}
+            {sensoryTimeLeft !== null && sensoryTimeLeft > 0 && (
+              <div className="w-full max-w-md bg-purple-950/40 border border-purple-500/50 rounded-2xl p-3 mb-3 text-center animate-pulse shadow-[0_0_15px_rgba(168,85,247,0.15)]">
+                <span className="block text-xs font-black text-purple-400 uppercase tracking-widest">⚠️ Sensory Deprivation Active ⚠️</span>
+                <span className="block text-[11px] text-purple-200 mt-1 font-bold">Colors fade in {sensoryTimeLeft}s! Memorize the target cards!</span>
+              </div>
+            )}
+
+            {/* Lag Spike Warning */}
+            {lagSpikeSecondsLeft !== null && lagSpikeSecondsLeft > 0 && (
+              <div className="w-full max-w-md bg-yellow-950/40 border border-yellow-500/50 rounded-2xl p-3 mb-3 text-center animate-pulse shadow-[0_0_15px_rgba(234,179,8,0.15)]">
+                <span className="block text-xs font-black text-yellow-400 uppercase tracking-widest">⚠️ Network Lag Spike ⚠️</span>
+                <span className="block text-[11px] text-yellow-200 mt-1 font-bold">Connection frozen! Clicks are locked for another {lagSpikeSecondsLeft}s</span>
+              </div>
+            )}
+
             {(() => {
               const expectedGuessTeam = gameState.gameMode === 'duet' ? 
                 (gameState.currentTurn === 'red' ? 'blue' : 'red') : 
                 gameState.currentTurn;
-                
+              
+              const isLagSpikeActive = lagSpikeSecondsLeft !== null && lagSpikeSecondsLeft > 0;
+              const isSensoryDepActive = gameState?.activeModifier === 'sensory-deprivation' && gameState.currentPhase === 'spymaster';
+              const shouldShowColors = !isSensoryDepActive || (sensoryTimeLeft === null || sensoryTimeLeft > 0);
+              
               const isDisabled = (gameState.currentPhase === 'spymaster' && !isGivingClue) || 
                                  currentPlayer!.team !== expectedGuessTeam || 
                                  (isSpymaster && gameState.gameMode !== 'duet' && !isGivingClue) ||
-                                 !!gameState.winner;
+                                 !!gameState.winner ||
+                                 isLagSpikeActive;
               return (
                 <div className="w-full flex flex-col items-center transition-all duration-1000">
                   <Grid
                     cards={gameState.cards}
-                    isSpymaster={gameState.gameMode === 'duet' || isSpymaster || !!gameState.winner}
+                    isSpymaster={((gameState.gameMode === 'duet' || isSpymaster || !!gameState.winner) && shouldShowColors)}
                     disabled={isDisabled}
                     onCardClick={handleCardClick}
                     playerTeam={currentPlayer!.team}
@@ -478,7 +585,62 @@ export default function LANGame() {
                     currentPlayerId={player?.id}
                     onCardContextMenu={handleCardContextMenu}
                     onGuess={handleGuessCard}
+                    activeModifier={gameState.activeModifier}
+                    currentPhase={gameState.currentPhase}
                   />
+
+                  {/* Chaos Modifiers Operative Action Buttons */}
+                  {gameState.currentPhase === 'operative' && !gameState.winner && isMyTurnToGuess && (
+                    <div className="flex flex-wrap items-center justify-center gap-2 mt-4 z-20">
+                      {gameState.activeModifier === 'blood-pact' && gameState.modifierState?.bloodPactStatus === 'available' && (
+                        <button
+                          onClick={() => {
+                            setIsBloodPactToggleActive(!isBloodPactToggleActive);
+                            setIsLockToggleActive(false);
+                          }}
+                          className={cn(
+                            "px-4 py-2 rounded-xl font-black text-xs tracking-wider border transition-all cursor-pointer",
+                            isBloodPactToggleActive
+                              ? "bg-red-600 text-white border-red-400 shadow-[0_0_15px_rgba(239,68,68,0.5)] animate-pulse"
+                              : "bg-red-950/40 text-red-400 border-red-500/40 hover:bg-red-900/30"
+                          )}
+                        >
+                          {isBloodPactToggleActive ? "🩸 CLICK CARD TO REVEAL..." : "🩸 USE BLOOD PACT"}
+                        </button>
+                      )}
+                      
+                      {gameState.activeModifier === 'gacha-pull' && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm("Leverage pure chance? Clicking this will reveal a random unrevealed card color!")) {
+                              socket?.emit("gacha_pull", { roomId });
+                            }
+                          }}
+                          className="px-4 py-2 rounded-xl font-black text-xs tracking-wider bg-orange-600 border border-orange-500/50 shadow-lg shadow-orange-600/30 hover:bg-orange-500 hover:scale-105 active:scale-95 transition-all text-white cursor-pointer"
+                        >
+                          🕹️ PULL LEVER (GACHA)
+                        </button>
+                      )}
+                      
+                      {gameState.activeModifier === 'shield-wall' && gameState.modifierState?.shieldActive && (
+                        <button
+                          onClick={() => {
+                            setIsLockToggleActive(!isLockToggleActive);
+                            setIsBloodPactToggleActive(false);
+                          }}
+                          className={cn(
+                            "px-4 py-2 rounded-xl font-black text-xs tracking-wider border transition-all cursor-pointer",
+                            isLockToggleActive
+                              ? "bg-blue-600 text-white border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)] animate-pulse"
+                              : "bg-blue-950/40 text-blue-400 border-blue-500/40 hover:bg-blue-900/30"
+                          )}
+                        >
+                          {isLockToggleActive ? "🔒 CLICK CARD TO SHIELD..." : "🔒 LOCK CARD (SHIELD)"}
+                        </button>
+                      )}
+                    </div>
+                  )}
+
                   {gameState.currentPhase === 'operative' && !gameState.winner && (
                     <ActiveClueBar 
                       activeCue={gameState.activeCue}
@@ -543,6 +705,23 @@ export default function LANGame() {
           </button>
         </div>
       )}
+      {/* Chaos Modifier Announcement Banner */}
+      {showModifierBanner && (() => {
+        const mod = MODIFIERS.find(m => m.id === showModifierBanner);
+        if (!mod) return null;
+        return (
+          <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[150] flex items-center justify-center p-8 text-center animate-fade-in">
+            <div className="max-w-xl bg-slate-900 border-2 border-red-500/40 rounded-3xl p-8 sm:p-10 shadow-[0_0_60px_rgba(239,68,68,0.3)] animate-reveal-pop flex flex-col items-center">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-red-500/15 border-2 border-red-500/40 flex items-center justify-center text-3xl sm:text-4xl mb-6 animate-pulse">
+                🌀
+              </div>
+              <div className="text-red-500 text-xs font-black tracking-widest uppercase mb-2">Chaos Modifier Activated!</div>
+              <h2 className="text-2xl sm:text-4xl font-black text-white tracking-widest mb-4 uppercase">{mod.name}</h2>
+              <p className="text-slate-300 text-xs sm:text-sm font-bold leading-relaxed">{mod.description}</p>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

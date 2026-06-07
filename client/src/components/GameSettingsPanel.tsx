@@ -21,6 +21,8 @@ interface GameSettingsPanelProps {
   setLanguage: (lang: Language) => void;
   clueType: ClueType;
   setClueType: (clueType: ClueType) => void;
+  chaosMode: boolean;
+  setChaosMode: (val: boolean) => void;
 }
 
 export default function GameSettingsPanel({
@@ -39,7 +41,9 @@ export default function GameSettingsPanel({
   language,
   setLanguage,
   clueType,
-  setClueType
+  setClueType,
+  chaosMode,
+  setChaosMode
 }: GameSettingsPanelProps) {
   const [showTimerModal, setShowTimerModal] = useState(false);
   const [showWordPacksModal, setShowWordPacksModal] = useState(false);
@@ -173,6 +177,32 @@ export default function GameSettingsPanel({
               className="w-full accent-indigo-500 h-2 bg-[#1a1a1a] rounded-lg appearance-none cursor-pointer"
             />
           </div>
+        </div>
+
+        {/* Chaos Mode Toggle */}
+        <div className={cn(
+          "bg-[#2a2a2a] rounded-2xl p-4 border transition-all mt-2 flex items-center justify-between",
+          chaosMode ? "border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.15)] bg-red-950/10" : "border-[#444]"
+        )}>
+          <div className="flex items-center gap-3">
+            <div className={cn("p-2 rounded-full text-white", chaosMode ? "bg-red-500" : "bg-slate-600")}>
+              <span className="text-sm font-bold">🌀</span>
+            </div>
+            <div className="text-left">
+              <span className="block text-sm font-black tracking-widest text-white uppercase leading-none">Chaos Mode</span>
+              <span className="block text-[10px] font-bold text-slate-400 mt-1 leading-tight">Random global modifier applied each turn</span>
+            </div>
+          </div>
+          <label className={cn("relative inline-flex items-center group", isHost ? "cursor-pointer" : "opacity-50 cursor-not-allowed")}>
+            <input 
+              type="checkbox" 
+              checked={chaosMode} 
+              disabled={!isHost}
+              onChange={(e) => setChaosMode(e.target.checked)} 
+              className="sr-only peer" 
+            />
+            <div className="w-11 h-6 bg-slate-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-red-300 dark:peer-focus:ring-red-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
+          </label>
         </div>
       </div>
 
