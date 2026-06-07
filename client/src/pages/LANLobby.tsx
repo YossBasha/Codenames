@@ -606,13 +606,13 @@ export default function LANLobby() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-4 h-full">
+          <div className="flex flex-col gap-4 h-full min-h-min">
             {/* DUET SIDE A */}
-            <div className="flex-1 bg-green-500/20 border-2 border-green-400 rounded-3xl p-4 flex flex-col items-center shadow-[0_0_20px_rgba(34,197,94,0.3)] min-h-[150px] relative overflow-hidden group">
+            <div className="flex-1 bg-green-500/20 border-2 border-green-400 rounded-3xl p-4 flex flex-col items-center shadow-[0_0_20px_rgba(34,197,94,0.3)] relative overflow-hidden group">
               <div className="absolute top-0 w-full h-10 bg-green-600/30 font-black text-center pt-2 text-white/80 tracking-widest text-sm z-0">
                 SIDE A
               </div>
-              <div className="w-full flex-1 flex flex-col items-center pt-10 z-10">
+              <div className="w-full flex-1 flex flex-col items-center pt-10 z-10 min-h-[60px]">
                 <div className="flex flex-col gap-2 w-full">
                   {redPlayers.map(p => (
                     <div key={p.id} className="bg-green-600/50 px-4 py-2 rounded-xl text-center font-bold border border-green-500/50">
@@ -624,18 +624,18 @@ export default function LANLobby() {
               <button 
                 onMouseEnter={playLobbyHoverSfx}
                 onClick={() => handleJoinTeam('red', 'spymaster')}
-                className="mt-auto w-full py-2 bg-[#e67e22] hover:bg-[#d35400] border-b-4 border-[#a04000] rounded-2xl font-black text-white shadow-lg transition-all hover:translate-y-[2px] hover:border-b-2 active:border-b-0 active:translate-y-1 tracking-widest z-10"
+                className="mt-4 w-full py-2 bg-[#e67e22] hover:bg-[#d35400] border-b-4 border-[#a04000] rounded-2xl font-black text-white shadow-lg transition-all hover:translate-y-[2px] hover:border-b-2 active:border-b-0 active:translate-y-1 tracking-widest z-10"
               >
                 JOIN TEAM
               </button>
             </div>
 
             {/* DUET SIDE B */}
-            <div className="flex-1 bg-teal-500/20 border-2 border-teal-400 rounded-3xl p-4 flex flex-col items-center shadow-[0_0_20px_rgba(20,184,166,0.3)] min-h-[150px] relative overflow-hidden group">
+            <div className="flex-1 bg-teal-500/20 border-2 border-teal-400 rounded-3xl p-4 flex flex-col items-center shadow-[0_0_20px_rgba(20,184,166,0.3)] relative overflow-hidden group">
               <div className="absolute top-0 w-full h-10 bg-teal-600/30 font-black text-center pt-2 text-white/80 tracking-widest text-sm z-0">
                 SIDE B
               </div>
-              <div className="w-full flex-1 flex flex-col items-center pt-10 z-10">
+              <div className="w-full flex-1 flex flex-col items-center pt-10 z-10 min-h-[60px]">
                 <div className="flex flex-col gap-2 w-full">
                   {bluePlayers.map(p => (
                     <div key={p.id} className="bg-teal-600/50 px-4 py-2 rounded-xl text-center font-bold border border-teal-500/50">
@@ -647,7 +647,7 @@ export default function LANLobby() {
               <button 
                 onMouseEnter={playLobbyHoverSfx}
                 onClick={() => handleJoinTeam('blue', 'spymaster')}
-                className="mt-auto w-full py-2 bg-[#e67e22] hover:bg-[#d35400] border-b-4 border-[#a04000] rounded-2xl font-black text-white shadow-lg transition-all hover:translate-y-[2px] hover:border-b-2 active:border-b-0 active:translate-y-1 tracking-widest z-10"
+                className="mt-4 w-full py-2 bg-[#e67e22] hover:bg-[#d35400] border-b-4 border-[#a04000] rounded-2xl font-black text-white shadow-lg transition-all hover:translate-y-[2px] hover:border-b-2 active:border-b-0 active:translate-y-1 tracking-widest z-10"
               >
                 JOIN TEAM
               </button>
