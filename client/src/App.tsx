@@ -1,5 +1,6 @@
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { GameProvider } from './context/GameContext';
+import { I18nProvider } from './context/I18nContext';
 import Home from './pages/Home';
 import PassAndPlay from './pages/PassAndPlay';
 import LANLobby from './pages/LANLobby';
@@ -8,6 +9,7 @@ import JoinGame from './pages/JoinGame';
 import { Capacitor } from '@capacitor/core';
 import { NodeJS } from '@choreruiz/capacitor-node-js';
 import { useEffect } from 'react';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   useEffect(() => {
@@ -62,17 +64,20 @@ function App() {
   }, []);
 
   return (
-    <GameProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/pass-and-play" element={<PassAndPlay />} />
-          <Route path="/lan-lobby" element={<LANLobby />} />
-          <Route path="/join-game" element={<JoinGame />} />
-          <Route path="/lan-game" element={<LANGame />} />
-        </Routes>
-      </Router>
-    </GameProvider>
+    <I18nProvider>
+      <GameProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/pass-and-play" element={<PassAndPlay />} />
+            <Route path="/lan-lobby" element={<LANLobby />} />
+            <Route path="/join-game" element={<JoinGame />} />
+            <Route path="/lan-game" element={<LANGame />} />
+          </Routes>
+        </Router>
+        <Toaster position="top-center" />
+      </GameProvider>
+    </I18nProvider>
   );
 }
 

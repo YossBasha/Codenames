@@ -173,7 +173,7 @@ body {
 }
 
 .animate-eroding-parchment {
-  animation: eroding-parchment 30s linear forwards;
+  animation: eroding-parchment 20s linear forwards;
   will-change: opacity;
 }
 

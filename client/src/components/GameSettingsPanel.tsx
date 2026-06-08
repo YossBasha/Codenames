@@ -2,14 +2,16 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   BookOpen, Clock, X, Globe, Check, Keyboard, Upload, Volume2, VolumeX, PenTool,
-  Binary, FileText, HelpCircle, EyeOff, Shuffle, Ghost, Wind, Zap, HeartHandshake, Dices, Shield, WifiOff, Flame, Type, Eye
+  Binary, FileText, HelpCircle, EyeOff, Shuffle, Ghost, Wind, Zap, HeartHandshake, Dices, Shield, WifiOff, Flame, Type, Eye,
+  Skull, Gift, Swords, FastForward, Activity, Scissors, Copy, Crosshair, Terminal
 } from 'lucide-react';
 import { cn } from '../utils';
 import type { Language, CustomWordWeight, TimerSettings, ClueType } from '../../../shared/types';
 import { useGameContext } from '../context/GameContext';
+import { useI18n } from '../context/I18nContext';
 import { MODIFIERS } from '../../../shared/modifiers';
 
-const MODIFIER_ICONS: Record<string, React.ComponentType<any>> = {
+export const MODIFIER_ICONS: Record<string, React.ComponentType<any>> = {
   'Binary': Binary,
   'FileText': FileText,
   'HelpCircle': HelpCircle,
@@ -24,7 +26,16 @@ const MODIFIER_ICONS: Record<string, React.ComponentType<any>> = {
   'WifiOff': WifiOff,
   'Flame': Flame,
   'Type': Type,
-  'Eye': Eye
+  'Eye': Eye,
+  'Skull': Skull,
+  'Gift': Gift,
+  'Swords': Swords,
+  'FastForward': FastForward,
+  'Activity': Activity,
+  'Scissors': Scissors,
+  'Copy': Copy,
+  'Crosshair': Crosshair,
+  'Terminal': Terminal
 };
 
 interface GameSettingsPanelProps {
@@ -79,6 +90,7 @@ export default function GameSettingsPanel({
   const [customWordsTab, setCustomWordsTab] = useState<'type'|'upload'>('type');
   
   const { volume, setVolume } = useGameContext();
+  const { t, uiLanguage } = useI18n();
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -128,8 +140,8 @@ export default function GameSettingsPanel({
             )}
           >
             <div className="text-center">
-              <div className="font-black text-base lg:text-lg tracking-wider">CLASSIC</div>
-              <div className="text-[10px] opacity-80">4+ PLAYERS</div>
+              <div className="font-black text-base lg:text-lg tracking-wider">{t('classic_mode')}</div>
+              <div className="text-[10px] opacity-80">{t('players_4_plus')}</div>
             </div>
           </button>
           <button 
@@ -139,8 +151,8 @@ export default function GameSettingsPanel({
             )}
           >
             <div className="text-center">
-              <div className="font-black text-base lg:text-lg tracking-wider">DUET</div>
-              <div className="text-[10px] opacity-80">2+ PLAYERS</div>
+              <div className="font-black text-base lg:text-lg tracking-wider">{t('duet_mode')}</div>
+              <div className="text-[10px] opacity-80">{t('players_2_plus')}</div>
             </div>
           </button>
         </div>
@@ -156,10 +168,10 @@ export default function GameSettingsPanel({
               <BookOpen className="w-5 h-5" />
             </div>
             <div className="text-center">
-              <div className="font-black text-sm lg:text-base tracking-widest text-white">WORD PACKS</div>
+              <div className="font-black text-sm lg:text-base tracking-widest text-white">{t('word_packs')}</div>
               <div className="text-[10px] font-bold text-slate-400 leading-tight">
-                {language.toUpperCase()} • {selectedPacks.length} packs
-                {customWordsArray.length > 0 && ` • ${customWordWeight} custom`}
+                {t('packs_count').replace('{lang}', language === 'all' ? 'ALL' : language.toUpperCase()).replace('{count}', selectedPacks.length.toString())}
+                {customWordsArray.length > 0 && t('custom_words_weight').replace('{weight}', customWordWeight)}
               </div>
             </div>
           </button>
@@ -174,7 +186,7 @@ export default function GameSettingsPanel({
               <Clock className="w-5 h-5" />
             </div>
             <div className="text-center">
-              <div className="font-black text-sm lg:text-base tracking-widest text-white">TIMER</div>
+              <div className="font-black text-sm lg:text-base tracking-widest text-white">{t('timer_label')}</div>
               <div className="text-[10px] font-bold text-slate-400 tracking-wider leading-tight">
                 {timerSettings.preset === 'off' ? 'OFF' : timerSettings.preset.toUpperCase()}
               </div>
@@ -191,20 +203,20 @@ export default function GameSettingsPanel({
               <PenTool className="w-5 h-5" />
             </div>
             <div className="text-center">
-              <div className="font-black text-sm lg:text-base tracking-widest text-white">CLUES</div>
+              <div className="font-black text-sm lg:text-base tracking-widest text-white">{t('clues_label')}</div>
               <div className="text-[10px] font-bold text-slate-400 tracking-wider leading-tight">
-                {clueType === 'both' ? 'TEXT & DOODLES' : clueType === 'doodle' ? 'DOODLES ONLY' : 'TEXT ONLY'}
+                {clueType === 'both' ? t('text_and_doodles') : clueType === 'doodle' ? t('doodles_only') : t('text_only')}
               </div>
             </div>
           </button>
         </div>
-        <div className="bg-[#2a2a2a] rounded-2xl p-2.5 border border-[#444] shadow-inner mt-1.5 flex items-center gap-2.5">
+        <div className="bg-[#2a2a2a] rounded-2xl p-2.5 border border-[#444] shadow-inner mt-1.5 flex items-center gap-2.5" dir="ltr">
           <div className="p-1.5 rounded-full bg-slate-700 text-white flex-shrink-0">
             {volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </div>
           <div className="flex-1">
             <div className="flex justify-between items-center mb-0.5">
-              <span className="text-[10px] font-bold text-slate-400 tracking-wider">SFX VOLUME</span>
+              <span className="text-[10px] font-bold text-slate-400 tracking-wider">{t('sfx_volume')}</span>
               <span className="text-[10px] font-mono font-bold text-slate-300">{Math.round(volume * 100)}%</span>
             </div>
             <input 
@@ -230,8 +242,8 @@ export default function GameSettingsPanel({
                 <span className="text-xs font-bold">🌀</span>
               </div>
               <div className="text-left">
-                <span className="block text-xs font-black tracking-widest text-white uppercase leading-none">Chaos Mode</span>
-                <span className="block text-[9px] font-bold text-slate-400 mt-1 leading-tight">Random global modifier applied each turn</span>
+                <span className="block text-xs font-black tracking-widest text-white uppercase leading-none">{t('chaos_mode_title')}</span>
+                <span className="block text-[9px] font-bold text-slate-400 mt-1 leading-tight">{t('chaos_mode_desc')}</span>
               </div>
             </div>
             <label className={cn("relative inline-flex items-center group", isHost ? "cursor-pointer" : "opacity-50 cursor-not-allowed")}>
@@ -251,8 +263,8 @@ export default function GameSettingsPanel({
               onClick={() => setShowChaosModal(true)}
               className="w-full py-1.5 bg-red-950/40 hover:bg-red-900/30 border border-red-500/30 rounded-xl font-bold tracking-wider text-[10px] text-red-400 hover:text-red-300 transition-colors flex items-center justify-center gap-1.5"
             >
-              <span>CONFIGURE EVENTS</span>
-              <span className="px-1.5 py-0.5 bg-red-500/20 text-red-300 text-[8px] font-black rounded-md leading-none">
+              <span>{t('configure_events')}</span>
+              <span className="px-1.5 py-0.5 bg-red-500/20 text-red-300 text-[8px] font-black rounded-md leading-none" dir="ltr">
                 {enabledModifiers.length} / {MODIFIERS.length}
               </span>
             </button>
@@ -275,8 +287,8 @@ export default function GameSettingsPanel({
                 <BookOpen className="w-8 h-8" />
               </div>
               <div>
-                <h2 className="text-2xl font-black tracking-widest text-white">WORD SETTINGS</h2>
-                <p className="text-sm font-bold text-slate-400">Configure language and vocabulary pools</p>
+                <h2 className="text-2xl font-black tracking-widest text-white">{t('word_settings_title')}</h2>
+                <p className="text-sm font-bold text-slate-400">{t('word_settings_desc')}</p>
               </div>
             </div>
 
@@ -287,7 +299,7 @@ export default function GameSettingsPanel({
                     <div className="bg-[#444] p-2 rounded-lg text-white">
                       <Globe className="w-5 h-5" />
                     </div>
-                    <div className="font-black tracking-widest text-sm text-white">LANGUAGE</div>
+                    <div className="font-black tracking-widest text-sm text-white">{t('language_label')}</div>
                   </div>
                   
                   <div className="flex bg-[#222] p-1 rounded-lg border border-[#444]">
@@ -318,21 +330,21 @@ export default function GameSettingsPanel({
                       {selectedPacks.includes('classic') && <Check className="w-4 h-4 text-white" />}
                     </div>
                     <input type="checkbox" className="hidden" checked={selectedPacks.includes('classic')} onChange={() => isHost && setSelectedPacks(prev => prev.includes('classic') ? prev.filter(p => p !== 'classic') : [...prev, 'classic'])} disabled={!isHost} />
-                    <span className="text-sm font-bold text-slate-300">Base Pack</span>
+                    <span className="text-sm font-bold text-slate-300">{t('base_pack')}</span>
                   </label>
                   <label className={cn("flex items-center gap-3 group bg-[#222] p-3 rounded-xl border border-[#444] transition-colors", isHost ? "cursor-pointer hover:border-indigo-500" : "opacity-70 cursor-not-allowed")}>
                     <div className={cn("w-5 h-5 rounded flex items-center justify-center border transition-colors", selectedPacks.includes('duet') ? "bg-indigo-500 border-indigo-500" : "border-slate-500")}>
                       {selectedPacks.includes('duet') && <Check className="w-4 h-4 text-white" />}
                     </div>
                     <input type="checkbox" className="hidden" checked={selectedPacks.includes('duet')} onChange={() => isHost && setSelectedPacks(prev => prev.includes('duet') ? prev.filter(p => p !== 'duet') : [...prev, 'duet'])} disabled={!isHost} />
-                    <span className="text-sm font-bold text-slate-300">Duet Pack</span>
+                    <span className="text-sm font-bold text-slate-300">{t('duet_pack')}</span>
                   </label>
                   <label className={cn("flex items-center gap-3 group bg-[#222] p-3 rounded-xl border border-[#444] transition-colors", isHost ? "cursor-pointer hover:border-indigo-500" : "opacity-70 cursor-not-allowed")}>
                     <div className={cn("w-5 h-5 rounded flex items-center justify-center border transition-colors", selectedPacks.includes('emojis') ? "bg-indigo-500 border-indigo-500" : "border-slate-500")}>
                       {selectedPacks.includes('emojis') && <Check className="w-4 h-4 text-white" />}
                     </div>
                     <input type="checkbox" className="hidden" checked={selectedPacks.includes('emojis')} onChange={() => isHost && setSelectedPacks(prev => prev.includes('emojis') ? prev.filter(p => p !== 'emojis') : [...prev, 'emojis'])} disabled={!isHost} />
-                    <span className="text-sm font-bold text-slate-300">Emojis 🎭</span>
+                    <span className="text-sm font-bold text-slate-300">{t('emojis_pack')}</span>
                   </label>
                 </div>
               </div>
@@ -344,8 +356,8 @@ export default function GameSettingsPanel({
                       <BookOpen className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="font-black tracking-widest text-sm text-white">CUSTOM WORDS</div>
-                      <div className="text-xs text-emerald-400 font-bold">Unique words: {customWordsArray.length}</div>
+                      <div className="font-black tracking-widest text-sm text-white">{t('custom_words_title')}</div>
+                      <div className="text-xs text-emerald-400 font-bold">{t('unique_words_count').replace('{count}', customWordsArray.length.toString())}</div>
                     </div>
                   </div>
 
@@ -359,7 +371,7 @@ export default function GameSettingsPanel({
                         !isHost && "opacity-50 cursor-not-allowed"
                       )}
                     >
-                      <Keyboard className="w-3.5 h-3.5" /> Type words
+                      <Keyboard className="w-3.5 h-3.5" /> {t('type_words')}
                     </button>
                     <button
                       onClick={() => isHost && setCustomWordsTab('upload')}
@@ -370,7 +382,7 @@ export default function GameSettingsPanel({
                         !isHost && "opacity-50 cursor-not-allowed"
                       )}
                     >
-                      <Upload className="w-3.5 h-3.5" /> Upload file
+                      <Upload className="w-3.5 h-3.5" /> {t('upload_file')}
                     </button>
                   </div>
                 </div>
@@ -380,13 +392,13 @@ export default function GameSettingsPanel({
                     value={customWordsText}
                     onChange={(e) => setCustomWordsText(e.target.value)}
                     disabled={!isHost}
-                    placeholder="Paste or type words here...&#10;One word per line."
+                    placeholder={t('type_words_placeholder')}
                     className="w-full h-32 bg-[#222] border border-[#444] rounded-xl p-3 text-sm font-mono text-white focus:border-emerald-500 outline-none resize-none disabled:opacity-50"
                   />
                 ) : (
                   <div className={cn("w-full h-32 bg-[#222] border-2 border-dashed border-[#444] rounded-xl flex flex-col items-center justify-center gap-2 relative transition-colors", isHost ? "hover:border-emerald-500" : "opacity-50")}>
                     <Upload className="w-8 h-8 text-slate-500" />
-                    <div className="text-sm font-bold text-slate-400">Drag & Drop .txt or .csv</div>
+                    <div className="text-sm font-bold text-slate-400">{t('drag_drop_file')}</div>
                     <input
                       type="file"
                       accept=".txt,.csv"
@@ -399,7 +411,7 @@ export default function GameSettingsPanel({
 
                 <div className="flex flex-col gap-2 mt-2">
                   <div className="flex justify-between text-xs font-bold text-slate-400">
-                    <span>Custom Words Ratio</span>
+                    <span>{t('custom_words_ratio')}</span>
                     <span className="text-emerald-400 uppercase">{customWordWeight}</span>
                   </div>
                   <div className="flex bg-[#222] p-1 rounded-lg border border-[#444]">
@@ -426,7 +438,7 @@ export default function GameSettingsPanel({
               onClick={() => setShowWordPacksModal(false)}
               className="mt-8 w-full py-3 bg-indigo-500 hover:bg-indigo-400 rounded-xl font-black tracking-widest text-white shadow-lg transition-colors"
             >
-              DONE
+              {t('done_btn')}
             </button>
           </div>
         </div>,
@@ -448,8 +460,8 @@ export default function GameSettingsPanel({
                 <Clock className="w-8 h-8" />
               </div>
               <div>
-                <h2 className="text-2xl font-black tracking-widest text-white">TIMER SETTINGS</h2>
-                <p className="text-sm font-bold text-slate-400">Configure turn limits</p>
+                <h2 className="text-2xl font-black tracking-widest text-white">{t('timer_settings')}</h2>
+                <p className="text-sm font-bold text-slate-400">{t('timer_settings_desc')}</p>
               </div>
             </div>
 
@@ -465,7 +477,7 @@ export default function GameSettingsPanel({
                     !isHost && "opacity-50 cursor-not-allowed"
                   )}
                 >
-                  {preset.toUpperCase()}
+                  {t(`timer_${preset}` as any).toUpperCase()}
                 </button>
               ))}
             </div>
@@ -473,8 +485,8 @@ export default function GameSettingsPanel({
             <div className="space-y-4">
               <div className="flex items-center justify-between bg-[#2a2a2a] p-4 rounded-2xl border border-[#333]">
                 <div className="text-left">
-                  <div className="font-bold text-white tracking-wider">Spymaster Turn</div>
-                  <div className="text-xs text-slate-400">Base limit to give clue</div>
+                  <div className="font-bold text-white tracking-wider">{t('spymaster_turn')}</div>
+                  <div className="text-xs text-slate-400">{t('spymaster_turn_desc')}</div>
                 </div>
                 <div className="flex items-center gap-2">
                   <input 
@@ -484,14 +496,14 @@ export default function GameSettingsPanel({
                     onChange={e => setTimerSettings(p => ({ ...p, spymasterTime: Number(e.target.value) }))}
                     className="w-16 bg-[#111] border border-slate-700 rounded p-2 text-center font-mono font-bold text-white disabled:opacity-50"
                   />
-                  <span className="text-slate-500 font-bold text-xs">SEC</span>
+                  <span className="text-slate-500 font-bold text-xs">{t('sec_label')}</span>
                 </div>
               </div>
 
               <div className="flex items-center justify-between bg-[#2a2a2a] p-4 rounded-2xl border border-[#333]">
                 <div className="text-left">
-                  <div className="font-bold text-white tracking-wider">Operative Turn</div>
-                  <div className="text-xs text-slate-400">Time per guess cycle</div>
+                  <div className="font-bold text-white tracking-wider">{t('operative_turn')}</div>
+                  <div className="text-xs text-slate-400">{t('operative_turn_desc')}</div>
                 </div>
                 <div className="flex items-center gap-2">
                   <input 
@@ -501,14 +513,14 @@ export default function GameSettingsPanel({
                     onChange={e => setTimerSettings(p => ({ ...p, operativeTime: Number(e.target.value) }))}
                     className="w-16 bg-[#111] border border-slate-700 rounded p-2 text-center font-mono font-bold text-white disabled:opacity-50"
                   />
-                  <span className="text-slate-500 font-bold text-xs">SEC</span>
+                  <span className="text-slate-500 font-bold text-xs">{t('sec_label')}</span>
                 </div>
               </div>
 
               <div className="flex items-center justify-between bg-[#2a2a2a] p-4 rounded-2xl border border-[#333]">
                 <div className="text-left">
-                  <div className="font-bold text-white tracking-wider">+ First Clue Bonus</div>
-                  <div className="text-xs text-slate-400">Added to round 1 only</div>
+                  <div className="font-bold text-white tracking-wider">{t('first_clue_bonus')}</div>
+                  <div className="text-xs text-slate-400">{t('first_clue_bonus_desc')}</div>
                 </div>
                 <div className="flex items-center gap-2">
                   <input 
@@ -518,7 +530,7 @@ export default function GameSettingsPanel({
                     onChange={e => setTimerSettings(p => ({ ...p, extraFirstClueTime: Number(e.target.value) }))}
                     className="w-16 bg-[#111] border border-slate-700 rounded p-2 text-center font-mono font-bold text-white disabled:opacity-50"
                   />
-                  <span className="text-slate-500 font-bold text-xs">SEC</span>
+                  <span className="text-slate-500 font-bold text-xs">{t('sec_label')}</span>
                 </div>
               </div>
             </div>
@@ -527,7 +539,7 @@ export default function GameSettingsPanel({
               onClick={() => setShowTimerModal(false)}
               className="mt-8 w-full py-3 bg-orange-500 hover:bg-orange-400 rounded-xl font-black tracking-widest text-white shadow-lg transition-colors"
             >
-              DONE
+              {t('done_btn')}
             </button>
           </div>
         </div>,
@@ -548,16 +560,16 @@ export default function GameSettingsPanel({
                 <PenTool className="w-8 h-8" />
               </div>
               <div>
-                <h2 className="text-2xl font-black tracking-widest text-white">CLUE TYPE</h2>
-                <p className="text-sm font-bold text-slate-400">How spymasters give clues</p>
+                <h2 className="text-2xl font-black tracking-widest text-white">{t('clue_type')}</h2>
+                <p className="text-sm font-bold text-slate-400">{t('clue_type_desc')}</p>
               </div>
             </div>
 
             <div className="flex flex-col gap-3">
               {[
-                { type: 'both', label: 'TEXT & DOODLES', desc: 'Spymasters can type words or draw pictures' },
-                { type: 'text', label: 'TEXT ONLY', desc: 'Spymasters can only type words (Classic)' },
-                { type: 'doodle', label: 'DOODLES ONLY', desc: 'Spymasters can only draw pictures' }
+                { type: 'both', label: t('text_and_doodles'), desc: t('clue_text_doodle_desc') },
+                { type: 'text', label: t('text_only'), desc: t('clue_text_desc') },
+                { type: 'doodle', label: t('doodles_only'), desc: t('clue_doodle_desc') }
               ].map(opt => (
                 <button
                   key={opt.type}
@@ -584,7 +596,7 @@ export default function GameSettingsPanel({
               onClick={() => setShowClueModal(false)}
               className="mt-8 w-full py-3 bg-emerald-500 hover:bg-emerald-400 rounded-xl font-black tracking-widest text-white shadow-lg transition-colors"
             >
-              DONE
+              {t('done_btn')}
             </button>
           </div>
         </div>,
@@ -606,8 +618,8 @@ export default function GameSettingsPanel({
                 <span className="text-xl font-bold leading-none">🌀</span>
               </div>
               <div>
-                <h2 className="text-2xl font-black tracking-widest text-white">CHAOS EVENTS</h2>
-                <p className="text-xs font-bold text-slate-400">Configure which event modifiers can occur</p>
+                <h2 className="text-2xl font-black tracking-widest text-white">{t('chaos_events_title')}</h2>
+                <p className="text-xs font-bold text-slate-400">{t('chaos_events_desc')}</p>
               </div>
             </div>
 
@@ -623,13 +635,13 @@ export default function GameSettingsPanel({
                   }).map(m => m.id))}
                   className="px-4 py-1.5 bg-[#333] hover:bg-[#444] border border-[#555] rounded-xl text-xs font-black tracking-wider text-slate-200 transition-all"
                 >
-                  SELECT ALL
+                  {t('select_all')}
                 </button>
                 <button
                   onClick={() => setEnabledModifiers?.([])}
                   className="px-4 py-1.5 bg-[#333] hover:bg-[#444] border border-[#555] rounded-xl text-xs font-black tracking-wider text-slate-200 transition-all"
                 >
-                  DESELECT ALL
+                  {t('deselect_all')}
                 </button>
               </div>
             )}
@@ -639,22 +651,16 @@ export default function GameSettingsPanel({
               {(['spymaster', 'board', 'guesser'] as const).map(category => {
                 const categoryModifiers = MODIFIERS.filter(m => m.category === category);
                 const categoryTitle = category === 'spymaster' 
-                  ? 'SPYMASTER MODIFIERS' 
+                  ? t('spymaster_modifiers')
                   : category === 'board' 
-                    ? 'BOARD MODIFIERS' 
-                    : 'GUESSER MODIFIERS';
+                    ? t('board_modifiers')
+                    : t('guesser_modifiers');
                 const categoryColor = category === 'spymaster' 
                   ? 'border-indigo-500/30 text-indigo-400 bg-indigo-500/5' 
                   : category === 'board' 
                     ? 'border-amber-500/30 text-amber-400 bg-amber-500/5' 
                     : 'border-rose-500/30 text-rose-400 bg-rose-500/5';
                 
-                const iconBgColor = category === 'spymaster' 
-                  ? 'bg-indigo-500/20 text-indigo-400' 
-                  : category === 'board' 
-                    ? 'bg-amber-500/20 text-amber-400' 
-                    : 'bg-rose-500/20 text-rose-400';
-
                 return (
                   <div key={category} className="space-y-2.5">
                     <div className={cn("px-3 py-1.5 border rounded-xl font-black text-[10px] tracking-widest leading-none w-max uppercase", categoryColor)}>
@@ -698,12 +704,12 @@ export default function GameSettingsPanel({
                                 : "bg-[#222222] border-[#333333] hover:border-slate-600"
                             )}
                           >
-                            <div className={cn("p-2 rounded-xl flex-shrink-0 transition-colors", isEnabled ? iconBgColor : "bg-slate-800 text-slate-400")}>
-                              <IconComponent className="w-5 h-5" />
-                            </div>
                             <div className="flex-1 min-w-0 pr-6">
-                              <div className="font-black tracking-wider text-xs text-white mb-0.5">{mod.name}</div>
-                              <div className="text-[10px] font-bold text-slate-400 leading-normal">{mod.description}</div>
+                              <div className="flex items-center gap-2 mb-1 group-hover:text-red-400 transition-colors">
+                                <IconComponent className="w-5 h-5 text-red-500" />
+                                <span className="font-black text-sm tracking-widest">{uiLanguage === 'ar' ? mod.nameAr || mod.name : mod.name}</span>
+                              </div>
+                              <p className="text-slate-400 text-[10px] leading-relaxed pr-8">{uiLanguage === 'ar' ? mod.descriptionAr || mod.description : mod.description}</p>
                             </div>
                             
                             {/* Checkbox display */}

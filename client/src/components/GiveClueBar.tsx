@@ -3,6 +3,7 @@ import { PenTool, Send } from 'lucide-react';
 import DrawingModal from './DrawingModal';
 import { checkRhyme } from '../../../shared/modifiers';
 import type { ClueType } from '../../../shared/types';
+import { useI18n } from '../context/I18nContext';
 
 interface GiveClueBarProps {
   onSubmitCue: (cue: string, num: number) => void;
@@ -22,6 +23,7 @@ export default function GiveClueBar({
   const [cueInput, setCueInput] = useState('');
   const [numInput, setNumInput] = useState<number | ''>('');
   const [showDrawingModal, setShowDrawingModal] = useState(false);
+  const { t } = useI18n();
 
   useEffect(() => {
     if (clueTargetCount > 0) {
@@ -48,6 +50,12 @@ export default function GiveClueBar({
   const isFiveLetterCurseValid = () => {
     if (activeModifier !== 'five-letter-curse') return true;
     return cueInput.trim().length === 5;
+  };
+
+  const isBooleanSearchValid = () => {
+    if (activeModifier !== 'boolean-search') return true;
+    const matches = cueInput.match(/\s+(AND|OR|NOT)\s+/g);
+    return matches !== null && matches.length === 1;
   };
 
   const handleSubmitCue = (e: React.FormEvent) => {
@@ -83,7 +91,7 @@ export default function GiveClueBar({
               type="button"
               onClick={() => setShowDrawingModal(true)}
               className="p-2.5 sm:p-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl sm:rounded-full transition-colors flex-shrink-0 cursor-pointer"
-              title="Draw a Clue"
+              title={t('draw_clue_title')}
             >
               <PenTool className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
@@ -93,16 +101,18 @@ export default function GiveClueBar({
             <div className="flex-1 min-w-0 relative">
               <input 
                 type="text" 
-                placeholder={activeModifier === 'oracle-riddle' ? "Enter 2 rhyming words (e.g. red bed)..." : "Enter clue word..."}
-                value={cueInput.startsWith('data:image') ? '[Doodle Clue Ready]' : cueInput}
+                placeholder={activeModifier === 'oracle-riddle' ? t('enter_rhyme_placeholder') : t('enter_clue_placeholder')}
+                value={cueInput.startsWith('data:image') ? t('doodle_clue_ready') : cueInput}
                 readOnly={cueInput.startsWith('data:image')}
                 onChange={(e) => {
                   let val = e.target.value;
-                  if (activeModifier === 'oracle-riddle') {
+                  if (activeModifier === 'oracle-riddle' || activeModifier === 'boolean-search') {
                     const cleanVal = val.replace(/[^a-zA-Z0-9\u0600-\u06FF\s]/g, '');
-                    const words = cleanVal.trim().split(/\s+/).filter(Boolean);
-                    if (words.length > 2) {
-                      return;
+                    if (activeModifier === 'oracle-riddle') {
+                      const words = cleanVal.trim().split(/\s+/).filter(Boolean);
+                      if (words.length > 2) {
+                        return;
+                      }
                     }
                     setCueInput(cleanVal);
                   } else {
@@ -132,23 +142,29 @@ export default function GiveClueBar({
                 cueInput.trim().length === 0 || 
                 !isNumberValid() ||
                 (activeModifier === 'oracle-riddle' && !isOracleRiddleValid()) ||
-                (activeModifier === 'five-letter-curse' && !isFiveLetterCurseValid())
+                (activeModifier === 'five-letter-curse' && !isFiveLetterCurseValid()) ||
+                (activeModifier === 'boolean-search' && !isBooleanSearchValid())
               }
               className="h-10 sm:h-12 px-4 sm:px-6 bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black rounded-xl sm:rounded-full transition-all shadow-lg shadow-emerald-500/20 active:scale-95 text-xs sm:text-sm flex items-center gap-1.5 uppercase tracking-wider whitespace-nowrap cursor-pointer"
             >
-              <span>Give Clue</span>
+              <span>{t('give_clue_btn')}</span>
               <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
           </div>
         </form>
         {activeModifier === 'oracle-riddle' && cueInput.trim().length > 0 && !isOracleRiddleValid() && (
           <div className="mt-2 text-[10px] sm:text-xs text-red-400 font-bold tracking-wide animate-pulse bg-slate-900/90 rounded-lg py-1 px-3 border border-red-500/30 shadow-lg text-center">
-            ⚠️ Must be exactly 2 rhyming words! (e.g. "red bed")
+            {t('oracle_error')}
           </div>
         )}
         {activeModifier === 'five-letter-curse' && cueInput.trim().length > 0 && !isFiveLetterCurseValid() && (
           <div className="mt-2 text-[10px] sm:text-xs text-red-400 font-bold tracking-wide animate-pulse bg-slate-900/90 rounded-lg py-1 px-3 border border-red-500/30 shadow-lg text-center">
-            ⚠️ Clue must be exactly 5 letters long!
+            {t('five_letter_error')}
+          </div>
+        )}
+        {activeModifier === 'boolean-search' && cueInput.trim().length > 0 && !isBooleanSearchValid() && (
+          <div className="mt-2 text-[10px] sm:text-xs text-red-400 font-bold tracking-wide animate-pulse bg-slate-900/90 rounded-lg py-1 px-3 border border-red-500/30 shadow-lg text-center">
+            {t('boolean_error')}
           </div>
         )}
       </div>

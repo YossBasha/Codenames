@@ -3,6 +3,8 @@ import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../utils';
 import { MODIFIERS } from '../../../shared/modifiers';
+import { MODIFIER_ICONS } from './GameSettingsPanel';
+import { useI18n } from '../context/I18nContext';
 
 interface TopBarProps {
   redScore: number;
@@ -48,6 +50,7 @@ export default function TopBar({
   activeModifier
 }: TopBarProps) {
   const navigate = useNavigate();
+  const { t, uiLanguage } = useI18n();
 
   const isActiveSpymaster = currentPhase === 'spymaster' && (
     (gameMode === 'classic' && playerTeam === currentTurn && playerRole === 'spymaster') ||
@@ -59,12 +62,12 @@ export default function TopBar({
       <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
         <button 
           onClick={() => navigate('/')}
-          className="p-1 sm:p-1.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
+          className="absolute left-2.5 sm:left-4 p-1 sm:p-1.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer z-10"
         >
           <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
         </button>
         {gameMode === 'classic' ? (
-          <div className="flex items-center gap-2 sm:gap-4 bg-slate-800/80 rounded-xl p-1 sm:p-1.5 font-black text-xs sm:text-sm shadow-inner ring-1 ring-white/5">
+          <div className="flex items-center gap-2 sm:gap-4 bg-slate-800/80 rounded-xl p-1 sm:p-1.5 font-black text-xs sm:text-sm shadow-inner ring-1 ring-white/5 rtl:mr-8 ltr:ml-8 sm:rtl:mr-10 sm:ltr:ml-10">
             <div className={`px-2 py-0.5 sm:px-3 sm:py-1 rounded-md transition-all duration-300 ${currentTurn === 'red' ? 'bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/40 scale-105 sm:scale-110 ring-1 ring-red-400/50' : 'text-red-500 hover:bg-red-500/10'}`}>
               {redScore}
             </div>
@@ -74,10 +77,10 @@ export default function TopBar({
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-800 rounded-lg p-1 sm:p-1.5 font-bold text-xs sm:text-sm text-lime-400">
+          <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-800 rounded-lg p-1 sm:p-1.5 font-bold text-xs sm:text-sm text-lime-400 rtl:mr-8 ltr:ml-8 sm:rtl:mr-10 sm:ltr:ml-10">
             <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-lime-500 shadow-[0_0_10px_#84cc16]"></div>
             <span className="whitespace-nowrap">
-              {remainingGreens !== undefined ? `${remainingGreens} GREEN` : `TOKENS: ${timerTokens}`}
+              {remainingGreens !== undefined ? t('green_tokens').replace('{count}', remainingGreens.toString()) : t('tokens_count').replace('{count}', timerTokens.toString())}
             </span>
           </div>
         )}
@@ -94,21 +97,22 @@ export default function TopBar({
           {activeModifier && (() => {
             const mod = MODIFIERS.find(m => m.id === activeModifier);
             if (!mod) return null;
+            const IconComponent = MODIFIER_ICONS[mod.icon] || MODIFIER_ICONS['HelpCircle'];
             return (
               <div className="relative group cursor-pointer z-50">
                 <div className="flex items-center gap-1 bg-red-500/20 border border-red-500/40 hover:bg-red-500/30 transition-all rounded-full px-2 py-0.5 shadow-[0_0_10px_rgba(239,68,68,0.2)]">
-                  <span className="text-[9px] sm:text-xs">🌀</span>
+                  <IconComponent className="w-3 h-3 sm:w-4 sm:h-4 text-red-400" />
                   <span className="text-[7px] sm:text-[9px] font-black tracking-widest text-red-400 uppercase">{mod.name}</span>
                 </div>
                 
                 <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-slate-950/95 border border-red-500/30 rounded-2xl p-4 shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50">
                   <div className="flex items-center gap-2 mb-2 text-red-400">
-                    <span className="text-base">🌀</span>
-                    <h4 className="font-black tracking-wider text-xs uppercase">{mod.name}</h4>
+                    <IconComponent className="w-5 h-5" />
+                    <h4 className="font-black tracking-wider text-xs uppercase">{uiLanguage === 'ar' ? mod.nameAr || mod.name : mod.name}</h4>
                   </div>
-                  <p className="text-[11px] font-bold text-slate-300 leading-normal">{mod.description}</p>
+                  <p className="text-[11px] font-bold text-slate-300 leading-normal">{uiLanguage === 'ar' ? mod.descriptionAr || mod.description : mod.description}</p>
                   <div className="mt-2 pt-2 border-t border-white/5 text-[9px] font-black text-slate-500 tracking-wider uppercase text-center">
-                    Category: {mod.category}
+                    {t('category_label')} {uiLanguage === 'ar' ? mod.categoryAr || mod.category : mod.category}
                   </div>
                 </div>
               </div>
@@ -122,37 +126,37 @@ export default function TopBar({
                 "transition-colors duration-300",
                 currentTurn === 'red' ? 'text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-rose-600' : 'text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-600'
               )}>
-                {currentTurn === 'red' ? 'RED' : 'BLUE'}
-              </span> TURN
+                {currentTurn === 'red' ? t('red_team_turn') : t('blue_team_turn')}
+              </span>
             </>
           ) : (
             <>
               <span className={currentTurn === 'red' ? 'text-lime-400' : 'text-green-400'}>
-                {currentTurn === 'red' ? 'SIDE A' : 'SIDE B'}
+                {currentTurn === 'red' ? t('side_a') : t('side_b')}
               </span>
-              <span className="hidden sm:inline"> (Gives Clue)</span>
+              <span className="hidden sm:inline"> {t('gives_clue')}</span>
             </>
           )}
         </div>
         {gameMode !== 'duet' && (
           <div className="text-[8px] sm:text-[10px] font-bold text-slate-400 mt-0 uppercase tracking-widest whitespace-nowrap">
-            {currentPhase === 'spymaster' ? 'Spymaster' : 'Operative'}
+            {currentPhase === 'spymaster' ? t('spymaster_role_label') : t('operative_role_label')}
           </div>
         )}
       </div>
 
-      <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-3 shrink-0">
+      <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-3 shrink-0 rtl:pl-8 sm:rtl:pl-12">
         {amHost && (
           <button
             onClick={onRestartGame}
             className="px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg font-bold bg-amber-600 hover:bg-amber-500 text-white transition-all shadow-lg shadow-amber-600/20 whitespace-nowrap text-[10px] sm:text-xs cursor-pointer"
           >
-            New Game
+            {t('new_game')}
           </button>
         )}
         {isActiveSpymaster ? (
           <div className="px-2.5 py-1 sm:px-3 sm:py-1.5 bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 font-bold rounded-lg text-[9px] sm:text-xs whitespace-nowrap animate-pulse">
-            Giving Clue...
+            {t('giving_clue_status')}
           </div>
         ) : (
           <div className="flex items-center gap-1.5 sm:gap-2">
@@ -165,7 +169,7 @@ export default function TopBar({
                     : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600'
                 }`}
               >
-                {isSpymaster ? 'Hide Spymaster View' : 'Spymaster View'}
+                {isSpymaster ? t('hide_spymaster_view') : t('spymaster_view')}
               </button>
             )}
           </div>

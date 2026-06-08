@@ -1,5 +1,6 @@
 import type { Player, Team } from '../../../shared/types';
 import { cn } from '../utils';
+import { useI18n } from '../context/I18nContext';
 
 interface TeamColumnProps {
   team: Team;
@@ -12,6 +13,7 @@ interface TeamColumnProps {
 
 export default function TeamColumn({ team, score, operatives, spymasters, gameMode = 'classic', className }: TeamColumnProps) {
   const isRed = team === 'red';
+  const { t } = useI18n();
   
   if (gameMode === 'duet') {
     const allPlayers = [...operatives, ...spymasters];
@@ -23,18 +25,18 @@ export default function TeamColumn({ team, score, operatives, spymasters, gameMo
           isSideA ? "bg-gradient-to-b from-lime-500/20 to-lime-500/5 ring-lime-500/30" : "bg-gradient-to-b from-green-500/20 to-green-500/5 ring-green-500/30"
         )}>
           <h3 className={cn("text-sm lg:text-xl font-black tracking-widest mb-4", isSideA ? "text-lime-400" : "text-green-400")}>
-            {isSideA ? "SIDE A" : "SIDE B"}
+            {isSideA ? t('side_a') : t('side_b')}
           </h3>
           <div className="flex flex-col gap-3 w-full">
             {allPlayers.length === 0 ? (
-              <span className="text-slate-500 text-sm italic text-center">Empty</span>
+              <span className="text-slate-500 text-sm italic text-center">{t('empty')}</span>
             ) : (
               allPlayers.map(p => (
                 <div key={p.id} className={cn(
                   "text-white text-xs lg:text-base font-bold bg-black/40 px-2 py-1 lg:px-4 lg:py-2 rounded-xl text-center w-full whitespace-nowrap overflow-hidden text-ellipsis border-t border-white/10 shadow-lg transition-opacity",
                   p.connected === false && "opacity-50 grayscale"
                 )}>
-                  {p.name} {p.connected === false && "(Offline)"}
+                  {p.name} {p.connected === false && t('offline')}
                 </div>
               ))
             )}
@@ -52,18 +54,18 @@ export default function TeamColumn({ team, score, operatives, spymasters, gameMo
         isRed ? "bg-gradient-to-b from-red-500/20 to-red-500/5 ring-red-500/30 shadow-red-500/10" : "bg-gradient-to-b from-blue-500/20 to-blue-500/5 ring-blue-500/30 shadow-blue-500/10"
       )}>
         <h3 className={cn("text-[9px] lg:text-sm font-black tracking-widest mb-1 lg:mb-2 leading-none", isRed ? "text-red-400" : "text-blue-400")}>
-          OPERATIVES
+          {t('operatives_role')}
         </h3>
         <div className="flex flex-wrap gap-2 justify-center">
           {operatives.length === 0 ? (
-            <span className="text-slate-500 text-xs italic">Empty</span>
+            <span className="text-slate-500 text-xs italic">{t('empty')}</span>
           ) : (
             operatives.map(p => (
               <div key={p.id} className={cn(
                 "text-white text-[10px] lg:text-sm font-bold bg-black/30 px-2 lg:px-3 py-0.5 lg:py-1 rounded-full whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px] lg:max-w-none transition-opacity",
                 p.connected === false && "opacity-50 grayscale"
               )}>
-                {p.name} {p.connected === false && "(Offline)"}
+                {p.name} {p.connected === false && t('offline')}
               </div>
             ))
           )}
@@ -86,18 +88,18 @@ export default function TeamColumn({ team, score, operatives, spymasters, gameMo
         isRed ? "bg-gradient-to-b from-red-500/20 to-red-500/5 ring-red-500/30 shadow-red-500/10" : "bg-gradient-to-b from-blue-500/20 to-blue-500/5 ring-blue-500/30 shadow-blue-500/10"
       )}>
         <h3 className={cn("text-[9px] lg:text-sm font-black tracking-widest mb-1 lg:mb-2 leading-none", isRed ? "text-red-400" : "text-blue-400")}>
-          SPYMASTERS
+          {t('spymasters_role')}
         </h3>
         <div className="flex flex-wrap gap-2 justify-center">
           {spymasters.length === 0 ? (
-            <span className="text-slate-500 text-xs italic">Empty</span>
+            <span className="text-slate-500 text-xs italic">{t('empty')}</span>
           ) : (
             spymasters.map(p => (
               <div key={p.id} className={cn(
                 "text-white text-[10px] lg:text-sm font-bold bg-black/30 px-2 lg:px-3 py-0.5 lg:py-1 rounded-full whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px] lg:max-w-none transition-opacity",
                 p.connected === false && "opacity-50 grayscale"
               )}>
-                {p.name} {p.connected === false && "(Offline)"}
+                {p.name} {p.connected === false && t('offline')}
               </div>
             ))
           )}

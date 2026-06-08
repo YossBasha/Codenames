@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Check, X } from 'lucide-react';
 import { cn } from '../utils';
+import { useI18n } from '../context/I18nContext';
 
 interface ActiveClueBarProps {
   activeCue: string | null;
@@ -18,6 +19,7 @@ export default function ActiveClueBar({
   canEndTurn
 }: ActiveClueBarProps) {
   const [isZoomed, setIsZoomed] = useState(false);
+  const { t } = useI18n();
 
   if (!activeCue || activeCueNumber === null) return null;
 
@@ -31,10 +33,10 @@ export default function ActiveClueBar({
           {activeCue.startsWith('data:image') ? (
             <img 
               src={activeCue} 
-              alt="Doodle Clue" 
+              alt={t('doodle_clue')}
               className="h-10 sm:h-14 rounded-lg border border-slate-300 shadow-sm object-contain bg-white cursor-pointer hover:scale-105 transition-transform" 
               onClick={() => setIsZoomed(true)}
-              title="Click to enlarge"
+              title={t('click_to_enlarge')}
             />
           ) : (
             <span className={cn(
@@ -48,7 +50,7 @@ export default function ActiveClueBar({
           {isBonus ? (
             <div className="flex items-center gap-2 bg-gradient-to-r from-blue-100 to-indigo-100 px-3 py-1 sm:px-4 sm:py-2 rounded-full border-2 border-blue-400 shadow-inner">
               <span className="text-blue-700 font-black text-sm sm:text-lg whitespace-nowrap drop-shadow-sm">
-                {activeCueNumber}+1 BONUS
+                {activeCueNumber} {t('bonus_plus_one')}
               </span>
             </div>
           ) : (
@@ -81,13 +83,13 @@ export default function ActiveClueBar({
             <button 
               onClick={(e) => { e.stopPropagation(); setIsZoomed(false); }}
               className="absolute -top-12 right-0 p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition-colors"
-              title="Close"
+              title={t('close_btn')}
             >
               <X className="w-6 h-6 text-white" />
             </button>
             <img 
               src={activeCue} 
-              alt="Doodle Clue Enlarged" 
+              alt={t('doodle_clue_enlarged')}
               className="w-full h-auto max-h-[85vh] object-contain rounded-xl shadow-2xl bg-white border-4 border-slate-700 cursor-default" 
               onClick={(e) => e.stopPropagation()}
             />

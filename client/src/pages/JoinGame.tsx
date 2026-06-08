@@ -1,16 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { startListening, stopListening, getDiscoveredRooms, scanForRoomsHTTP, type DiscoveredRoom } from '../utils/discovery';
+import { useI18n } from '../context/I18nContext';
 import { ArrowLeft, RefreshCw, Wifi } from 'lucide-react';
 
 export default function JoinGame() {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<'local' | 'online'>('local');
   const [rooms, setRooms] = useState<DiscoveredRoom[]>([]);
   const [publicRooms, setPublicRooms] = useState<any[]>([]);
   const [isScanning, setIsScanning] = useState(true);
-  const [isFetchingPublic, setIsFetchingPublic] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
+  const [isFetchingPublic, setIsFetchingPublic] = useState(false);
   const httpRoomsRef = useRef<DiscoveredRoom[]>([]);
 
   useEffect(() => {
@@ -85,33 +87,34 @@ export default function JoinGame() {
 
   return (
     <div className="min-h-screen bg-[#121212] flex flex-col p-4 sm:p-6 font-sans text-white">
-      <div className="flex items-center mb-6">
-        <button onClick={() => navigate('/')} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors">
+      <div className="relative flex items-center justify-center mb-6 min-h-[48px]">
+        <button onClick={() => navigate('/')} className="absolute left-0 p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors">
           <ArrowLeft className="w-6 h-6" />
         </button>
-        <h1 className="text-2xl font-black ml-4 tracking-widest">JOIN GAME</h1>
+        <h1 className="text-center text-2xl font-black tracking-widest text-white">{t('join_game')}</h1>
       </div>
 
-      <div className="max-w-2xl w-full mx-auto flex-1 flex flex-col gap-4">
+      <div className="w-full max-w-2xl mx-auto flex flex-col gap-6 mt-6 pb-12 flex-1">
         
         {/* Tabs */}
-        <div className="flex bg-[#242424] rounded-2xl p-1 shadow-lg">
+        <div className="flex bg-slate-800/50 p-1 rounded-2xl border border-slate-700/50 backdrop-blur-sm">
           <button
             onClick={() => setActiveTab('local')}
-            className={`flex-1 py-3 rounded-xl font-bold text-sm tracking-widest transition-all ${activeTab === 'local' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+            className={`flex-1 py-3 text-sm sm:text-base font-bold rounded-xl transition-all ${activeTab === 'local' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'}`}
           >
-            LOCAL NETWORK
+            {t('local_room')}
           </button>
           <button
             disabled
-            className="flex-1 py-3 rounded-xl font-bold text-sm tracking-widest transition-all text-slate-600 cursor-not-allowed"
+            className="flex-1 py-3 text-sm sm:text-base font-bold rounded-xl transition-all flex items-center justify-center gap-2 opacity-50 cursor-not-allowed text-slate-400 bg-slate-800/30"
           >
-            ONLINE (COMING SOON)
+            <Wifi className="w-4 h-4" />
+            {t('online_room')} ({t('online_public_coming_soon').includes('قريباً') ? 'قريباً' : 'Soon'})
           </button>
         </div>
 
         {activeTab === 'local' ? (
-          <div className="bg-[#242424] rounded-3xl p-6 lg:p-8 flex flex-col flex-1 shadow-xl relative overflow-hidden">
+          <div className="bg-[#242424] rounded-3xl p-6 lg:p-8 flex flex-col min-h-[450px] shadow-xl relative overflow-hidden">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold flex items-center gap-2">
                 <Wifi className={`w-5 h-5 ${isScanning ? 'text-blue-400 animate-pulse' : 'text-green-400'}`} />
@@ -128,19 +131,27 @@ export default function JoinGame() {
               </button>
             </div>
 
+            {showWarning && rooms.length === 0 && (
+              <div className="mb-6 p-4 bg-yellow-500/10 border-2 border-yellow-500/30 rounded-2xl">
+                <h3 className="text-yellow-400 font-bold mb-1 flex items-center gap-2">
+                  <span className="text-xl">⚠️</span> {t('auto_discovery_warning')}
+                </h3>
+                <p className="text-yellow-400/80 text-sm">
+                  {t('wifi_warning')}
+                </p>
+              </div>
+            )}
+
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
               {rooms.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-slate-500 gap-4 text-center">
-                  <div className="w-16 h-16 rounded-full border-4 border-slate-700 border-t-blue-500 animate-spin"></div>
-                  <p className="font-bold">Scanning for local games...</p>
-                  <p className="text-sm">Make sure the host is on the same Wi-Fi network.</p>
-                  
-                  {showWarning && (
-                    <div className="mt-8 p-4 bg-orange-500/10 border border-orange-500/30 rounded-xl text-orange-400 max-w-sm transition-opacity duration-1000 ease-in-out opacity-100">
-                      <p className="text-sm font-semibold">
-                        No rooms found? Ensure the device hosting the game is also the device providing the mobile hotspot!
-                      </p>
-                    </div>
+                  {isScanning ? (
+                    <>
+                      <div className="w-16 h-16 rounded-full border-4 border-slate-700 border-t-blue-500 animate-spin"></div>
+                      <p className="font-bold">{t('scanning_local')}</p>
+                    </>
+                  ) : (
+                    <p className="font-bold">{t('no_local_rooms')}</p>
                   )}
                 </div>
               ) : (
@@ -153,10 +164,10 @@ export default function JoinGame() {
                     >
                       <div>
                         <h3 className="font-bold text-lg text-white mb-1">{room.roomID}</h3>
-                        <p className="text-slate-400 text-sm">Hosted by <span className="text-blue-400 font-bold">{room.hostName}</span></p>
+                        <p className="text-slate-400 text-sm">{t('hosted_by')} <span className="text-blue-400 font-bold">{room.hostName}</span></p>
                       </div>
                       <div className="bg-blue-500/20 text-blue-400 px-4 py-2 rounded-xl font-bold group-hover:bg-blue-500 group-hover:text-white transition-colors">
-                        JOIN
+                        {t('join')}
                       </div>
                     </button>
                   ))}
@@ -165,11 +176,11 @@ export default function JoinGame() {
             </div>
           </div>
         ) : (
-          <div className="bg-[#242424] rounded-3xl p-6 lg:p-8 flex flex-col flex-1 shadow-xl relative overflow-hidden">
+          <div className="bg-[#242424] rounded-3xl p-6 lg:p-8 flex flex-col min-h-[450px] shadow-xl relative overflow-hidden">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold flex items-center gap-2">
                 <Wifi className="w-5 h-5 text-green-400" />
-                Public Online Rooms
+                {t('public_online_rooms')}
               </h2>
               <button 
                 onClick={fetchPublicRooms}
@@ -185,17 +196,17 @@ export default function JoinGame() {
                   {isFetchingPublic ? (
                     <>
                       <div className="w-16 h-16 rounded-full border-4 border-slate-700 border-t-blue-500 animate-spin"></div>
-                      <p className="font-bold">Fetching online rooms...</p>
+                      <p className="font-bold">{t('fetching_online')}</p>
                     </>
                   ) : (
                     <>
-                      <p className="font-bold">No public rooms available.</p>
-                      <p className="text-sm">Why not host one yourself?</p>
+                      <p className="font-bold">{t('no_public_rooms')}</p>
+                      <p className="text-sm">{t('why_not_host')}</p>
                       <button 
                         onClick={() => navigate('/lan-lobby?host=true&wan=true')}
                         className="mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold text-white transition-colors"
                       >
-                        HOST ONLINE ROOM
+                        {t('host_online_room')}
                       </button>
                     </>
                   )}
@@ -212,17 +223,17 @@ export default function JoinGame() {
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="font-bold text-lg text-white">{room.roomID}</h3>
                           {room.gameStarted && (
-                            <span className="bg-red-500/20 text-red-400 text-[10px] px-2 py-0.5 rounded font-black tracking-widest">IN PROGRESS</span>
+                            <span className="bg-red-500/20 text-red-400 text-[10px] px-2 py-0.5 rounded font-black tracking-widest">{t('in_progress')}</span>
                           )}
                         </div>
                         <p className="text-slate-400 text-sm">
-                          Hosted by <span className="text-blue-400 font-bold">{room.hostName}</span>
+                          {t('hosted_by')} <span className="text-blue-400 font-bold">{room.hostName}</span>
                           <span className="mx-2">•</span>
-                          {room.players} players
+                          {room.players} {t('players_count')}
                         </p>
                       </div>
                       <div className="bg-blue-500/20 text-blue-400 px-4 py-2 rounded-xl font-bold group-hover:bg-blue-500 group-hover:text-white transition-colors">
-                        JOIN
+                        {t('join')}
                       </div>
                     </button>
                   ))}
@@ -240,6 +251,7 @@ export default function JoinGame() {
 }
 
 function ManualJoin({ navigate, activeTab }: { navigate: (path: string) => void, activeTab: 'local'|'online' }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [ip, setIp] = useState('');
   const [port, setPort] = useState('3000');
@@ -261,7 +273,7 @@ function ManualJoin({ navigate, activeTab }: { navigate: (path: string) => void,
         onClick={() => setOpen(o => !o)}
         className="w-full px-6 py-4 flex items-center justify-between text-slate-400 hover:text-white transition-colors"
       >
-        <span className="font-bold text-sm tracking-widest">{activeTab === 'online' ? 'JOIN PRIVATE ONLINE ROOM' : 'JOIN MANUALLY (LAPTOP / DESKTOP)'}</span>
+        <span className="font-bold text-sm tracking-widest">{activeTab === 'online' ? t('join_private_online') : t('join_manually')}</span>
         <span className="text-lg">{open ? '▲' : '▼'}</span>
       </button>
 
@@ -269,10 +281,10 @@ function ManualJoin({ navigate, activeTab }: { navigate: (path: string) => void,
         <div className="px-6 pb-6 flex flex-col gap-3">
           {activeTab === 'local' ? (
             <>
-              <p className="text-slate-500 text-xs">Enter the host's details directly if auto-discovery isn't finding the room.</p>
+              <p className="text-slate-500 text-xs">{t('enter_host_details')}</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-1">Host IP Address</label>
+                  <label className="block text-xs font-bold text-slate-400 mb-1">{t('host_ip')}</label>
                   <input
                     type="text"
                     placeholder="e.g. 192.168.1.5"
@@ -282,7 +294,7 @@ function ManualJoin({ navigate, activeTab }: { navigate: (path: string) => void,
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-1">Port</label>
+                  <label className="block text-xs font-bold text-slate-400 mb-1">{t('port')}</label>
                   <input
                     type="number"
                     placeholder="3000"
@@ -294,11 +306,11 @@ function ManualJoin({ navigate, activeTab }: { navigate: (path: string) => void,
               </div>
             </>
           ) : (
-            <p className="text-slate-500 text-xs">Enter the exact Room ID to join an unlisted or private online room.</p>
+            <p className="text-slate-500 text-xs">{t('enter_exact_room_id')}</p>
           )}
           
           <div>
-            <label className="block text-xs font-bold text-slate-400 mb-1">Room ID</label>
+            <label className="block text-xs font-bold text-slate-400 mb-1">{t('room_id')}</label>
             <input
               type="text"
               placeholder="e.g. Room-4321"
@@ -313,7 +325,7 @@ function ManualJoin({ navigate, activeTab }: { navigate: (path: string) => void,
             disabled={activeTab === 'online' ? !room.trim() : (!ip.trim() || !port.trim() || !room.trim())}
             className="w-full py-3 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            JOIN ROOM
+            {t('join_room_button')}
           </button>
         </div>
       )}

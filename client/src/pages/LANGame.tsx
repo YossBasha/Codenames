@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGameContext } from "../context/GameContext";
+import { useI18n } from "../context/I18nContext";
 import type { GameState } from "../../../shared/types";
 import Grid from "../components/Grid";
 import TopBar from "../components/TopBar";
@@ -9,6 +10,7 @@ import GameLog from "../components/GameLog";
 import ActiveClueBar from "../components/ActiveClueBar";
 import GiveClueBar from "../components/GiveClueBar";
 import { cn } from "../utils";
+import { MODIFIER_ICONS } from '../components/GameSettingsPanel';
 import type { Player } from "../../../shared/types";
 import { playCardRevealSfx, playCardHoverSfx, playCardSelectSfx } from "../utils/sfx";
 import { MODIFIERS } from "../../../shared/modifiers";
@@ -16,6 +18,7 @@ import { MODIFIERS } from "../../../shared/modifiers";
 export default function LANGame() {
   const navigate = useNavigate();
   const { player, roomId, socket } = useGameContext();
+  const { t, uiLanguage } = useI18n();
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [roomPlayers, setRoomPlayers] = useState<Player[]>([]);
   const roomPlayersRef = useRef<Player[]>([]);
@@ -300,7 +303,7 @@ export default function LANGame() {
     if (!gameState || gameState.winner || !socket || !roomId) return;
     
     if (gameState.currentPhase === 'spymaster' && currentPlayer?.role === 'spymaster' && gameState.activeModifier === 'd20-roll' && gameState.modifierState?.canRevealForFree) {
-       if (window.confirm("Use your free reveal on this card?")) {
+       if (window.confirm(t('confirm_free_reveal'))) {
          socket.emit("d20_free_reveal", { roomId, cardId: id });
        }
        return;
@@ -394,7 +397,7 @@ export default function LANGame() {
   if (!gameState || !player)
     return (
       <div className="min-h-screen bg-[#1a1a1a] text-white flex flex-col font-sans relative overflow-x-hidden">
-        Loading Game...
+        {t('loading_game')}
       </div>
     );
 
@@ -442,7 +445,7 @@ export default function LANGame() {
     ((player?.sessionId && roomPlayers[0].sessionId === player?.sessionId) || roomPlayers[0].id === player?.id);
 
   const handleRestartGame = () => {
-    if (window.confirm("Are you sure you want to end the current game and return everyone to the lobby?")) {
+    if (window.confirm(t('confirm_end_game'))) {
       socket?.emit('play_again', { roomId });
     }
   };
@@ -461,9 +464,9 @@ export default function LANGame() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01" />
               </svg>
             </div>
-            <h2 className="text-2xl font-black text-white tracking-wide">HOST DISCONNECTED</h2>
+            <h2 className="text-2xl font-black text-white tracking-wide">{t('host_disconnected')}</h2>
             <p className="text-slate-400 text-sm leading-relaxed">
-              The host has left the game. You will be returned to the main menu shortly.
+              {t('host_left_game')}
             </p>
             <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden mt-2">
               <div className="h-full bg-red-500 rounded-full animate-shrink-bar" />
@@ -472,7 +475,7 @@ export default function LANGame() {
               onClick={() => navigate('/')}
               className="mt-1 px-8 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-2xl font-bold text-white transition-colors text-sm tracking-widest"
             >
-              RETURN NOW
+              {t('return_now')}
             </button>
           </div>
         </div>
@@ -486,11 +489,11 @@ export default function LANGame() {
           </div>
           <div className="mt-8 text-2xl sm:text-4xl font-black tracking-widest text-white uppercase text-center animate-pulse">
             {gameState.modifierState.result === 1 ? (
-              <span className="text-red-500">CRITICAL FAILURE!</span>
+              <span className="text-red-500">{t('critical_failure')}</span>
             ) : gameState.modifierState.result === 20 ? (
-              <span className="text-emerald-500">CRITICAL SUCCESS!</span>
+              <span className="text-emerald-500">{t('critical_success')}</span>
             ) : (
-              <span className="text-indigo-300">The Die is Cast</span>
+              <span className="text-indigo-300">{t('die_is_cast')}</span>
             )}
           </div>
         </div>
@@ -558,7 +561,7 @@ export default function LANGame() {
                 "bg-lime-500/20 border-lime-500/50"
               )}>
                 <span className="font-black text-[10px] xs:text-xs sm:text-sm tracking-widest mb-1 text-center sticky top-0 bg-black/40 w-full rounded py-0.5 text-lime-400">
-                  SIDE A
+                  {t('side_a')}
                 </span>
                 <div className="flex flex-col gap-1 w-full mt-1">
                   {[...redOperatives, ...redSpymasters].map(p => (
@@ -567,7 +570,7 @@ export default function LANGame() {
                         p.connected === false && "opacity-50 grayscale"
                       )}>
                         <img src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=84cc16`} alt={p.name} className="w-4 h-4 xs:w-5 xs:h-5 rounded-full flex-shrink-0" />
-                        <span className="text-white font-bold text-[9px] xs:text-[10px] truncate">{p.name} {p.connected === false && "(Offline)"}</span>
+                        <span className="text-white font-bold text-[9px] xs:text-[10px] truncate">{p.name} {p.connected === false && t('offline')}</span>
                       </div>
                   ))}
                 </div>
@@ -578,7 +581,7 @@ export default function LANGame() {
                 "bg-green-500/20 border-green-500/50"
               )}>
                 <span className="font-black text-[10px] xs:text-xs sm:text-sm tracking-widest mb-1 text-center sticky top-0 bg-black/40 w-full rounded py-0.5 text-green-400">
-                  SIDE B
+                  {t('side_b')}
                 </span>
                 <div className="flex flex-col gap-1 w-full mt-1">
                   {[...blueOperatives, ...blueSpymasters].map(p => (
@@ -587,7 +590,7 @@ export default function LANGame() {
                       p.connected === false && "opacity-50 grayscale"
                     )}>
                       <img src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=22c55e`} alt={p.name} className="w-4 h-4 xs:w-5 xs:h-5 rounded-full flex-shrink-0" />
-                      <span className="text-white font-bold text-[9px] xs:text-[10px] truncate">{p.name} {p.connected === false && "(Offline)"}</span>
+                      <span className="text-white font-bold text-[9px] xs:text-[10px] truncate">{p.name} {p.connected === false && t('offline')}</span>
                     </div>
                   ))}
                 </div>
@@ -618,13 +621,13 @@ export default function LANGame() {
               }`}
             >
               {gameState.gameMode === 'classic' ? (
-                `${gameState.currentTurn.toUpperCase()} TEAM'S TURN`
+                t('teams_turn').replace('{team}', uiLanguage === 'ar' ? (gameState.currentTurn === 'red' ? t('red_team') : t('blue_team')) : gameState.currentTurn.toUpperCase())
               ) : (
-                gameState.currentTurn === 'red' ? "SIDE A GIVES CLUE -> SIDE B GUESSES" : "SIDE B GIVES CLUE -> SIDE A GUESSES"
+                gameState.currentTurn === 'red' ? t('side_a_gives_clue') : t('side_b_gives_clue')
               )}
             </h2>
             <div className="text-slate-400 font-bold mt-0.5 text-xs lg:text-xs xl:text-sm">
-              Playing as: {player.name} ({gameState.gameMode === 'duet' ? (player.team === 'red' ? 'Side A' : 'Side B') : player.role})
+              {t('playing_as')} {player.name} ({gameState.gameMode === 'duet' ? (player.team === 'red' ? t('side_a_role') : t('side_b_role')) : (player.role === 'operative' ? t('operatives_role') : t('spymasters_role'))})
             </div>
           </div>
 
@@ -632,11 +635,11 @@ export default function LANGame() {
             <div className="mb-4 lg:mb-8 p-4 lg:p-6 glass rounded-2xl text-center shadow-[0_0_50px_rgba(0,0,0,0.5)] z-20 animate-fade-in-up w-full max-w-lg mx-auto">
               {gameState.gameMode === 'duet' ? (
                 <h2 className={`text-2xl lg:text-4xl font-black mb-4 ${gameState.winner === 'red' ? "text-lime-500" : "text-red-500"}`}>
-                  {gameState.winner === 'red' ? "YOU WIN TOGETHER!" : "YOU LOSE TOGETHER!"}
+                  {gameState.winner === 'red' ? t('you_win_together') : t('you_lose_together')}
                 </h2>
               ) : (
                 <h2 className={`text-2xl lg:text-4xl font-black mb-4 ${gameState.winner === "red" ? "text-red-500" : "text-blue-500"}`}>
-                  {gameState.winner.toUpperCase()} TEAM WINS!
+                  {t('team_wins').replace('{team}', uiLanguage === 'ar' ? (gameState.winner === 'red' ? t('red_team') : t('blue_team')) : gameState.winner.toUpperCase())}
                 </h2>
               )}
               {roomPlayers.length > 0 && roomPlayers[0].id === player.id ? (
@@ -644,10 +647,10 @@ export default function LANGame() {
                   onClick={handleRestart}
                   className="px-6 py-2 lg:px-8 lg:py-3 bg-white text-slate-900 font-bold rounded-xl hover:bg-slate-200 transition-colors mt-4"
                 >
-                  Play Again
+                  {t('play_again')}
                 </button>
               ) : (
-                <div className="text-slate-400 font-bold mt-6">Waiting for host to restart...</div>
+                <div className="text-slate-400 font-bold mt-6">{t('waiting_for_host_restart')}</div>
               )}
             </div>
           )}
@@ -656,27 +659,27 @@ export default function LANGame() {
             {/* Sensory Deprivation Warning */}
             {sensoryTimeLeft !== null && sensoryTimeLeft > 0 && (
               <div className="w-full max-w-md bg-purple-950/40 border border-purple-500/50 rounded-xl p-2 mb-2 text-center animate-pulse shadow-[0_0_15px_rgba(168,85,247,0.15)]">
-                <span className="block text-xs font-black text-purple-400 uppercase tracking-widest">⚠️ Sensory Deprivation Active ⚠️</span>
-                <span className="block text-[11px] text-purple-200 mt-1 font-bold">Colors fade in {sensoryTimeLeft}s! Memorize the target cards!</span>
+                <span className="block text-xs font-black text-purple-400 uppercase tracking-widest">{t('sensory_deprivation_active')}</span>
+                <span className="block text-[11px] text-purple-200 mt-1 font-bold">{t('colors_fade_in').replace('{time}', sensoryTimeLeft.toString())}</span>
               </div>
             )}
 
             {/* Lag Spike Warning */}
             {lagSpikeSecondsLeft !== null && lagSpikeSecondsLeft > 0 && (
               <div className="w-full max-w-md bg-yellow-950/40 border border-yellow-500/50 rounded-xl p-2 mb-2 text-center animate-pulse shadow-[0_0_15px_rgba(234,179,8,0.15)]">
-                <span className="block text-xs font-black text-yellow-400 uppercase tracking-widest">⚠️ Network Lag Spike ⚠️</span>
-                <span className="block text-[11px] text-yellow-200 mt-1 font-bold">Connection frozen! Clicks are locked for another {lagSpikeSecondsLeft}s</span>
+                <span className="block text-xs font-black text-yellow-400 uppercase tracking-widest">{t('network_lag_spike')}</span>
+                <span className="block text-[11px] text-yellow-200 mt-1 font-bold">{t('connection_frozen').replace('{time}', lagSpikeSecondsLeft.toString())}</span>
               </div>
             )}
 
             {/* Intercept Phase Warning */}
             {gameState.activeModifier === 'the-intercept' && gameState.modifierState?.interceptPhase && (
               <div className="w-full max-w-md bg-rose-950/40 border border-rose-500/50 rounded-xl p-3 mb-2 text-center animate-pulse shadow-[0_0_20px_rgba(225,29,72,0.3)]">
-                <span className="block text-sm font-black text-rose-400 uppercase tracking-widest">🚨 INTERCEPT OPPORTUNITY ({gameState.modifierState.interceptTimeLeft}s) 🚨</span>
+                <span className="block text-sm font-black text-rose-400 uppercase tracking-widest">{t('intercept_opportunity').replace('{time}', gameState.modifierState.interceptTimeLeft?.toString() || '0')}</span>
                 <span className="block text-xs text-rose-200 mt-1 font-bold">
                   {currentPlayer?.team !== gameState.currentTurn && !isSpymaster
-                    ? "Click ONE card! If you guess the enemy's card, you steal it!" 
-                    : "The enemy team is attempting an intercept! Wait..."}
+                    ? t('click_one_card_steal') 
+                    : t('enemy_attempting_intercept')}
                 </span>
               </div>
             )}
@@ -709,6 +712,12 @@ export default function LANGame() {
                     word: gameState.modifierState.originalWords![i] || c.word
                   }));
                 }
+              } else if (gameState.activeModifier === 'hall-of-mirrors' && gameState.modifierState?.illusionCardId) {
+                displayCards = displayCards.map(c => 
+                  c.id === gameState.modifierState!.illusionCardId 
+                  ? { ...c, word: gameState.modifierState!.illusionWord } 
+                  : c
+                );
               }
 
               return (
@@ -736,6 +745,7 @@ export default function LANGame() {
                     isGuesser={!!isMyTurnToGuess}
                     gachaHighlightId={gachaHighlightCardId}
                     d20FreeReveal={gameState.activeModifier === 'd20-roll' && gameState.modifierState?.canRevealForFree && isSpymaster}
+                    invertedCardIds={gameState.modifierState?.invertedCardIds || []}
                   />
 
                   {/* Chaos Modifiers Spymaster Action Buttons */}
@@ -747,14 +757,14 @@ export default function LANGame() {
                         }}
                         className="px-6 py-4 rounded-xl font-black text-sm sm:text-lg tracking-wider border transition-all text-white shrink-0 bg-gradient-to-br from-indigo-500 to-indigo-700 border-indigo-400 shadow-lg shadow-indigo-600/40 hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2"
                       >
-                        🎲 ROLL THE D20
+                        {t('roll_the_d20')}
                       </button>
                     </div>
                   )}
                   {gameState.currentPhase === 'spymaster' && isSpymaster && currentPlayer?.team === gameState.currentTurn && gameState.activeModifier === 'd20-roll' && gameState.modifierState?.canRevealForFree && (
                     <div className="w-full max-w-md bg-emerald-950/40 border border-emerald-500/50 rounded-xl p-3 mt-4 text-center animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.15)] z-20">
-                      <span className="block text-sm font-black text-emerald-400 uppercase tracking-widest">✨ Critical Success ✨</span>
-                      <span className="block text-xs text-emerald-200 mt-1 font-bold">Click one of your team's cards to reveal it for free!</span>
+                      <span className="block text-sm font-black text-emerald-400 uppercase tracking-widest">✨ {t('critical_success')} ✨</span>
+                      <span className="block text-xs text-emerald-200 mt-1 font-bold">{t('click_to_reveal_free')}</span>
                     </div>
                   )}
 
@@ -774,14 +784,14 @@ export default function LANGame() {
                               : "bg-red-950/40 text-red-400 border-red-500/40 hover:bg-red-900/30"
                           )}
                         >
-                          {isBloodPactToggleActive ? "🩸 CLICK CARD TO REVEAL..." : "🩸 USE BLOOD PACT"}
+                          {isBloodPactToggleActive ? t('click_card_to_reveal') : t('use_blood_pact')}
                         </button>
                       )}
 
                       {gameState.activeModifier === 'mutiny' && !gameState.modifierState?.mutinyUsed && gameState.successfulGuessesThisTurn === 0 && (
                         <button
                           onClick={() => {
-                            if (window.confirm("Reject this clue? The Spymaster will have to give a new one, but your max guesses will drop by 1.")) {
+                            if (window.confirm(t('confirm_reject_clue'))) {
                               socket?.emit("reject_clue", { roomId });
                             }
                           }}
@@ -789,7 +799,7 @@ export default function LANGame() {
                             "px-4 py-2 rounded-xl font-black text-xs tracking-wider border transition-all cursor-pointer bg-fuchsia-950/40 text-fuchsia-400 border-fuchsia-500/40 hover:bg-fuchsia-900/30 hover:scale-105 active:scale-95"
                           )}
                         >
-                          👎 REJECT CLUE (MUTINY)
+                          {t('reject_clue_mutiny')}
                         </button>
                       )}
                       
@@ -798,7 +808,7 @@ export default function LANGame() {
                           <button
                             disabled={!!gameState.modifierState?.gachaPulling}
                             onClick={() => {
-                              if (window.confirm("Leverage pure chance? Clicking this will reveal a card based on the generated odds!")) {
+                              if (window.confirm(t('confirm_gacha_pull'))) {
                                 socket?.emit("gacha_pull", { roomId });
                               }
                             }}
@@ -809,7 +819,7 @@ export default function LANGame() {
                                 : "bg-gradient-to-br from-orange-500 to-orange-700 border-orange-400 shadow-lg shadow-orange-600/40 hover:scale-105 active:scale-95 cursor-pointer"
                             )}
                           >
-                            {gameState.modifierState?.gachaPulling ? "🎰 PULLING LEVER..." : "🕹️ PULL LEVER (GACHA)"}
+                            {gameState.modifierState?.gachaPulling ? t('pulling_lever') : t('pull_lever_gacha')}
                           </button>
 
                           {gameState.modifierState?.gachaChances && (
@@ -817,25 +827,25 @@ export default function LANGame() {
                               {gameState.modifierState.gachaChances.correct !== undefined && (
                                 <div className="bg-emerald-950/40 border border-emerald-500/50 rounded-lg px-2 py-1 text-center min-w-[3rem]">
                                   <div className="text-emerald-400 font-black text-sm sm:text-base">{gameState.modifierState.gachaChances.correct}%</div>
-                                  <div className="text-[9px] font-bold text-emerald-200 uppercase tracking-widest">{gameState.gameMode === 'duet' ? 'Green' : 'Correct'}</div>
+                                  <div className="text-[9px] font-bold text-emerald-200 uppercase tracking-widest">{gameState.gameMode === 'duet' ? t('green_color') : t('correct_guess')}</div>
                                 </div>
                               )}
                               {gameState.modifierState.gachaChances.neutral !== undefined && (
                                 <div className="bg-slate-800/80 border border-slate-600 rounded-lg px-2 py-1 text-center min-w-[3rem]">
                                   <div className="text-slate-300 font-black text-sm sm:text-base">{gameState.modifierState.gachaChances.neutral}%</div>
-                                  <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">White</div>
+                                  <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{t('white_color')}</div>
                                 </div>
                               )}
                               {gameState.gameMode === 'classic' && gameState.modifierState.gachaChances.enemy !== undefined && (
                                 <div className="bg-amber-950/40 border border-amber-500/50 rounded-lg px-2 py-1 text-center min-w-[3rem]">
                                   <div className="text-amber-400 font-black text-sm sm:text-base">{gameState.modifierState.gachaChances.enemy}%</div>
-                                  <div className="text-[9px] font-bold text-amber-200 uppercase tracking-widest">Enemy</div>
+                                  <div className="text-[9px] font-bold text-amber-200 uppercase tracking-widest">{t('enemy_guess')}</div>
                                 </div>
                               )}
                               {gameState.modifierState.gachaChances.assassin !== undefined && (
                                 <div className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-center shadow-inner min-w-[3rem]">
                                   <div className="text-white font-black text-sm sm:text-base drop-shadow-[0_0_2px_rgba(255,255,255,0.8)]">{gameState.modifierState.gachaChances.assassin}%</div>
-                                  <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Black</div>
+                                  <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">{t('black_color')}</div>
                                 </div>
                               )}
                             </div>
@@ -856,7 +866,7 @@ export default function LANGame() {
                               : "bg-blue-950/40 text-blue-400 border-blue-500/40 hover:bg-blue-900/30"
                           )}
                         >
-                          {isLockToggleActive ? "🔒 CLICK CARD TO SHIELD..." : "🔒 LOCK CARD (SHIELD)"}
+                          {isLockToggleActive ? t('click_card_to_shield') : t('lock_card_shield')}
                         </button>
                       )}
                     </div>
@@ -887,8 +897,8 @@ export default function LANGame() {
                       <div className="flex-1 bg-slate-800/80 rounded-full py-3 sm:py-4 px-4 sm:px-6 flex items-center justify-center shadow-lg border border-slate-700 animate-pulse">
                         <span className="text-slate-400 font-black text-sm sm:text-lg tracking-widest uppercase">
                           {gameState.gameMode === 'classic' 
-                            ? 'Waiting for Spymaster...' 
-                            : `Waiting for Side ${gameState.currentTurn === 'red' ? 'A' : 'B'}...`}
+                            ? t('waiting_for_spymaster') 
+                            : (gameState.currentTurn === 'red' ? t('waiting_for_side_a') : t('waiting_for_side_b'))}
                         </span>
                       </div>
                     </div>
@@ -917,7 +927,7 @@ export default function LANGame() {
         <div className="fixed bottom-4 left-4 z-50">
           {showPrankMenu && (
             <div className="absolute bottom-full left-0 mb-2 w-48 bg-slate-800 border border-slate-600 rounded-xl shadow-2xl p-2 animate-fade-in origin-bottom-left">
-              <div className="text-xs text-slate-400 font-bold mb-2 px-2 uppercase">Prank Vibrate</div>
+              <div className="text-xs text-slate-400 font-bold mb-2 px-2 uppercase">{t('prank_vibrate')}</div>
               <div className="max-h-48 overflow-y-auto pr-1 custom-scrollbar">
                 {roomPlayers.filter(p => p.id !== player?.id).map(p => (
                   <button
@@ -934,7 +944,7 @@ export default function LANGame() {
                   </button>
                 ))}
                 {roomPlayers.length <= 1 && (
-                  <div className="text-sm text-slate-500 px-2 italic">Nobody else here...</div>
+                  <div className="text-sm text-slate-500 px-2 italic">{t('nobody_else_here')}</div>
                 )}
               </div>
             </div>
@@ -952,15 +962,16 @@ export default function LANGame() {
       {showModifierBanner && (() => {
         const mod = MODIFIERS.find(m => m.id === showModifierBanner);
         if (!mod) return null;
+        const IconComponent = MODIFIER_ICONS[mod.icon] || MODIFIER_ICONS['HelpCircle'];
         return (
           <div className="fixed inset-0 bg-slate-950/93 backdrop-blur-none sm:backdrop-blur-sm z-[150] flex items-center justify-center p-8 text-center animate-fade-in">
             <div className="max-w-xl bg-slate-900 border-2 border-red-500/40 rounded-3xl p-8 sm:p-10 shadow-[0_0_60px_rgba(239,68,68,0.3)] animate-reveal-pop flex flex-col items-center">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-red-500/15 border-2 border-red-500/40 flex items-center justify-center text-3xl sm:text-4xl mb-6 animate-pulse">
-                🌀
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-red-500/15 border-2 border-red-500/40 flex items-center justify-center text-red-500 mb-6 animate-pulse">
+                <IconComponent className="w-10 h-10 sm:w-12 sm:h-12" />
               </div>
-              <div className="text-red-500 text-xs font-black tracking-widest uppercase mb-2">Chaos Modifier Activated!</div>
-              <h2 className="text-2xl sm:text-4xl font-black text-white tracking-widest mb-4 uppercase">{mod.name}</h2>
-              <p className="text-slate-300 text-xs sm:text-sm font-bold leading-relaxed">{mod.description}</p>
+              <div className="text-red-500 text-xs font-black tracking-widest uppercase mb-2">{t('chaos_modifier_activated')}</div>
+              <h2 className="text-2xl sm:text-4xl font-black text-white tracking-widest mb-4 uppercase">{uiLanguage === 'ar' ? mod.nameAr || mod.name : mod.name}</h2>
+              <p className="text-slate-300 text-xs sm:text-sm font-bold leading-relaxed">{uiLanguage === 'ar' ? mod.descriptionAr || mod.description : mod.description}</p>
             </div>
           </div>
         );

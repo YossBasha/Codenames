@@ -26,9 +26,10 @@ interface CardProps {
   gachaHighlight?: boolean;
   d20FreeReveal?: boolean;
   isScramblePending?: boolean;
+  isPoltergeistInverted?: boolean;
 }
 
-function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, isClueTarget = false, isGivingClue = false, highlightedBy = [], currentPlayerId, onClick, onContextMenu, onGuess, activeModifier, currentPhase, scrambleDx, scrambleDy, isGuesser = false, gachaHighlight = false, d20FreeReveal = false, isScramblePending = false }: CardProps) {
+function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, isClueTarget = false, isGivingClue = false, highlightedBy = [], currentPlayerId, onClick, onContextMenu, onGuess, activeModifier, currentPhase, scrambleDx, scrambleDy, isGuesser = false, gachaHighlight = false, d20FreeReveal = false, isScramblePending = false, isPoltergeistInverted = false }: CardProps) {
   let isRevealedForMe = card.revealed;
   if (gameMode === 'duet' && !card.revealed) {
     if (playerTeam === 'red' && card.revealedByA) {
@@ -240,7 +241,8 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
           className={cn(
             "relative z-10 flex items-center justify-center h-full w-full p-1 sm:p-2 text-center break-words leading-none sm:leading-tight transform transition-transform",
             activeModifier === 'eroding-parchment' && currentPhase === 'operative' && isGuesser && !isRevealedForMe && "animate-eroding-parchment",
-            !isScramblePending && (scrambleDx !== undefined || scrambleDy !== undefined) && activeModifier !== 'earthquake' && "animate-scramble"
+            !isScramblePending && (scrambleDx !== undefined || scrambleDy !== undefined) && activeModifier !== 'earthquake' && "animate-scramble",
+            isPoltergeistInverted && !card.revealed && "rotate-180"
           )}
         >
           {activeModifier === 'marquee-madness' && !card.revealed ? (

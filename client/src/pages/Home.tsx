@@ -1,8 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useGameContext } from '../context/GameContext';
+import { useI18n } from '../context/I18nContext';
 import { playMenuHoverSfx, playMenuClickSfx } from '../utils/sfx';
-import { Palette, X, Check } from 'lucide-react';
+import { Palette, X, Check, Globe } from 'lucide-react';
 import { cn } from '../utils';
 import type { ThemeType } from '../../../shared/types';
 import { useState } from 'react';
@@ -10,6 +11,7 @@ import { useState } from 'react';
 export default function Home() {
   const navigate = useNavigate();
   const { socket, setSocket, theme, setTheme } = useGameContext();
+  const { t, uiLanguage, setUiLanguage } = useI18n();
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showHostModal, setShowHostModal] = useState(false);
 
@@ -24,6 +26,18 @@ export default function Home() {
       <div className="absolute top-[-20%] left-[-10%] w-96 h-96 bg-red-500/20 rounded-full blur-[100px]" />
       <div className="absolute bottom-[-20%] right-[-10%] w-96 h-96 bg-blue-500/20 rounded-full blur-[100px]" />
 
+      {/* Language Toggle Button */}
+      <button
+        onClick={() => setUiLanguage(uiLanguage === 'en' ? 'ar' : 'en')}
+        className="absolute top-4 left-4 z-50 p-3 bg-slate-800/80 hover:bg-slate-700/80 rounded-full border border-slate-600 transition-colors shadow-lg backdrop-blur flex items-center gap-2"
+        title="Toggle UI Language"
+      >
+        <Globe className="w-5 h-5 text-sky-400" />
+        <span className="text-sky-400 font-bold text-sm leading-none pt-[2px]">
+          {uiLanguage === 'en' ? 'AR' : 'EN'}
+        </span>
+      </button>
+
       {/* Theme Button */}
       <button
         onClick={() => setShowThemeModal(true)}
@@ -35,9 +49,9 @@ export default function Home() {
       <div className="z-10 flex flex-col items-center gap-8 w-full max-w-md glass p-8 rounded-3xl">
         <div className="text-center">
           <h1 className="text-5xl font-black mb-2 tracking-tight bg-gradient-to-r from-red-500 to-blue-500 bg-clip-text text-transparent">
-            CODENAMES
+            {t('title')}
           </h1>
-          <p className="text-slate-400 font-medium">Top Secret Word Game</p>
+          <p className="text-slate-400 font-medium">{t('subtitle')}</p>
         </div>
 
         <div className="flex flex-col w-full gap-4 mt-8">
@@ -46,12 +60,12 @@ export default function Home() {
             onClick={() => { playMenuClickSfx(); navigate('/pass-and-play'); }}
             className="w-full py-4 px-6 bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-500 hover:to-purple-700 rounded-xl font-bold text-lg shadow-lg shadow-purple-500/25 transition-all transform hover:-translate-y-1"
           >
-            Pass & Play
+            {t('pass_and_play')}
           </button>
           
           <div className="relative flex py-2 items-center">
             <div className="flex-grow border-t border-slate-700"></div>
-            <span className="flex-shrink-0 mx-4 text-slate-500 text-sm font-bold">MULTIPLAYER</span>
+            <span className="flex-shrink-0 mx-4 text-slate-500 text-sm font-bold">{t('multiplayer')}</span>
             <div className="flex-grow border-t border-slate-700"></div>
           </div>
 
@@ -61,14 +75,14 @@ export default function Home() {
               onClick={() => { playMenuClickSfx(); setShowHostModal(true); }}
               className="flex-1 py-4 px-6 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl font-bold text-lg transition-all transform hover:-translate-y-1"
             >
-              Host Game
+              {t('create_game')}
             </button>
             <button
               onMouseEnter={playMenuHoverSfx}
               onClick={() => { playMenuClickSfx(); navigate('/join-game'); }}
-              className="flex-1 py-4 px-6 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl font-bold text-lg transition-all transform hover:-translate-y-1"
+              className="flex-1 py-4 px-4 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold shadow-lg shadow-black/20 transition-all transform hover:-translate-y-1 text-[15px]"
             >
-              Join Game
+              {t('join_game')}
             </button>
           </div>
         </div>
@@ -94,8 +108,8 @@ export default function Home() {
                 <Palette className="w-8 h-8" />
               </div>
               <div>
-                <h2 className="text-2xl font-black tracking-widest text-white">THEME SETTINGS</h2>
-                <p className="text-sm font-bold text-slate-400">Change the visual style</p>
+                <h2 className="text-2xl font-black tracking-widest text-white">{t('theme_settings')}</h2>
+                <p className="text-sm font-bold text-slate-400">{t('change_visual_style')}</p>
               </div>
             </div>
 
@@ -121,7 +135,7 @@ export default function Home() {
               onClick={() => setShowThemeModal(false)}
               className="mt-8 w-full py-3 bg-pink-500 hover:bg-pink-400 rounded-xl font-black tracking-widest text-white shadow-lg transition-colors"
             >
-              DONE
+              {t('done')}
             </button>
           </div>
         </div>
@@ -137,23 +151,23 @@ export default function Home() {
               <X className="w-5 h-5 text-white" />
             </button>
 
-            <h2 className="text-2xl font-black tracking-widest text-white mb-6">HOST GAME</h2>
+            <h2 className="text-2xl font-black tracking-widest text-white mb-6">{t('host_game').toUpperCase()}</h2>
 
             <div className="flex flex-col gap-3">
               <button
                 disabled
                 className="w-full text-left p-4 rounded-xl border-2 bg-slate-800/50 border-slate-700 cursor-not-allowed opacity-60 flex flex-col gap-1"
               >
-                <span className="font-black tracking-widest text-slate-400 uppercase">Online (Public) - COMING SOON..</span>
-                <span className="text-sm font-bold text-slate-500">Host on the global internet server</span>
+                <span className="font-black tracking-widest text-slate-400 uppercase">{t('online_public_coming_soon')}</span>
+                <span className="text-sm font-bold text-slate-500">{t('host_global_internet')}</span>
               </button>
               
               <button
                 onClick={() => { playMenuClickSfx(); navigate('/lan-lobby?host=true'); }}
                 className="w-full text-left p-4 rounded-xl border-2 bg-[#222] border-[#333] hover:border-slate-500 transition-all flex flex-col gap-1"
               >
-                <span className="font-black tracking-widest text-white uppercase">Local Network (LAN)</span>
-                <span className="text-sm font-bold text-slate-400">Host for players on the same Wi-Fi</span>
+                <span className="font-black tracking-widest text-white uppercase">{t('local_network_lan')}</span>
+                <span className="text-sm font-bold text-slate-400">{t('host_same_wifi')}</span>
               </button>
             </div>
           </div>

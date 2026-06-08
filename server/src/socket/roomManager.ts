@@ -1,5 +1,5 @@
 import { Server, Socket } from 'socket.io';
-import { GameState, Player, Language, GameMode, TimerSettings, CustomWordWeight } from '../../../shared/types';
+import { GameState, Player, Language, GameMode, TimerSettings, CustomWordWeight, Card as CardData } from '../../../shared/types';
 import { generateGrid, generateDuetGrid, shuffleArray } from '../../../shared/gameLogic';
 import { MODIFIERS, checkRhyme } from '../../../shared/modifiers';
 import { wordPackRegistry } from '../../../shared/wordPacks';
@@ -13,6 +13,16 @@ interface Room {
 }
 
 const rooms: Record<string, Room> = {};
+
+function getLoggedWord(room: Room, card: CardData): string {
+  if (room.gameState && room.gameState.activeModifier === 'censored-documents' && room.gameState.modifierState?.originalWords) {
+    const idx = room.gameState.cards.findIndex(c => c.id === card.id);
+    if (idx !== -1 && room.gameState.modifierState.originalWords[idx]) {
+      return room.gameState.modifierState.originalWords[idx];
+    }
+  }
+  return card.word;
+}
 
 export function getPublicRooms() {
   return Object.values(rooms).map(r => ({
@@ -179,12 +189,10 @@ function applyRandomModifier(room: Room) {
       };
       
       gameState.cards.forEach(card => {
-        if (card.revealed) return; // Optional: maybe we translate revealed too, but let's translate all? Wait, "entire board switches languages!" Let's do all.
-        // wait, I will just translate all.
+        if (card.revealed) return; 
         const sourcePacks = wordPackRegistry[gameState.language];
         const targetPacks = wordPackRegistry[targetLang];
         
-        // Find the word in the source packs
         let found = false;
         for (const packName in sourcePacks) {
           const packWords = sourcePacks[packName];
@@ -205,8 +213,6 @@ function applyRandomModifier(room: Room) {
     gameState.cards.forEach(card => {
       if (card.revealed) return;
       
-      // Skip if it looks like an emoji (simple length check or regex)
-      // A typical emoji might be length 1 or 2, but let's use a regex
       if (/\p{Emoji}/u.test(card.word)) return;
       
       const chars = card.word.split('');
@@ -221,6 +227,24 @@ function applyRandomModifier(room: Room) {
       }
       card.word = chars.join('');
     });
+  } else if (randomModifier.id === 'hall-of-mirrors') {
+    const unrevealedCards = gameState.cards.filter(c => !c.revealed);
+    if (unrevealedCards.length >= 2) {
+      const shuffled = shuffleArray([...unrevealedCards]);
+      gameState.modifierState = {
+        illusionCardId: shuffled[1].id,
+        illusionWord: shuffled[0].word
+      };
+    }
+  } else if (randomModifier.id === 'poltergeist') {
+    const unrevealedCards = gameState.cards.filter(c => !c.revealed);
+    const numToInvert = Math.floor(unrevealedCards.length / 2);
+    if (numToInvert > 0) {
+      const shuffled = shuffleArray([...unrevealedCards]);
+      gameState.modifierState = {
+        invertedCardIds: shuffled.slice(0, numToInvert).map(c => c.id)
+      };
+    }
   } else if (randomModifier.id === 'earthquake') {
     gameState.modifierState = {
       originalWords: gameState.cards.map(c => c.word),
@@ -232,12 +256,6 @@ function applyRandomModifier(room: Room) {
     
     const shuffledWords = shuffleArray([...unrevealedWords]);
     
-    // Also we need to shuffle types, or just swap the words between the existing cards?
-    // "Every single unrevealed card on the board shuffles to a new position."
-    // So we should shuffle the words, types, duetTypes, etc.
-    // The easiest way is to extract all unrevealed card properties and shuffle them, then assign them back to the same indices.
-    
-    // Let's gather the data we want to shuffle
     interface CardData {
       word: string;
       type: string;
@@ -514,7 +532,7 @@ function processGuess(io: Server, room: Room, player: Player, cardId: number) {
         avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=${player.team === 'red' ? 'ef4444' : '3b82f6'}` 
       },
       guessingTeam: expectedGuessTeam as 'red' | 'blue',
-      cardWord: card.word,
+      cardWord: getLoggedWord(room, card),
       revealedColor: keyType!,
       timestamp: Date.now()
     });
@@ -572,7 +590,7 @@ function processGuess(io: Server, room: Room, player: Player, cardId: number) {
           avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=${player.team === 'red' ? 'ef4444' : '3b82f6'}` 
         },
         guessingTeam: expectedGuessTeam as 'red' | 'blue',
-        cardWord: card.word,
+        cardWord: getLoggedWord(room, card),
         revealedColor: card.type,
         timestamp: Date.now()
       });
@@ -826,9 +844,14 @@ export function setupRoomManager(io: Server) {
           } else if (room.gameState.activeModifier === 'oracle-riddle') {
             const words = cue.trim().split(/\s+/).filter(Boolean);
             if (words.length !== 2 || !checkRhyme(words[0], words[1], !!room.gameState.isRTL)) {
-              return; // Reject invalid clue
+              return; 
             }
             finalCue = words.join(' ');
+          } else if (room.gameState.activeModifier === 'boolean-search') {
+            const matches = cue.match(/\s+(AND|OR|NOT)\s+/g);
+            if (!matches || matches.length !== 1) {
+              return;
+            }
           }
 
           let finalNumber = number;
@@ -867,7 +890,7 @@ export function setupRoomManager(io: Server) {
           if (room.gameState.activeModifier === 'the-intercept' && room.gameState.gameMode === 'classic') {
             if (!room.gameState.modifierState) room.gameState.modifierState = {};
             room.gameState.modifierState.interceptPhase = true;
-            room.gameState.modifierState.interceptTimeLeft = 10;
+            room.gameState.modifierState.interceptTimeLeft = 5;
             
             const interceptInterval = setInterval(() => {
               if (!room.gameState || room.gameState.modifierState?.interceptPhase !== true) {
@@ -1012,7 +1035,7 @@ export function setupRoomManager(io: Server) {
         if (!room.gameState.modifierState?.interceptPhase) return;
         
         const isDuet = room.gameState.gameMode === 'duet';
-        if (isDuet) return; // Intercept is disabled in duet
+        if (isDuet) return; 
         
         const activeTeam = room.gameState.currentTurn;
         const enemyTeam = activeTeam === 'red' ? 'blue' : 'red';
@@ -1022,18 +1045,14 @@ export function setupRoomManager(io: Server) {
         const card = room.gameState.cards.find(c => c.id === cardId);
         if (!card || card.revealed) return;
         
-        // Immediately end intercept phase
         room.gameState.modifierState.interceptPhase = false;
         room.gameState.modifierState.interceptTimeLeft = 0;
         
-        // Card reveals logic
         card.revealed = true;
         let revealedColor = card.type;
 
-        // If they click the ACTIVE team's card, they steal it! 
-        // It becomes THEIR color.
         if (card.type === activeTeam) {
-            card.type = enemyTeam; // Steal the card!
+            card.type = enemyTeam; 
             revealedColor = enemyTeam;
         }
 
@@ -1045,13 +1064,13 @@ export function setupRoomManager(io: Server) {
             avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=${player.team === 'red' ? 'ef4444' : '3b82f6'}` 
           },
           guessingTeam: enemyTeam,
-          cardWord: card.word,
+          cardWord: getLoggedWord(room, card),
           revealedColor: revealedColor,
           timestamp: Date.now()
         });
 
         if (revealedColor === 'assassin') {
-          room.gameState.winner = activeTeam; // active team wins because enemy clicked assassin
+          room.gameState.winner = activeTeam; 
         } else if (revealedColor === 'red') {
           room.gameState.redScore--;
           if (room.gameState.redScore <= 0) room.gameState.winner = 'red';
@@ -1107,7 +1126,7 @@ export function setupRoomManager(io: Server) {
               avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=882222` 
             },
             guessingTeam: expectedGuessTeam as 'red' | 'blue',
-            cardWord: card.word,
+            cardWord: getLoggedWord(room, card),
             revealedColor: keyType!,
             timestamp: Date.now()
           });
@@ -1123,7 +1142,7 @@ export function setupRoomManager(io: Server) {
               avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=882222` 
             },
             guessingTeam: expectedGuessTeam as 'red' | 'blue',
-            cardWord: card.word,
+            cardWord: getLoggedWord(room, card),
             revealedColor: card.type,
             timestamp: Date.now()
           });
@@ -1199,7 +1218,6 @@ export function setupRoomManager(io: Server) {
           const currentRoom = rooms[roomId];
           if (currentRoom && currentRoom.gameState && currentRoom.gameState.activeModifier === 'd20-roll') {
             if (result === 1) {
-              // Critical Failure: Skip turn
               currentRoom.gameState.gameLog.push({
                 id: Math.random().toString(36).substring(7),
                 type: 'guess',
@@ -1215,13 +1233,11 @@ export function setupRoomManager(io: Server) {
               transitionToNewTurn(io, currentRoom);
               io.to(roomId).emit('game_update', currentRoom.gameState);
             } else if (result === 20) {
-              // Critical Success: Free reveal
-              currentRoom.gameState.modifierState.rollCompleted = true; // mark roll as finished
+              currentRoom.gameState.modifierState.rollCompleted = true; 
               currentRoom.gameState.modifierState.canRevealForFree = true;
               io.to(roomId).emit('game_update', currentRoom.gameState);
             } else {
-              // Normal result
-              currentRoom.gameState.modifierState.rollCompleted = true; // mark roll as finished
+              currentRoom.gameState.modifierState.rollCompleted = true; 
               io.to(roomId).emit('game_update', currentRoom.gameState);
             }
           }
@@ -1256,7 +1272,7 @@ export function setupRoomManager(io: Server) {
           ((expectedTurn === 'blue' ? card.duetTypeB : card.duetTypeA) === 'green') : 
           (card.type === teamColor);
 
-        if (!validColor) return; // Only allow revealing own team's cards
+        if (!validColor) return; 
 
         delete room.gameState.modifierState.canRevealForFree;
         
@@ -1268,7 +1284,7 @@ export function setupRoomManager(io: Server) {
             avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=10b981` 
           },
           guessingTeam: expectedTurn as 'red' | 'blue',
-          cardWord: `Revealed ${card.word} for free!`,
+          cardWord: `Revealed ${getLoggedWord(room, card)} for free!`,
           revealedColor: 'neutral',
           timestamp: Date.now()
         });
@@ -1428,7 +1444,7 @@ export function setupRoomManager(io: Server) {
               avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=64748b` 
             },
             guessingTeam: expectedGuessTeam as 'red' | 'blue',
-            cardWord: `Locked card: ${card.word}`,
+            cardWord: `Locked card: ${getLoggedWord(room, card)}`,
             revealedColor: 'neutral',
             timestamp: Date.now()
           });

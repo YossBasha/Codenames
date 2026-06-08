@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGameContext } from "../context/GameContext";
+import { useI18n } from "../context/I18nContext";
 import { generateGrid, generateDuetGrid } from "../../../shared/gameLogic";
 import type { GameState, CustomWordWeight, TimerSettings, Team, ClueType } from "../../../shared/types";
 import { MODIFIERS } from "../../../shared/modifiers";
@@ -30,6 +31,7 @@ function getNextTurnDuetLocal(currentTurn: Team, cards: any[]): 'red' | 'blue' {
 export default function PassAndPlay() {
   const navigate = useNavigate();
   const { language, setLanguage } = useGameContext();
+  const { t } = useI18n();
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [localPhase, setLocalPhase] = useState<LocalPhase>('Setup');
   const [clueTargets, setClueTargets] = useState<number[]>([]);
@@ -476,7 +478,7 @@ export default function PassAndPlay() {
           <button onMouseEnter={playMenuHoverSfx} onClick={() => { playMenuClickSfx(); navigate('/'); }} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
           </button>
-          <h1 className="ml-4 text-xl font-black tracking-widest text-slate-200">PASS & PLAY SETUP</h1>
+          <h1 className="mx-4 text-xl font-black tracking-widest text-slate-200">{t('pass_play_setup')}</h1>
         </div>
         
         <div className="flex-1 max-w-4xl mx-auto w-full flex flex-col">
@@ -511,7 +513,7 @@ export default function PassAndPlay() {
               onClick={() => { playMenuClickSfx(); handleStartGame(); }}
               className="w-full py-4 bg-[#22c55e] hover:bg-[#16a34a] rounded-full font-black text-2xl tracking-widest text-white shadow-[0_10px_0_#15803d] hover:translate-y-1 hover:shadow-[0_5px_0_#15803d] transition-all"
             >
-              START GAME
+              {t('start_game')}
             </button>
           </div>
         </div>
@@ -519,7 +521,7 @@ export default function PassAndPlay() {
     );
   }
 
-  if (!gameState) return <div className="min-h-screen bg-[#0f172a] text-white flex items-center justify-center">Loading...</div>;
+  if (!gameState) return <div className="min-h-screen bg-[#0f172a] text-white flex items-center justify-center">{t('loading')}</div>;
 
   const bgClass = gameState.winner === "red"
       ? (gameState.gameMode === 'duet' ? "bg-green-950" : "bg-red-950")
@@ -577,18 +579,18 @@ export default function PassAndPlay() {
           <div className="mb-8 p-6 glass rounded-2xl text-center shadow-[0_0_50px_rgba(0,0,0,0.5)] z-20 animate-fade-in-up">
             {gameState.gameMode === 'duet' ? (
               <h2 className={`text-4xl font-black mb-4 ${gameState.winner === 'red' ? "text-green-500" : "text-red-500"}`}>
-                {gameState.winner === 'red' ? "YOU WIN TOGETHER!" : "YOU LOSE TOGETHER!"}
+                {gameState.winner === 'red' ? t('you_win_together') : t('you_lose_together')}
               </h2>
             ) : (
               <h2 className={`text-4xl font-black mb-4 ${gameState.winner === "red" ? "text-red-500" : "text-blue-500"}`}>
-                {gameState.winner.toUpperCase()} TEAM WINS!
+                {gameState.winner === "red" ? t('red_team') : t('blue_team')} {t('team_wins')}
               </h2>
             )}
             <button
               onClick={() => { setGameState(null); setLocalPhase('Setup'); }}
               className="px-8 py-3 bg-white text-slate-900 font-bold rounded-xl hover:bg-slate-200 transition-colors"
             >
-              Play Again
+              {t('play_again')}
             </button>
           </div>
         )}
@@ -605,14 +607,14 @@ export default function PassAndPlay() {
                   ? (gameState.currentTurn === 'red' ? "text-green-400" : "text-teal-400")
                   : (gameState.currentTurn === 'red' ? "text-red-500" : "text-blue-500")
               )}>
-                {gameState.gameMode === 'classic' ? `${gameState.currentTurn.toUpperCase()} SPYMASTER` : (gameState.currentTurn === 'red' ? "SIDE A GIVES CLUE" : "SIDE B GIVES CLUE")}
+                {gameState.gameMode === 'classic' ? `${gameState.currentTurn === "red" ? t('red_team') : t('blue_team')} - ${t('spymaster')}` : (gameState.currentTurn === 'red' ? `${t('side_a')} ${t('gives_clue')}` : `${t('side_b')} ${t('gives_clue')}`)}
               </h2>
-              <p className="text-2xl font-bold mb-8">Grab the device.</p>
+              <p className="text-2xl font-bold mb-8">{t('grab_device')}</p>
               <p className="text-slate-300 text-lg mb-8">
-                {gameState.gameMode === 'classic' ? "Operatives must look away from the screen." : "The other player must look away."}
+                {gameState.gameMode === 'classic' ? t('operatives_look_away') : t('other_player_look_away')}
               </p>
               <div className="text-white/50 text-sm animate-pulse">
-                Tap anywhere to view secret matrix
+                {t('tap_to_view_matrix')}
               </div>
             </div>
           </div>
@@ -629,16 +631,16 @@ export default function PassAndPlay() {
                   ? (gameState.currentTurn === 'red' ? "text-green-400" : "text-teal-400")
                   : (gameState.currentTurn === 'red' ? "text-red-500" : "text-blue-500")
               )}>
-                CLUE READY
+                {t('clue_ready')}
               </h2>
-              <p className="text-2xl font-bold mb-8">
-                {gameState.gameMode === 'classic' ? `Pass device to ${gameState.currentTurn.toUpperCase()} Operatives` : (gameState.currentTurn === 'red' ? "Pass device to SIDE B" : "Pass device to SIDE A")}
+              <p className="text-2xl font-bold mb-8 flex items-center justify-center gap-2" dir="ltr">
+                {gameState.gameMode === 'classic' ? `${t('pass_device_to')} ${gameState.currentTurn === "red" ? t('red_team') : t('blue_team')} ${t('operatives')}` : (gameState.currentTurn === 'red' ? `${t('pass_device_to')} ${t('side_b')}` : `${t('pass_device_to')} ${t('side_a')}`)}
               </p>
               <p className="text-slate-300 text-lg mb-8">
-                {gameState.gameMode === 'classic' ? "Spymaster must look away from the screen." : "The other player must look away."}
+                {gameState.gameMode === 'classic' ? t('spymaster_look_away') : t('other_player_look_away')}
               </p>
               <div className="text-white/50 text-sm animate-pulse">
-                Tap anywhere to reveal cards
+                {t('tap_to_reveal')}
               </div>
             </div>
           </div>

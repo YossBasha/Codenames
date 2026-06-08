@@ -26,9 +26,10 @@ interface GridProps {
   isGuesser?: boolean;
   gachaHighlightId?: number | null;
   d20FreeReveal?: boolean;
+  invertedCardIds?: number[];
 }
 
-export default function Grid({ cards, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, clueTargets = [], isGivingClue = false, highlightedCards = {}, players = [], currentPlayerId, onCardClick, onCardContextMenu, onGuess, activeModifier, currentPhase, scrambleActive, isScramblePending, originalWords, isGuesser, gachaHighlightId, d20FreeReveal }: GridProps) {
+export default function Grid({ cards, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, clueTargets = [], isGivingClue = false, highlightedCards = {}, players = [], currentPlayerId, onCardClick, onCardContextMenu, onGuess, activeModifier, currentPhase, scrambleActive, isScramblePending, originalWords, isGuesser, gachaHighlightId, d20FreeReveal, invertedCardIds = [] }: GridProps) {
   if (!cards || cards.length === 0) return null;
 
   // Pre-calculate highlighting players per card to avoid O(N * M) lookup inside the loop
@@ -96,6 +97,7 @@ export default function Grid({ cards, isSpymaster, disabled, playerTeam, gameMod
             isGuesser={isGuesser}
             gachaHighlight={gachaHighlightId === c.id}
             d20FreeReveal={d20FreeReveal}
+            isPoltergeistInverted={invertedCardIds.includes(c.id)}
           />
         );
       })}

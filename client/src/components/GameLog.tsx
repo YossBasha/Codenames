@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { LogEntry } from '../../../shared/types';
 import { cn } from '../utils';
+import { useI18n } from '../context/I18nContext';
 
 interface GameLogProps {
   logs: LogEntry[];
@@ -9,6 +10,7 @@ interface GameLogProps {
 
 export default function GameLog({ logs, gameMode = 'classic' }: GameLogProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const { t } = useI18n();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -17,12 +19,12 @@ export default function GameLog({ logs, gameMode = 'classic' }: GameLogProps) {
   return (
     <div className="flex flex-col bg-black/40 border border-slate-700/50 rounded-2xl overflow-hidden flex-1 relative w-full min-h-[150px]">
       <div className="bg-black/40 p-2 text-center text-xs font-black tracking-widest text-slate-500 absolute top-0 left-0 right-0 z-10 shadow-md h-8">
-        GAME LOG
+        {t('game_log')}
       </div>
       <div className="absolute top-8 left-0 right-0 bottom-0 overflow-y-auto p-4 flex flex-col gap-4 scrollbar-thin scrollbar-thumb-slate-700">
         {logs.length === 0 ? (
           <div className="text-slate-500 text-sm text-center italic mt-auto mb-auto">
-            No moves yet...
+            {t('no_moves_yet')}
           </div>
         ) : (
           logs.map((log) => {
