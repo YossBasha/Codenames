@@ -180,31 +180,25 @@ body {
 @keyframes scramble-swap {
   0% {
     transform: translate(var(--scramble-dx, 0), var(--scramble-dy, 0)) scale(1);
-    box-shadow: 0 4px 12px rgb(0 0 0 / 0.3);
     z-index: 50;
   }
   20% {
     transform: translate(var(--scramble-dx, 0), var(--scramble-dy, 0)) scale(1.08) rotate(2deg);
-    box-shadow: 0 0 25px rgba(168, 85, 247, 0.6), 0 20px 25px -5px rgb(0 0 0 / 0.3);
-    filter: brightness(1.2) hue-rotate(45deg);
     z-index: 50;
   }
   75% {
     transform: translate(calc(var(--scramble-dx, 0) * 0.15), calc(var(--scramble-dy, 0) * 0.15)) scale(1.04) rotate(-1deg);
-    box-shadow: 0 0 15px rgba(168, 85, 247, 0.3);
-    filter: brightness(1.1) hue-rotate(15deg);
     z-index: 50;
   }
   100% {
     transform: translate(0, 0) scale(1) rotate(0deg);
-    box-shadow: none;
-    filter: none;
     z-index: 1;
   }
 }
 
 .animate-scramble {
   animation: scramble-swap 1.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  will-change: transform;
 }
 
 @keyframes gacha-glow {
@@ -216,4 +210,13 @@ body {
     background-color: rgba(249, 115, 22, 0.15);
     box-shadow: inset 0 0 15px rgba(249, 115, 22, 0.3), 0 0 10px rgba(249, 115, 22, 0.3);
   }
+}
+
+@keyframes marquee-scroll {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+.animate-marquee-scroll {
+  animation: marquee-scroll 4s linear infinite;
 }

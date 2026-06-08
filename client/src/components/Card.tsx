@@ -24,9 +24,11 @@ interface CardProps {
   scrambleDy?: number;
   isGuesser?: boolean;
   gachaHighlight?: boolean;
+  d20FreeReveal?: boolean;
+  isScramblePending?: boolean;
 }
 
-function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, isClueTarget = false, isGivingClue = false, highlightedBy = [], currentPlayerId, onClick, onContextMenu, onGuess, activeModifier, currentPhase, scrambleDx, scrambleDy, isGuesser = false, gachaHighlight = false }: CardProps) {
+function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, isClueTarget = false, isGivingClue = false, highlightedBy = [], currentPlayerId, onClick, onContextMenu, onGuess, activeModifier, currentPhase, scrambleDx, scrambleDy, isGuesser = false, gachaHighlight = false, d20FreeReveal = false, isScramblePending = false }: CardProps) {
   let isRevealedForMe = card.revealed;
   if (gameMode === 'duet' && !card.revealed) {
     if (playerTeam === 'red' && card.revealedByA) {
@@ -60,6 +62,11 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
   if (gameMode === 'duet' && card.revealed) {
     // Use whatever the server set card.type to dynamically upon reveal
     typeToDisplay = card.type;
+  }
+
+  if (activeModifier === 'colorblind' && gameMode === 'classic' && isSpymaster && !card.revealed) {
+    if (typeToDisplay === 'red') typeToDisplay = 'blue';
+    else if (typeToDisplay === 'blue') typeToDisplay = 'red';
   }
 
   const colorClasses = {
@@ -114,6 +121,13 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
     isDisabled = isRevealedForMe || (isSpymaster && gameMode !== 'duet') || disabled;
   }
 
+  if (d20FreeReveal && isSpymaster && !isRevealedForMe) {
+    const isOwnTeam = gameMode === 'duet' ? (typeToDisplay === 'green') : (typeToDisplay === playerTeam);
+    if (isOwnTeam) {
+      isDisabled = false;
+    }
+  }
+
   if (card.shieldedTurns && card.shieldedTurns > 0) {
     isDisabled = true;
   }
@@ -122,6 +136,15 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
 
   return (
     <div
+      style={
+        (scrambleDx !== undefined || scrambleDy !== undefined) && activeModifier === 'earthquake'
+          ? {
+              "--scramble-dx": `${(scrambleDx ?? 0) * 105}%`,
+              "--scramble-dy": `${(scrambleDy ?? 0) * 105}%`,
+              ...(isScramblePending ? { transform: `translate(var(--scramble-dx, 0), var(--scramble-dy, 0))` } : {})
+            } as React.CSSProperties
+          : undefined
+      }
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
@@ -150,7 +173,7 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
         "relative w-full aspect-[4/3] sm:aspect-[3/2] max-h-[calc((100vh-250px)/5)] sm:max-h-[calc((100vh-300px)/5)] rounded-lg sm:rounded-xl font-black transition-all duration-300 transform",
         !(scrambleDx !== undefined || scrambleDy !== undefined) && "overflow-hidden",
         isEmoji ? "text-4xl sm:text-5xl lg:text-7xl" : "text-[9px] xs:text-[11px] sm:text-sm lg:text-lg tracking-tighter sm:tracking-tight",
-        isDisabled && !isRevealedForMe && !isGivingClue
+        isDisabled && !isRevealedForMe && !isGivingClue && !d20FreeReveal
           ? "cursor-default opacity-80"
           : isGivingClue && !isValidClueTarget
             ? "cursor-default opacity-80"
@@ -158,10 +181,11 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
         hiddenClasses,
         card.revealed && isSpymaster && "opacity-50",
         showColor && shadowClasses[typeToDisplay],
-        (isClueTarget || highlightedBy.length > 0) && "scale-[1.02] z-10",
+        (isClueTarget || highlightedBy.length > 0 || (d20FreeReveal && !isDisabled)) && "scale-[1.02] z-10",
         gachaHighlight && "z-40",
         justRevealed && !['green', 'red', 'blue'].includes(typeToDisplay) && "animate-reveal-pop",
-        justRevealed && ['green', 'red', 'blue'].includes(typeToDisplay) && "animate-card-flip"
+        justRevealed && ['green', 'red', 'blue'].includes(typeToDisplay) && "animate-card-flip",
+        !isScramblePending && (scrambleDx !== undefined || scrambleDy !== undefined) && activeModifier === 'earthquake' && "animate-scramble"
       )}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
@@ -169,7 +193,8 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
       <div className={cn(
         "absolute inset-0 rounded-lg sm:rounded-xl pointer-events-none z-20",
         isClueTarget && "ring-2 sm:ring-4 ring-inset ring-yellow-400 shadow-[inset_0_0_15px_rgba(250,204,21,0.5),0_0_15px_rgba(250,204,21,0.5)]",
-        highlightedBy.length > 0 && "ring-2 sm:ring-4 ring-inset ring-white shadow-[inset_0_0_15px_rgba(255,255,255,0.5),0_0_15px_rgba(255,255,255,0.5)]"
+        highlightedBy.length > 0 && "ring-2 sm:ring-4 ring-inset ring-white shadow-[inset_0_0_15px_rgba(255,255,255,0.5),0_0_15px_rgba(255,255,255,0.5)]",
+        d20FreeReveal && !isDisabled && "ring-2 sm:ring-4 ring-inset ring-emerald-400 shadow-[inset_0_0_15px_rgba(16,185,129,0.5),0_0_15px_rgba(16,185,129,0.5)] animate-pulse"
       )} />
 
       {/* Gacha Pull Highlight Overlay */}
@@ -204,20 +229,29 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
       {!card.revealed || !['green', 'red', 'blue'].includes(typeToDisplay) ? (
         <div 
           style={
-            scrambleDx !== undefined || scrambleDy !== undefined
+            (scrambleDx !== undefined || scrambleDy !== undefined) && activeModifier !== 'earthquake'
               ? {
                   "--scramble-dx": `${(scrambleDx ?? 0) * 108}%`,
                   "--scramble-dy": `${(scrambleDy ?? 0) * 108}%`,
+                  ...(isScramblePending ? { transform: `translate(var(--scramble-dx, 0), var(--scramble-dy, 0))` } : {})
                 } as React.CSSProperties
               : undefined
           }
           className={cn(
             "relative z-10 flex items-center justify-center h-full w-full p-1 sm:p-2 text-center break-words leading-none sm:leading-tight transform transition-transform",
             activeModifier === 'eroding-parchment' && currentPhase === 'operative' && isGuesser && !isRevealedForMe && "animate-eroding-parchment",
-            (scrambleDx !== undefined || scrambleDy !== undefined) && "animate-scramble"
+            !isScramblePending && (scrambleDx !== undefined || scrambleDy !== undefined) && activeModifier !== 'earthquake' && "animate-scramble"
           )}
         >
-          {card.word}
+          {activeModifier === 'marquee-madness' && !card.revealed ? (
+            <div className="w-full h-full relative overflow-hidden flex items-center">
+              <div className="absolute inset-0 flex items-center justify-center whitespace-nowrap animate-marquee-scroll">
+                {card.word}
+              </div>
+            </div>
+          ) : (
+            card.word
+          )}
         </div>
       ) : null}
 

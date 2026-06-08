@@ -43,7 +43,7 @@ export default function LANGame() {
         setScrambleActive(false);
         const timer = setTimeout(() => {
           setShowModifierBanner(null);
-          if (gameState.activeModifier === 'dimensional-scramble') {
+          if (gameState.activeModifier === 'dimensional-scramble' || gameState.activeModifier === 'earthquake') {
             setScrambleActive(true);
             setTimeout(() => setScrambleActive(false), 2000);
           }
@@ -299,6 +299,13 @@ export default function LANGame() {
   const handleCardClick = (id: number) => {
     if (!gameState || gameState.winner || !socket || !roomId) return;
     
+    if (gameState.currentPhase === 'spymaster' && currentPlayer?.role === 'spymaster' && gameState.activeModifier === 'd20-roll' && gameState.modifierState?.canRevealForFree) {
+       if (window.confirm("Use your free reveal on this card?")) {
+         socket.emit("d20_free_reveal", { roomId, cardId: id });
+       }
+       return;
+    }
+
     if (isLockToggleActive) {
       socket.emit("lock_card", { roomId, cardId: id });
       setIsLockToggleActive(false);
@@ -353,7 +360,11 @@ export default function LANGame() {
 
   const handleGuessCard = (id: number) => {
     if (!gameState || gameState.winner || !socket || !roomId) return;
-    socket.emit("guess_card", { roomId, cardId: id });
+    if (gameState.activeModifier === 'the-intercept' && gameState.modifierState?.interceptPhase) {
+      socket.emit("intercept_guess", { roomId, cardId: id });
+    } else {
+      socket.emit("guess_card", { roomId, cardId: id });
+    }
   };
 
   const handleCardContextMenu = (e: React.MouseEvent, id: number) => {
@@ -387,7 +398,7 @@ export default function LANGame() {
       </div>
     );
 
-  const isSpymaster = player.role === "spymaster";
+  const isSpymaster = player.role === "spymaster" || gameState?.gameMode === 'duet';
   const isSensoryDepActive = gameState?.activeModifier === 'sensory-deprivation' && gameState?.currentPhase === 'spymaster';
   const shouldShowColors = !isSensoryDepActive || (sensoryTimeLeft === null || sensoryTimeLeft > 0);
 
@@ -466,6 +477,25 @@ export default function LANGame() {
           </div>
         </div>
       )}
+
+      {/* D20 Roll Animation Overlay */}
+      {gameState.activeModifier === 'd20-roll' && gameState.modifierState?.rolled && !gameState.modifierState?.rollCompleted && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[150] flex flex-col items-center justify-center p-4 animate-fade-in pointer-events-none">
+          <div className="text-6xl sm:text-8xl md:text-9xl font-black text-indigo-400 animate-bounce drop-shadow-[0_0_30px_rgba(99,102,241,0.8)]">
+            {gameState.modifierState.result}
+          </div>
+          <div className="mt-8 text-2xl sm:text-4xl font-black tracking-widest text-white uppercase text-center animate-pulse">
+            {gameState.modifierState.result === 1 ? (
+              <span className="text-red-500">CRITICAL FAILURE!</span>
+            ) : gameState.modifierState.result === 20 ? (
+              <span className="text-emerald-500">CRITICAL SUCCESS!</span>
+            ) : (
+              <span className="text-indigo-300">The Die is Cast</span>
+            )}
+          </div>
+        </div>
+      )}
+
       <TopBar
         redScore={gameState.redScore}
         blueScore={gameState.blueScore}
@@ -639,22 +669,52 @@ export default function LANGame() {
               </div>
             )}
 
+            {/* Intercept Phase Warning */}
+            {gameState.activeModifier === 'the-intercept' && gameState.modifierState?.interceptPhase && (
+              <div className="w-full max-w-md bg-rose-950/40 border border-rose-500/50 rounded-xl p-3 mb-2 text-center animate-pulse shadow-[0_0_20px_rgba(225,29,72,0.3)]">
+                <span className="block text-sm font-black text-rose-400 uppercase tracking-widest">🚨 INTERCEPT OPPORTUNITY ({gameState.modifierState.interceptTimeLeft}s) 🚨</span>
+                <span className="block text-xs text-rose-200 mt-1 font-bold">
+                  {currentPlayer?.team !== gameState.currentTurn && !isSpymaster
+                    ? "Click ONE card! If you guess the enemy's card, you steal it!" 
+                    : "The enemy team is attempting an intercept! Wait..."}
+                </span>
+              </div>
+            )}
+
             {(() => {
               const expectedGuessTeam = gameState.gameMode === 'duet' ? 
                 (gameState.currentTurn === 'red' ? 'blue' : 'red') : 
                 gameState.currentTurn;
               
+              const isInterceptPhase = gameState.activeModifier === 'the-intercept' && !!gameState.modifierState?.interceptPhase;
+              const enemyTeam = gameState.currentTurn === 'red' ? 'blue' : 'red';
+              const effectiveGuessTeam = isInterceptPhase ? enemyTeam : expectedGuessTeam;
+              
               const isLagSpikeActive = lagSpikeSecondsLeft !== null && lagSpikeSecondsLeft > 0;
               
               const isDisabled = (gameState.currentPhase === 'spymaster' && !isGivingClue) || 
-                                 currentPlayer!.team !== expectedGuessTeam || 
+                                 currentPlayer!.team !== effectiveGuessTeam || 
                                  (isSpymaster && gameState.gameMode !== 'duet' && !isGivingClue) ||
                                  !!gameState.winner ||
-                                 isLagSpikeActive;
+                                 isLagSpikeActive ||
+                                 (isInterceptPhase && currentPlayer!.team === expectedGuessTeam);
+              const isScramblePending = !!((showModifierBanner === 'dimensional-scramble' || showModifierBanner === 'earthquake') && (isSpymaster || isGivingClue));
+              let displayCards = gameState.cards;
+              if (isScramblePending) {
+                if (gameState.modifierState?.originalCards) {
+                  displayCards = gameState.modifierState.originalCards;
+                } else if (gameState.modifierState?.originalWords) {
+                  displayCards = gameState.cards.map((c, i) => ({
+                    ...c,
+                    word: gameState.modifierState.originalWords![i] || c.word
+                  }));
+                }
+              }
+
               return (
                 <div className="w-full flex flex-col items-center transition-all duration-1000">
                   <Grid
-                    cards={gameState.cards}
+                    cards={displayCards}
                     isSpymaster={((gameState.gameMode === 'duet' || isSpymaster || !!gameState.winner) && shouldShowColors)}
                     disabled={isDisabled}
                     onCardClick={handleCardClick}
@@ -671,10 +731,32 @@ export default function LANGame() {
                     activeModifier={gameState.activeModifier}
                     currentPhase={gameState.currentPhase}
                     scrambleActive={scrambleActive && !!(isSpymaster || isGivingClue)}
+                    isScramblePending={isScramblePending}
                     originalWords={gameState.modifierState?.originalWords}
                     isGuesser={!!isMyTurnToGuess}
                     gachaHighlightId={gachaHighlightCardId}
+                    d20FreeReveal={gameState.activeModifier === 'd20-roll' && gameState.modifierState?.canRevealForFree && isSpymaster}
                   />
+
+                  {/* Chaos Modifiers Spymaster Action Buttons */}
+                  {gameState.currentPhase === 'spymaster' && isSpymaster && currentPlayer?.team === gameState.currentTurn && gameState.activeModifier === 'd20-roll' && !gameState.modifierState?.rolled && !gameState.modifierState?.rollCompleted && (
+                    <div className="flex flex-col items-center gap-3 bg-indigo-950/20 p-4 rounded-2xl border border-indigo-500/30 mt-4 z-20">
+                      <button
+                        onClick={() => {
+                          socket?.emit("d20_roll", { roomId });
+                        }}
+                        className="px-6 py-4 rounded-xl font-black text-sm sm:text-lg tracking-wider border transition-all text-white shrink-0 bg-gradient-to-br from-indigo-500 to-indigo-700 border-indigo-400 shadow-lg shadow-indigo-600/40 hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2"
+                      >
+                        🎲 ROLL THE D20
+                      </button>
+                    </div>
+                  )}
+                  {gameState.currentPhase === 'spymaster' && isSpymaster && currentPlayer?.team === gameState.currentTurn && gameState.activeModifier === 'd20-roll' && gameState.modifierState?.canRevealForFree && (
+                    <div className="w-full max-w-md bg-emerald-950/40 border border-emerald-500/50 rounded-xl p-3 mt-4 text-center animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.15)] z-20">
+                      <span className="block text-sm font-black text-emerald-400 uppercase tracking-widest">✨ Critical Success ✨</span>
+                      <span className="block text-xs text-emerald-200 mt-1 font-bold">Click one of your team's cards to reveal it for free!</span>
+                    </div>
+                  )}
 
                   {/* Chaos Modifiers Operative Action Buttons */}
                   {gameState.currentPhase === 'operative' && !gameState.winner && isMyTurnToGuess && (
@@ -693,6 +775,21 @@ export default function LANGame() {
                           )}
                         >
                           {isBloodPactToggleActive ? "🩸 CLICK CARD TO REVEAL..." : "🩸 USE BLOOD PACT"}
+                        </button>
+                      )}
+
+                      {gameState.activeModifier === 'mutiny' && !gameState.modifierState?.mutinyUsed && gameState.successfulGuessesThisTurn === 0 && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm("Reject this clue? The Spymaster will have to give a new one, but your max guesses will drop by 1.")) {
+                              socket?.emit("reject_clue", { roomId });
+                            }
+                          }}
+                          className={cn(
+                            "px-4 py-2 rounded-xl font-black text-xs tracking-wider border transition-all cursor-pointer bg-fuchsia-950/40 text-fuchsia-400 border-fuchsia-500/40 hover:bg-fuchsia-900/30 hover:scale-105 active:scale-95"
+                          )}
+                        >
+                          👎 REJECT CLUE (MUTINY)
                         </button>
                       )}
                       

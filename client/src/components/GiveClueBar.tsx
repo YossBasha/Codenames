@@ -45,6 +45,11 @@ export default function GiveClueBar({
     return checkRhyme(words[0], words[1], !!isRTL);
   };
 
+  const isFiveLetterCurseValid = () => {
+    if (activeModifier !== 'five-letter-curse') return true;
+    return cueInput.trim().length === 5;
+  };
+
   const handleSubmitCue = (e: React.FormEvent) => {
     e.preventDefault();
     if (cueInput.trim().length > 0 && numInput !== '' && onSubmitCue) {
@@ -105,7 +110,7 @@ export default function GiveClueBar({
                   }
                 }}
                 className="w-full bg-slate-900/80 border border-slate-700/50 focus:border-slate-500/80 text-white px-3.5 py-2.5 sm:py-3.5 rounded-xl sm:rounded-full outline-none text-sm sm:text-base placeholder:text-slate-500 font-bold"
-                maxLength={32}
+                maxLength={activeModifier === 'five-letter-curse' ? 5 : 32}
               />
             </div>
           )}
@@ -126,7 +131,8 @@ export default function GiveClueBar({
               disabled={
                 cueInput.trim().length === 0 || 
                 !isNumberValid() ||
-                (activeModifier === 'oracle-riddle' && !isOracleRiddleValid())
+                (activeModifier === 'oracle-riddle' && !isOracleRiddleValid()) ||
+                (activeModifier === 'five-letter-curse' && !isFiveLetterCurseValid())
               }
               className="h-10 sm:h-12 px-4 sm:px-6 bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black rounded-xl sm:rounded-full transition-all shadow-lg shadow-emerald-500/20 active:scale-95 text-xs sm:text-sm flex items-center gap-1.5 uppercase tracking-wider whitespace-nowrap cursor-pointer"
             >
@@ -138,6 +144,11 @@ export default function GiveClueBar({
         {activeModifier === 'oracle-riddle' && cueInput.trim().length > 0 && !isOracleRiddleValid() && (
           <div className="mt-2 text-[10px] sm:text-xs text-red-400 font-bold tracking-wide animate-pulse bg-slate-900/90 rounded-lg py-1 px-3 border border-red-500/30 shadow-lg text-center">
             ⚠️ Must be exactly 2 rhyming words! (e.g. "red bed")
+          </div>
+        )}
+        {activeModifier === 'five-letter-curse' && cueInput.trim().length > 0 && !isFiveLetterCurseValid() && (
+          <div className="mt-2 text-[10px] sm:text-xs text-red-400 font-bold tracking-wide animate-pulse bg-slate-900/90 rounded-lg py-1 px-3 border border-red-500/30 shadow-lg text-center">
+            ⚠️ Clue must be exactly 5 letters long!
           </div>
         )}
       </div>

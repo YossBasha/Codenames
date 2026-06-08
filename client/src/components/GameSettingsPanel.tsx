@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   BookOpen, Clock, X, Globe, Check, Keyboard, Upload, Volume2, VolumeX, PenTool,
-  Binary, FileText, HelpCircle, EyeOff, Shuffle, Ghost, Wind, Zap, HeartHandshake, Dices, Shield, WifiOff, Flame
+  Binary, FileText, HelpCircle, EyeOff, Shuffle, Ghost, Wind, Zap, HeartHandshake, Dices, Shield, WifiOff, Flame, Type, Eye
 } from 'lucide-react';
 import { cn } from '../utils';
 import type { Language, CustomWordWeight, TimerSettings, ClueType } from '../../../shared/types';
@@ -22,7 +22,9 @@ const MODIFIER_ICONS: Record<string, React.ComponentType<any>> = {
   'Dices': Dices,
   'Shield': Shield,
   'WifiOff': WifiOff,
-  'Flame': Flame
+  'Flame': Flame,
+  'Type': Type,
+  'Eye': Eye
 };
 
 interface GameSettingsPanelProps {
@@ -108,6 +110,12 @@ export default function GameSettingsPanel({
       }
     }
   };
+
+  useEffect(() => {
+    if (language === 'all' && enabledModifiers?.includes('lost-in-translation') && setEnabledModifiers) {
+      setEnabledModifiers(enabledModifiers.filter(id => id !== 'lost-in-translation'));
+    }
+  }, [language, enabledModifiers, setEnabledModifiers]);
 
   return (
     <>
@@ -283,20 +291,24 @@ export default function GameSettingsPanel({
                   </div>
                   
                   <div className="flex bg-[#222] p-1 rounded-lg border border-[#444]">
-                    {(['all', 'en', 'ar'] as Language[]).map(lang => (
-                      <button
-                        key={lang}
-                        onClick={() => isHost && setLanguage(lang)}
-                        disabled={!isHost}
-                        className={cn(
-                          "px-4 py-1.5 rounded-md text-xs font-black tracking-wider transition-colors",
-                          language === lang ? "bg-indigo-500 text-white shadow-md" : "text-slate-400 hover:text-white",
-                          !isHost && "opacity-50 cursor-not-allowed"
-                        )}
-                      >
-                        {lang === 'all' ? 'ALL' : lang.toUpperCase()}
-                      </button>
-                    ))}
+                    {(['all', 'en', 'ar'] as Language[]).map(lang => {
+                      const isDisabledLang = lang === 'all' && enabledModifiers?.includes('lost-in-translation');
+                      return (
+                        <button
+                          key={lang}
+                          onClick={() => isHost && setLanguage(lang)}
+                          disabled={!isHost || isDisabledLang}
+                          className={cn(
+                            "px-4 py-1.5 rounded-md text-xs font-black tracking-wider transition-colors",
+                            language === lang ? "bg-indigo-500 text-white shadow-md" : "text-slate-400 hover:text-white",
+                            (!isHost || isDisabledLang) && "opacity-50 cursor-not-allowed",
+                            isDisabledLang && "line-through text-slate-600 hover:text-slate-600"
+                          )}
+                        >
+                          {lang === 'all' ? 'ALL' : lang.toUpperCase()}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -603,7 +615,12 @@ export default function GameSettingsPanel({
             {isHost && (
               <div className="flex gap-3 mb-4 shrink-0">
                 <button
-                  onClick={() => setEnabledModifiers?.(MODIFIERS.filter(m => !(m.id === 'critical-hit' && timerSettings.preset === 'off')).map(m => m.id))}
+                  onClick={() => setEnabledModifiers?.(MODIFIERS.filter(m => {
+                    if (m.id === 'critical-hit' && timerSettings.preset === 'off') return false;
+                    if ((m.id === 'colorblind' || m.id === 'the-intercept') && gameMode === 'duet') return false;
+                    if (m.id === 'lost-in-translation' && language === 'all') return false;
+                    return true;
+                  }).map(m => m.id))}
                   className="px-4 py-1.5 bg-[#333] hover:bg-[#444] border border-[#555] rounded-xl text-xs font-black tracking-wider text-slate-200 transition-all"
                 >
                   SELECT ALL
@@ -647,7 +664,12 @@ export default function GameSettingsPanel({
                       {categoryModifiers.map(mod => {
                         const isTimerRequired = mod.id === 'critical-hit';
                         const isTimerOff = timerSettings.preset === 'off';
-                        const isModDisabled = isTimerRequired && isTimerOff;
+                        
+                        const isDuetForbidden = mod.id === 'colorblind' || mod.id === 'the-intercept';
+                        const isDuet = gameMode === 'duet';
+                        const isLanguageForbidden = mod.id === 'lost-in-translation' && language === 'all';
+
+                        const isModDisabled = (isTimerRequired && isTimerOff) || (isDuetForbidden && isDuet) || isLanguageForbidden;
                         const isEnabled = enabledModifiers.includes(mod.id) && !isModDisabled;
                         const IconComponent = MODIFIER_ICONS[mod.icon] || HelpCircle;
 

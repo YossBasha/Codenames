@@ -92,7 +92,10 @@ export default function LANLobby() {
     if (isHost && timerSettings.preset === 'off' && enabledModifiers.includes('critical-hit')) {
       setEnabledModifiers(prev => prev.filter(id => id !== 'critical-hit'));
     }
-  }, [isHost, timerSettings.preset, enabledModifiers]);
+    if (isHost && gameMode === 'duet' && (enabledModifiers.includes('colorblind') || enabledModifiers.includes('the-intercept'))) {
+      setEnabledModifiers(prev => prev.filter(id => id !== 'colorblind' && id !== 'the-intercept'));
+    }
+  }, [isHost, timerSettings.preset, gameMode, enabledModifiers]);
 
   const customWordsArray = useMemo(() => {
     if (!customWordsText.trim()) return [];

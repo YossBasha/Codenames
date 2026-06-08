@@ -2,6 +2,7 @@ import { Server, Socket } from 'socket.io';
 import { GameState, Player, Language, GameMode, TimerSettings, CustomWordWeight } from '../../../shared/types';
 import { generateGrid, generateDuetGrid, shuffleArray } from '../../../shared/gameLogic';
 import { MODIFIERS, checkRhyme } from '../../../shared/modifiers';
+import { wordPackRegistry } from '../../../shared/wordPacks';
 
 interface Room {
   id: string;
@@ -53,6 +54,16 @@ function revertActiveModifier(room: Room) {
           card.type = 'neutral';
         }
       }
+    }
+  }
+
+  else if (modifier === 'lost-in-translation' || modifier === 'censored-documents') {
+    if (state && state.originalWords) {
+      gameState.cards.forEach((card, idx) => {
+        if (state.originalWords![idx]) {
+          card.word = state.originalWords![idx];
+        }
+      });
     }
   }
 
@@ -155,6 +166,104 @@ function applyRandomModifier(room: Room) {
     gameState.modifierState = {
       gachaChances: generateGachaChances(gameState)
     };
+  } else if (randomModifier.id === 'd20-roll') {
+    gameState.modifierState = {
+      rolled: false,
+      result: null
+    };
+  } else if (randomModifier.id === 'lost-in-translation') {
+    if (gameState.language === 'en' || gameState.language === 'ar') {
+      const targetLang = gameState.language === 'en' ? 'ar' : 'en';
+      gameState.modifierState = {
+        originalWords: gameState.cards.map(c => c.word)
+      };
+      
+      gameState.cards.forEach(card => {
+        if (card.revealed) return; // Optional: maybe we translate revealed too, but let's translate all? Wait, "entire board switches languages!" Let's do all.
+        // wait, I will just translate all.
+        const sourcePacks = wordPackRegistry[gameState.language];
+        const targetPacks = wordPackRegistry[targetLang];
+        
+        // Find the word in the source packs
+        let found = false;
+        for (const packName in sourcePacks) {
+          const packWords = sourcePacks[packName];
+          const idx = packWords.indexOf(card.word);
+          if (idx !== -1 && targetPacks[packName] && targetPacks[packName][idx]) {
+            card.word = targetPacks[packName][idx];
+            found = true;
+            break;
+          }
+        }
+      });
+    }
+  } else if (randomModifier.id === 'censored-documents') {
+    gameState.modifierState = {
+      originalWords: gameState.cards.map(c => c.word)
+    };
+    
+    gameState.cards.forEach(card => {
+      if (card.revealed) return;
+      
+      // Skip if it looks like an emoji (simple length check or regex)
+      // A typical emoji might be length 1 or 2, but let's use a regex
+      if (/\p{Emoji}/u.test(card.word)) return;
+      
+      const chars = card.word.split('');
+      const numToRedact = Math.max(1, Math.floor(chars.length * (Math.random() * 0.2 + 0.3))); // 30-50%
+      let redactedCount = 0;
+      while (redactedCount < numToRedact) {
+        const randIdx = Math.floor(Math.random() * chars.length);
+        if (chars[randIdx] !== '*' && chars[randIdx] !== ' ') {
+          chars[randIdx] = '*';
+          redactedCount++;
+        }
+      }
+      card.word = chars.join('');
+    });
+  } else if (randomModifier.id === 'earthquake') {
+    gameState.modifierState = {
+      originalWords: gameState.cards.map(c => c.word),
+      originalCards: JSON.parse(JSON.stringify(gameState.cards))
+    };
+    
+    const unrevealedCards = gameState.cards.filter(c => !c.revealed);
+    const unrevealedWords = unrevealedCards.map(c => c.word);
+    
+    const shuffledWords = shuffleArray([...unrevealedWords]);
+    
+    // Also we need to shuffle types, or just swap the words between the existing cards?
+    // "Every single unrevealed card on the board shuffles to a new position."
+    // So we should shuffle the words, types, duetTypes, etc.
+    // The easiest way is to extract all unrevealed card properties and shuffle them, then assign them back to the same indices.
+    
+    // Let's gather the data we want to shuffle
+    interface CardData {
+      word: string;
+      type: string;
+      duetTypeA?: string;
+      duetTypeB?: string;
+    }
+    
+    const unrevealedData: CardData[] = unrevealedCards.map(c => ({
+      word: c.word,
+      type: c.type,
+      duetTypeA: c.duetTypeA,
+      duetTypeB: c.duetTypeB
+    }));
+    
+    const shuffledData = shuffleArray([...unrevealedData]);
+    
+    let shuffleIdx = 0;
+    gameState.cards.forEach(c => {
+      if (!c.revealed) {
+        const data = shuffledData[shuffleIdx++];
+        c.word = data.word;
+        c.type = data.type as any;
+        c.duetTypeA = data.duetTypeA as any;
+        c.duetTypeB = data.duetTypeB as any;
+      }
+    });
   }
 }
 
@@ -359,7 +468,10 @@ function processGuess(io: Server, room: Room, player: Player, cardId: number) {
 
   if (player.team !== expectedGuessTeam || (!isDuet && player.role !== 'operative')) return;
   
-  const maxGuesses = room.gameState.activeCueNumber === 99 ? Infinity : (room.gameState.activeCueNumber || 0) + 1;
+  const baseAllowed = (room.gameState.activeCueNumber || 0) + 1;
+  const maxGuesses = room.gameState.activeCueNumber === 99 ? Infinity : 
+    (room.gameState.activeModifier === 'mutiny' && room.gameState.modifierState?.mutinyUsed ? baseAllowed - 1 : baseAllowed);
+    
   if (room.gameState.successfulGuessesThisTurn >= maxGuesses) return;
 
   const card = room.gameState.cards.find(c => c.id === cardId);
@@ -752,6 +864,30 @@ export function setupRoomManager(io: Server) {
             timestamp: Date.now()
           });
           
+          if (room.gameState.activeModifier === 'the-intercept' && room.gameState.gameMode === 'classic') {
+            if (!room.gameState.modifierState) room.gameState.modifierState = {};
+            room.gameState.modifierState.interceptPhase = true;
+            room.gameState.modifierState.interceptTimeLeft = 10;
+            
+            const interceptInterval = setInterval(() => {
+              if (!room.gameState || room.gameState.modifierState?.interceptPhase !== true) {
+                clearInterval(interceptInterval);
+                return;
+              }
+              room.gameState.modifierState.interceptTimeLeft--;
+              if (room.gameState.modifierState.interceptTimeLeft <= 0) {
+                room.gameState.modifierState.interceptPhase = false;
+                room.gameState.modifierState.interceptTimeLeft = 0;
+                clearInterval(interceptInterval);
+                startTimer(io, room);
+              }
+              io.to(roomId).emit('game_update', room.gameState);
+            }, 1000);
+            
+            io.to(roomId).emit('game_update', room.gameState);
+            return;
+          }
+          
           startTimer(io, room);
           io.to(roomId).emit('game_update', room.gameState);
         }
@@ -822,6 +958,110 @@ export function setupRoomManager(io: Server) {
           transitionToNewTurn(io, room);
           io.to(roomId).emit('game_update', room.gameState);
         }
+      }
+    });
+    
+    socket.on('reject_clue', ({ roomId }: { roomId: string }) => {
+      const room = rooms[roomId];
+      const player = room?.players.find(p => p.id === socket.id);
+      
+      if (room && room.gameState && !room.gameState.winner && player) {
+        if (room.gameState.currentPhase !== 'operative') return;
+        if (room.gameState.activeModifier !== 'mutiny') return;
+        if (room.gameState.modifierState?.mutinyUsed) return;
+
+        const isDuet = room.gameState.gameMode === 'duet';
+        const expectedGuessTeam = isDuet ? 
+          (room.gameState.currentTurn === 'red' ? 'blue' : 'red') : 
+          room.gameState.currentTurn;
+
+        if (player.team !== expectedGuessTeam || (!isDuet && player.role !== 'operative')) return;
+
+        if (!room.gameState.modifierState) room.gameState.modifierState = {};
+        room.gameState.modifierState.mutinyUsed = true;
+
+        room.gameState.currentPhase = 'spymaster';
+        room.gameState.activeCue = null;
+        room.gameState.activeCueNumber = null;
+        room.gameState.successfulGuessesThisTurn = 0;
+        
+        room.gameState.gameLog.push({
+          id: Math.random().toString(36).substring(7),
+          type: 'guess',
+          player: { 
+            name: player.name, 
+            avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=${player.team === 'red' ? 'ef4444' : '3b82f6'}` 
+          },
+          guessingTeam: player.team as 'red' | 'blue',
+          cardWord: 'Rejected the Clue! (Mutiny)',
+          revealedColor: 'neutral',
+          timestamp: Date.now()
+        });
+
+        io.to(roomId).emit('game_update', room.gameState);
+      }
+    });
+
+    socket.on('intercept_guess', ({ roomId, cardId }: { roomId: string, cardId: number }) => {
+      const room = rooms[roomId];
+      const player = room?.players.find(p => p.id === socket.id);
+      
+      if (room && room.gameState && !room.gameState.winner && player) {
+        if (room.gameState.currentPhase !== 'operative') return;
+        if (room.gameState.activeModifier !== 'the-intercept') return;
+        if (!room.gameState.modifierState?.interceptPhase) return;
+        
+        const isDuet = room.gameState.gameMode === 'duet';
+        if (isDuet) return; // Intercept is disabled in duet
+        
+        const activeTeam = room.gameState.currentTurn;
+        const enemyTeam = activeTeam === 'red' ? 'blue' : 'red';
+        
+        if (player.team !== enemyTeam || player.role !== 'operative') return;
+        
+        const card = room.gameState.cards.find(c => c.id === cardId);
+        if (!card || card.revealed) return;
+        
+        // Immediately end intercept phase
+        room.gameState.modifierState.interceptPhase = false;
+        room.gameState.modifierState.interceptTimeLeft = 0;
+        
+        // Card reveals logic
+        card.revealed = true;
+        let revealedColor = card.type;
+
+        // If they click the ACTIVE team's card, they steal it! 
+        // It becomes THEIR color.
+        if (card.type === activeTeam) {
+            card.type = enemyTeam; // Steal the card!
+            revealedColor = enemyTeam;
+        }
+
+        room.gameState.gameLog.push({
+          id: Math.random().toString(36).substring(7),
+          type: 'guess',
+          player: { 
+            name: `${player.name} (Intercept)`, 
+            avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=${player.team === 'red' ? 'ef4444' : '3b82f6'}` 
+          },
+          guessingTeam: enemyTeam,
+          cardWord: card.word,
+          revealedColor: revealedColor,
+          timestamp: Date.now()
+        });
+
+        if (revealedColor === 'assassin') {
+          room.gameState.winner = activeTeam; // active team wins because enemy clicked assassin
+        } else if (revealedColor === 'red') {
+          room.gameState.redScore--;
+          if (room.gameState.redScore <= 0) room.gameState.winner = 'red';
+        } else if (revealedColor === 'blue') {
+          room.gameState.blueScore--;
+          if (room.gameState.blueScore <= 0) room.gameState.winner = 'blue';
+        }
+
+        startTimer(io, room);
+        io.to(roomId).emit('game_update', room.gameState);
       }
     });
 
@@ -918,6 +1158,124 @@ export function setupRoomManager(io: Server) {
         room.gameState.modifierState.bloodPactOneGuessLeft = true;
         
         io.to(roomId).emit('game_update', room.gameState);
+      }
+    });
+
+    socket.on('d20_roll', ({ roomId }: { roomId: string }) => {
+      const room = rooms[roomId];
+      const player = room?.players.find(p => p.id === socket.id);
+      
+      if (room && room.gameState && !room.gameState.winner && player) {
+        if (room.gameState.currentPhase !== 'spymaster') return;
+        if (room.gameState.activeModifier !== 'd20-roll') return;
+        if (room.gameState.modifierState?.rolled) return;
+        
+        const isDuet = room.gameState.gameMode === 'duet';
+        const expectedTurn = room.gameState.currentTurn;
+        if (player.team !== expectedTurn || (!isDuet && player.role !== 'spymaster')) return;
+
+        if (!room.gameState.modifierState) room.gameState.modifierState = {};
+        
+        const result = Math.floor(Math.random() * 20) + 1;
+        room.gameState.modifierState.rolled = true;
+        room.gameState.modifierState.result = result;
+        
+        room.gameState.gameLog.push({
+          id: Math.random().toString(36).substring(7),
+          type: 'guess',
+          player: { 
+            name: `${player.name} (D20)`, 
+            avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=e67e22` 
+          },
+          guessingTeam: expectedTurn as 'red' | 'blue',
+          cardWord: `Rolled a ${result}!`,
+          revealedColor: 'neutral',
+          timestamp: Date.now()
+        });
+
+        io.to(roomId).emit('game_update', room.gameState);
+
+        setTimeout(() => {
+          const currentRoom = rooms[roomId];
+          if (currentRoom && currentRoom.gameState && currentRoom.gameState.activeModifier === 'd20-roll') {
+            if (result === 1) {
+              // Critical Failure: Skip turn
+              currentRoom.gameState.gameLog.push({
+                id: Math.random().toString(36).substring(7),
+                type: 'guess',
+                player: { 
+                  name: `System`, 
+                  avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=System&backgroundColor=e67e22` 
+                },
+                guessingTeam: expectedTurn as 'red' | 'blue',
+                cardWord: `Critical Failure! Turn skipped.`,
+                revealedColor: 'assassin',
+                timestamp: Date.now()
+              });
+              transitionToNewTurn(io, currentRoom);
+              io.to(roomId).emit('game_update', currentRoom.gameState);
+            } else if (result === 20) {
+              // Critical Success: Free reveal
+              currentRoom.gameState.modifierState.rollCompleted = true; // mark roll as finished
+              currentRoom.gameState.modifierState.canRevealForFree = true;
+              io.to(roomId).emit('game_update', currentRoom.gameState);
+            } else {
+              // Normal result
+              currentRoom.gameState.modifierState.rollCompleted = true; // mark roll as finished
+              io.to(roomId).emit('game_update', currentRoom.gameState);
+            }
+          }
+        }, 3500);
+      }
+    });
+
+    socket.on('d20_free_reveal', ({ roomId, cardId }: { roomId: string, cardId: number }) => {
+      const room = rooms[roomId];
+      const player = room?.players.find(p => p.id === socket.id);
+      
+      if (room && room.gameState && !room.gameState.winner && player) {
+        if (room.gameState.currentPhase !== 'spymaster') return;
+        if (room.gameState.activeModifier !== 'd20-roll') return;
+        if (!room.gameState.modifierState?.canRevealForFree) return;
+        
+        const isDuet = room.gameState.gameMode === 'duet';
+        const expectedTurn = room.gameState.currentTurn;
+        if (player.team !== expectedTurn || (!isDuet && player.role !== 'spymaster')) return;
+
+        const card = room.gameState.cards.find(c => c.id === cardId);
+        if (!card) return;
+
+        const isUnrevealed = isDuet ? 
+          (expectedTurn === 'blue' ? !card.revealedByB : !card.revealedByA) : 
+          !card.revealed;
+
+        if (!isUnrevealed) return;
+
+        const teamColor = expectedTurn;
+        const validColor = isDuet ? 
+          ((expectedTurn === 'blue' ? card.duetTypeB : card.duetTypeA) === 'green') : 
+          (card.type === teamColor);
+
+        if (!validColor) return; // Only allow revealing own team's cards
+
+        delete room.gameState.modifierState.canRevealForFree;
+        
+        room.gameState.gameLog.push({
+          id: Math.random().toString(36).substring(7),
+          type: 'guess',
+          player: { 
+            name: `${player.name} (Critical Success)`, 
+            avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=10b981` 
+          },
+          guessingTeam: expectedTurn as 'red' | 'blue',
+          cardWord: `Revealed ${card.word} for free!`,
+          revealedColor: 'neutral',
+          timestamp: Date.now()
+        });
+
+        // Use processGuess to handle the reveal logic without ending turn manually
+        processGuess(io, room, player, cardId);
+        // Turn transitions automatically handled by processGuess if needed, else they can still give a clue!
       }
     });
 
