@@ -103,10 +103,10 @@ export default function JoinGame() {
             LOCAL NETWORK
           </button>
           <button
-            onClick={() => setActiveTab('online')}
-            className={`flex-1 py-3 rounded-xl font-bold text-sm tracking-widest transition-all ${activeTab === 'online' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+            disabled
+            className="flex-1 py-3 rounded-xl font-bold text-sm tracking-widest transition-all text-slate-600 cursor-not-allowed"
           >
-            ONLINE (PUBLIC)
+            ONLINE (COMING SOON)
           </button>
         </div>
 

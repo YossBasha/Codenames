@@ -55,7 +55,7 @@ export default function TopBar({
   );
 
   return (
-    <div className="w-full shrink-0 flex flex-row items-center justify-between py-1 px-2.5 sm:py-1.5 sm:px-4 bg-slate-900/50 backdrop-blur-md shadow-md gap-2 sm:gap-4">
+    <div className="relative z-50 w-full shrink-0 flex flex-row items-center justify-between py-1 px-2.5 sm:py-1.5 sm:px-4 bg-slate-900/50 backdrop-blur-md shadow-md gap-2 sm:gap-4">
       <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
         <button 
           onClick={() => navigate('/')}
@@ -153,12 +153,6 @@ export default function TopBar({
         {isActiveSpymaster ? (
           <div className="px-2.5 py-1 sm:px-3 sm:py-1.5 bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 font-bold rounded-lg text-[9px] sm:text-xs whitespace-nowrap animate-pulse">
             Giving Clue...
-          </div>
-        ) : currentPhase === 'spymaster' ? (
-          <div className="px-2.5 py-1 sm:px-3 sm:py-1.5 bg-slate-800 text-slate-400 font-bold rounded-lg text-[9px] sm:text-xs animate-pulse whitespace-nowrap">
-            {gameMode === 'classic' 
-              ? 'Waiting for Spymaster...' 
-              : `Waiting for Side ${currentTurn === 'red' ? 'A' : 'B'}...`}
           </div>
         ) : (
           <div className="flex items-center gap-1.5 sm:gap-2">

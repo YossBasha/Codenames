@@ -141,11 +141,11 @@ export default function Home() {
 
             <div className="flex flex-col gap-3">
               <button
-                onClick={() => { playMenuClickSfx(); navigate('/lan-lobby?host=true&wan=true'); }}
-                className="w-full text-left p-4 rounded-xl border-2 bg-blue-500/20 border-blue-500 hover:bg-blue-500/30 transition-all flex flex-col gap-1"
+                disabled
+                className="w-full text-left p-4 rounded-xl border-2 bg-slate-800/50 border-slate-700 cursor-not-allowed opacity-60 flex flex-col gap-1"
               >
-                <span className="font-black tracking-widest text-white uppercase">Online (Public)</span>
-                <span className="text-sm font-bold text-slate-400">Host on the global internet server</span>
+                <span className="font-black tracking-widest text-slate-400 uppercase">Online (Public) - COMING SOON..</span>
+                <span className="text-sm font-bold text-slate-500">Host on the global internet server</span>
               </button>
               
               <button

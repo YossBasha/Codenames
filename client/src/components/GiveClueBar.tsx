@@ -105,7 +105,7 @@ export default function GiveClueBar({
                   }
                 }}
                 className="w-full bg-slate-900/80 border border-slate-700/50 focus:border-slate-500/80 text-white px-3.5 py-2.5 sm:py-3.5 rounded-xl sm:rounded-full outline-none text-sm sm:text-base placeholder:text-slate-500 font-bold"
-                maxLength={30}
+                maxLength={32}
               />
               {activeModifier === 'oracle-riddle' && cueInput.trim().length > 0 && !isOracleRiddleValid() && (
                 <span className="absolute left-4 -bottom-6 text-[9px] sm:text-[10px] text-red-400 font-bold tracking-wide animate-pulse">

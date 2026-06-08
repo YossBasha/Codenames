@@ -27,7 +27,7 @@ export default function ActiveClueBar({
   return (
     <>
       <div className="w-full shrink-0 max-w-3xl mx-auto mt-4 sm:mt-6 lg:mt-2 flex items-center justify-center gap-3 sm:gap-4 px-2 sm:px-4 animate-fade-in">
-        <div className="flex-1 bg-gradient-to-r from-slate-100 to-white rounded-full py-2 sm:py-3 px-4 sm:px-6 flex items-center justify-between shadow-xl ring-1 ring-slate-200">
+        <div className="flex-1 min-w-0 bg-gradient-to-r from-slate-100 to-white rounded-full py-2 sm:py-3 px-4 sm:px-6 flex items-center justify-between gap-2 shadow-xl ring-1 ring-slate-200">
           {activeCue.startsWith('data:image') ? (
             <img 
               src={activeCue} 
@@ -37,7 +37,10 @@ export default function ActiveClueBar({
               title="Click to enlarge"
             />
           ) : (
-            <span className="text-slate-900 font-black text-xl sm:text-3xl uppercase tracking-widest truncate">
+            <span className={cn(
+              "text-slate-900 font-black uppercase tracking-widest truncate flex-1 min-w-0",
+              activeCue.length > 20 ? "text-sm sm:text-lg" : activeCue.length > 12 ? "text-base sm:text-2xl" : "text-xl sm:text-3xl"
+            )}>
               {activeCue}
             </span>
           )}

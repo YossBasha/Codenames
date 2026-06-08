@@ -753,6 +753,18 @@ export default function LANGame() {
                       isRTL={gameState.isRTL}
                     />
                   )}
+
+                  {gameState.currentPhase === 'spymaster' && !isGivingClue && !gameState.winner && (
+                    <div className="w-full shrink-0 max-w-3xl mx-auto mt-4 sm:mt-6 lg:mt-2 flex items-center justify-center px-2 sm:px-4 animate-fade-in">
+                      <div className="flex-1 bg-slate-800/80 rounded-full py-3 sm:py-4 px-4 sm:px-6 flex items-center justify-center shadow-lg border border-slate-700 animate-pulse">
+                        <span className="text-slate-400 font-black text-sm sm:text-lg tracking-widest uppercase">
+                          {gameState.gameMode === 'classic' 
+                            ? 'Waiting for Spymaster...' 
+                            : `Waiting for Side ${gameState.currentTurn === 'red' ? 'A' : 'B'}...`}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })()}
