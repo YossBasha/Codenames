@@ -92,12 +92,20 @@ export default function GameSettingsPanel({
   const handlePresetChange = (preset: 'off' | 'quick' | 'relaxed' | 'custom') => {
     if (preset === 'off') {
       setTimerSettings({ preset, spymasterTime: 0, operativeTime: 0, extraFirstClueTime: 0 });
-    } else if (preset === 'quick') {
-      setTimerSettings({ preset, spymasterTime: 90, operativeTime: 60, extraFirstClueTime: 60 });
-    } else if (preset === 'relaxed') {
-      setTimerSettings({ preset, spymasterTime: 180, operativeTime: 120, extraFirstClueTime: 120 });
+      if (enabledModifiers?.includes('critical-hit') && setEnabledModifiers) {
+        setEnabledModifiers(enabledModifiers.filter(id => id !== 'critical-hit'));
+      }
     } else {
-      setTimerSettings(prev => ({ ...prev, preset }));
+      if (timerSettings.preset === 'off' && enabledModifiers && setEnabledModifiers && !enabledModifiers.includes('critical-hit')) {
+        setEnabledModifiers([...enabledModifiers, 'critical-hit']);
+      }
+      if (preset === 'quick') {
+        setTimerSettings({ preset, spymasterTime: 90, operativeTime: 60, extraFirstClueTime: 60 });
+      } else if (preset === 'relaxed') {
+        setTimerSettings({ preset, spymasterTime: 180, operativeTime: 120, extraFirstClueTime: 120 });
+      } else {
+        setTimerSettings(prev => ({ ...prev, preset }));
+      }
     }
   };
 
@@ -595,7 +603,7 @@ export default function GameSettingsPanel({
             {isHost && (
               <div className="flex gap-3 mb-4 shrink-0">
                 <button
-                  onClick={() => setEnabledModifiers?.(MODIFIERS.map(m => m.id))}
+                  onClick={() => setEnabledModifiers?.(MODIFIERS.filter(m => !(m.id === 'critical-hit' && timerSettings.preset === 'off')).map(m => m.id))}
                   className="px-4 py-1.5 bg-[#333] hover:bg-[#444] border border-[#555] rounded-xl text-xs font-black tracking-wider text-slate-200 transition-all"
                 >
                   SELECT ALL
@@ -637,11 +645,14 @@ export default function GameSettingsPanel({
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                       {categoryModifiers.map(mod => {
-                        const isEnabled = enabledModifiers.includes(mod.id);
+                        const isTimerRequired = mod.id === 'critical-hit';
+                        const isTimerOff = timerSettings.preset === 'off';
+                        const isModDisabled = isTimerRequired && isTimerOff;
+                        const isEnabled = enabledModifiers.includes(mod.id) && !isModDisabled;
                         const IconComponent = MODIFIER_ICONS[mod.icon] || HelpCircle;
 
                         const handleRowToggle = () => {
-                          if (!isHost || !setEnabledModifiers) return;
+                          if (!isHost || !setEnabledModifiers || isModDisabled) return;
                           if (isEnabled) {
                             setEnabledModifiers(enabledModifiers.filter(id => id !== mod.id));
                           } else {
@@ -654,8 +665,8 @@ export default function GameSettingsPanel({
                             key={mod.id}
                             onClick={handleRowToggle}
                             className={cn(
-                              "flex items-start gap-3 p-3 rounded-2xl border-2 text-left select-none relative group",
-                              isHost ? "cursor-pointer" : "cursor-default opacity-85",
+                              "flex items-start gap-3 p-3 rounded-2xl border-2 text-left select-none relative group transition-all duration-300",
+                              isModDisabled ? "opacity-30 cursor-not-allowed grayscale" : (isHost ? "cursor-pointer" : "cursor-default opacity-85"),
                               isEnabled 
                                 ? (category === 'spymaster' 
                                   ? "bg-[#16162d] border-indigo-600" 

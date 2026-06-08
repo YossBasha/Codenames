@@ -88,6 +88,12 @@ export default function LANLobby() {
     }
   }, [isHost, gameMode, selectedPacks, clueType, customWordsText, customWordWeight, timerSettings, chaosMode, enabledModifiers]);
 
+  useEffect(() => {
+    if (isHost && timerSettings.preset === 'off' && enabledModifiers.includes('critical-hit')) {
+      setEnabledModifiers(prev => prev.filter(id => id !== 'critical-hit'));
+    }
+  }, [isHost, timerSettings.preset, enabledModifiers]);
+
   const customWordsArray = useMemo(() => {
     if (!customWordsText.trim()) return [];
     const lines = customWordsText.split('\n');

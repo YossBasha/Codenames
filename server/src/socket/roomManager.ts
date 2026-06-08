@@ -151,7 +151,73 @@ function applyRandomModifier(room: Room) {
     gameState.modifierState = {
       shieldActive: true
     };
+  } else if (randomModifier.id === 'gacha-pull') {
+    gameState.modifierState = {
+      gachaChances: generateGachaChances(gameState)
+    };
   }
+}
+
+function generateGachaChances(gameState: any) {
+  const isDuet = gameState.gameMode === 'duet';
+  const expectedGuessTeam = isDuet ? 
+    (gameState.currentTurn === 'red' ? 'blue' : 'red') : 
+    gameState.currentTurn;
+
+  let hasCorrect = false;
+  let hasAssassin = false;
+  let hasEnemy = false;
+  let hasNeutral = false;
+
+  gameState.cards.forEach((c: any) => {
+    if (isDuet) {
+      const type = expectedGuessTeam === 'blue' ? c.duetTypeA : c.duetTypeB;
+      const revealed = expectedGuessTeam === 'blue' ? c.revealedByB : c.revealedByA;
+      if (!revealed) {
+        if (type === 'green') hasCorrect = true;
+        else if (type === 'assassin') hasAssassin = true;
+        else if (type === 'neutral') hasNeutral = true;
+      }
+    } else {
+      if (!c.revealed) {
+        if (c.type === expectedGuessTeam) hasCorrect = true;
+        else if (c.type === 'assassin') hasAssassin = true;
+        else if (c.type === 'neutral') hasNeutral = true;
+        else hasEnemy = true;
+      }
+    }
+  });
+
+  const chances = {
+    correct: hasCorrect ? Math.random() : 0,
+    assassin: hasAssassin ? Math.random() : 0,
+    enemy: hasEnemy ? Math.random() : 0,
+    neutral: hasNeutral ? Math.random() : 0
+  };
+
+  const total = chances.correct + chances.assassin + chances.enemy + chances.neutral;
+  if (total === 0) return null;
+
+  let sum = 0;
+  for (const k of ['correct', 'assassin', 'enemy', 'neutral'] as const) {
+    chances[k] = Math.round((chances[k] / total) * 100);
+    sum += chances[k];
+  }
+
+  if (sum !== 100) {
+    const diff = 100 - sum;
+    let maxK: 'correct'|'assassin'|'enemy'|'neutral' = 'correct';
+    let maxVal = -1;
+    for (const k of ['correct', 'assassin', 'enemy', 'neutral'] as const) {
+      if (chances[k] > maxVal) {
+        maxVal = chances[k];
+        maxK = k;
+      }
+    }
+    chances[maxK] += diff;
+  }
+
+  return chances;
 }
 
 function transitionToNewTurn(io: Server, room: Room) {
@@ -885,7 +951,41 @@ export function setupRoomManager(io: Server) {
           room.gameState.modifierState.gachaPulling = true;
           io.to(roomId).emit('game_update', room.gameState);
 
-          const randomCard = unrevealedCards[Math.floor(Math.random() * unrevealedCards.length)];
+          const chances = room.gameState.modifierState.gachaChances;
+          let selectedType: string | null = null;
+          if (chances) {
+            const roll = Math.random() * 100;
+            let acc = 0;
+            if (roll < (acc += chances.correct)) selectedType = 'correct';
+            else if (roll < (acc += chances.assassin)) selectedType = 'assassin';
+            else if (roll < (acc += chances.enemy)) selectedType = 'enemy';
+            else selectedType = 'neutral';
+          }
+
+          const validCardsForType = unrevealedCards.filter(c => {
+            if (!selectedType) return true;
+            if (isDuet) {
+              const type = expectedGuessTeam === 'blue' ? c.duetTypeA : c.duetTypeB;
+              if (selectedType === 'correct') return type === 'green';
+              if (selectedType === 'assassin') return type === 'assassin';
+              if (selectedType === 'neutral') return type === 'neutral';
+              return false;
+            } else {
+              if (selectedType === 'correct') return c.type === expectedGuessTeam;
+              if (selectedType === 'assassin') return c.type === 'assassin';
+              if (selectedType === 'neutral') return c.type === 'neutral';
+              if (selectedType === 'enemy') return c.type !== expectedGuessTeam && c.type !== 'neutral' && c.type !== 'assassin';
+              return false;
+            }
+          });
+
+          let randomCard;
+          if (validCardsForType.length > 0) {
+            randomCard = validCardsForType[Math.floor(Math.random() * validCardsForType.length)];
+          } else {
+            randomCard = unrevealedCards[Math.floor(Math.random() * unrevealedCards.length)];
+          }
+
           const candidateIds = unrevealedCards.map(c => c.id);
           
           // Build a pre-computed random highlight sequence so all clients show the exact same random picks
@@ -926,6 +1026,11 @@ export function setupRoomManager(io: Server) {
                   });
                   
                   processGuess(io, currentRoom, player, randomCard.id);
+
+                  if (currentRoom.gameState && currentRoom.gameState.activeModifier === 'gacha-pull' && !currentRoom.gameState.winner) {
+                    currentRoom.gameState.modifierState.gachaChances = generateGachaChances(currentRoom.gameState);
+                    io.to(roomId).emit('game_update', currentRoom.gameState);
+                  }
                 } else {
                   // Fallback emit if card was somehow revealed
                   io.to(roomId).emit('game_update', currentRoom.gameState);

@@ -68,10 +68,10 @@ export default function GiveClueBar({
 
   return (
     <>
-      <div className="w-full shrink-0 max-w-3xl mx-auto mt-4 sm:mt-6 lg:mt-2 px-2 sm:px-4 animate-fade-in relative z-20">
+      <div className="w-full shrink-0 max-w-3xl mx-auto mt-4 sm:mt-6 lg:mt-2 px-2 sm:px-4 animate-fade-in relative z-20 flex flex-col items-center">
         <form 
           onSubmit={handleSubmitCue} 
-          className="bg-slate-800/95 backdrop-blur-md border border-slate-700/80 rounded-2xl sm:rounded-full p-2 flex items-center gap-2 shadow-2xl"
+          className="w-full bg-slate-800/95 backdrop-blur-md border border-slate-700/80 rounded-2xl sm:rounded-full p-2 flex items-center gap-2 shadow-2xl"
         >
           {clueType !== 'text' && (
             <button
@@ -107,11 +107,6 @@ export default function GiveClueBar({
                 className="w-full bg-slate-900/80 border border-slate-700/50 focus:border-slate-500/80 text-white px-3.5 py-2.5 sm:py-3.5 rounded-xl sm:rounded-full outline-none text-sm sm:text-base placeholder:text-slate-500 font-bold"
                 maxLength={32}
               />
-              {activeModifier === 'oracle-riddle' && cueInput.trim().length > 0 && !isOracleRiddleValid() && (
-                <span className="absolute left-4 -bottom-6 text-[9px] sm:text-[10px] text-red-400 font-bold tracking-wide animate-pulse">
-                  ⚠️ Must be exactly 2 rhyming words! (e.g. "red bed")
-                </span>
-              )}
             </div>
           )}
 
@@ -140,6 +135,11 @@ export default function GiveClueBar({
             </button>
           </div>
         </form>
+        {activeModifier === 'oracle-riddle' && cueInput.trim().length > 0 && !isOracleRiddleValid() && (
+          <div className="mt-2 text-[10px] sm:text-xs text-red-400 font-bold tracking-wide animate-pulse bg-slate-900/90 rounded-lg py-1 px-3 border border-red-500/30 shadow-lg text-center">
+            ⚠️ Must be exactly 2 rhyming words! (e.g. "red bed")
+          </div>
+        )}
       </div>
 
       {showDrawingModal && (

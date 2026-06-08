@@ -697,22 +697,53 @@ export default function LANGame() {
                       )}
                       
                       {gameState.activeModifier === 'gacha-pull' && (
-                        <button
-                          disabled={!!gameState.modifierState?.gachaPulling}
-                          onClick={() => {
-                            if (window.confirm("Leverage pure chance? Clicking this will reveal a random unrevealed card color!")) {
-                              socket?.emit("gacha_pull", { roomId });
-                            }
-                          }}
-                          className={cn(
-                            "px-4 py-2 rounded-xl font-black text-xs tracking-wider border transition-all text-white",
-                            gameState.modifierState?.gachaPulling
-                              ? "bg-slate-700 border-slate-600 cursor-not-allowed opacity-60"
-                              : "bg-orange-600 border-orange-500/50 shadow-lg shadow-orange-600/30 hover:bg-orange-500 hover:scale-105 active:scale-95 cursor-pointer"
+                        <div className="flex flex-col sm:flex-row items-center gap-3 bg-orange-950/20 p-2 sm:p-3 rounded-2xl border border-orange-500/30">
+                          <button
+                            disabled={!!gameState.modifierState?.gachaPulling}
+                            onClick={() => {
+                              if (window.confirm("Leverage pure chance? Clicking this will reveal a card based on the generated odds!")) {
+                                socket?.emit("gacha_pull", { roomId });
+                              }
+                            }}
+                            className={cn(
+                              "px-4 py-3 rounded-xl font-black text-xs sm:text-sm tracking-wider border transition-all text-white shrink-0",
+                              gameState.modifierState?.gachaPulling
+                                ? "bg-slate-700 border-slate-600 cursor-not-allowed opacity-60"
+                                : "bg-gradient-to-br from-orange-500 to-orange-700 border-orange-400 shadow-lg shadow-orange-600/40 hover:scale-105 active:scale-95 cursor-pointer"
+                            )}
+                          >
+                            {gameState.modifierState?.gachaPulling ? "🎰 PULLING LEVER..." : "🕹️ PULL LEVER (GACHA)"}
+                          </button>
+
+                          {gameState.modifierState?.gachaChances && (
+                            <div className="flex flex-wrap items-center justify-center gap-2 bg-black/40 p-2 rounded-xl border border-white/5">
+                              {gameState.modifierState.gachaChances.correct !== undefined && (
+                                <div className="bg-emerald-950/40 border border-emerald-500/50 rounded-lg px-2 py-1 text-center min-w-[3rem]">
+                                  <div className="text-emerald-400 font-black text-sm sm:text-base">{gameState.modifierState.gachaChances.correct}%</div>
+                                  <div className="text-[9px] font-bold text-emerald-200 uppercase tracking-widest">{gameState.gameMode === 'duet' ? 'Green' : 'Correct'}</div>
+                                </div>
+                              )}
+                              {gameState.modifierState.gachaChances.neutral !== undefined && (
+                                <div className="bg-slate-800/80 border border-slate-600 rounded-lg px-2 py-1 text-center min-w-[3rem]">
+                                  <div className="text-slate-300 font-black text-sm sm:text-base">{gameState.modifierState.gachaChances.neutral}%</div>
+                                  <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">White</div>
+                                </div>
+                              )}
+                              {gameState.gameMode === 'classic' && gameState.modifierState.gachaChances.enemy !== undefined && (
+                                <div className="bg-amber-950/40 border border-amber-500/50 rounded-lg px-2 py-1 text-center min-w-[3rem]">
+                                  <div className="text-amber-400 font-black text-sm sm:text-base">{gameState.modifierState.gachaChances.enemy}%</div>
+                                  <div className="text-[9px] font-bold text-amber-200 uppercase tracking-widest">Enemy</div>
+                                </div>
+                              )}
+                              {gameState.modifierState.gachaChances.assassin !== undefined && (
+                                <div className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-center shadow-inner min-w-[3rem]">
+                                  <div className="text-white font-black text-sm sm:text-base drop-shadow-[0_0_2px_rgba(255,255,255,0.8)]">{gameState.modifierState.gachaChances.assassin}%</div>
+                                  <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Black</div>
+                                </div>
+                              )}
+                            </div>
                           )}
-                        >
-                          {gameState.modifierState?.gachaPulling ? "🎰 PULLING LEVER..." : "🕹️ PULL LEVER (GACHA)"}
-                        </button>
+                        </div>
                       )}
                       
                       {gameState.activeModifier === 'shield-wall' && gameState.modifierState?.shieldActive && (
