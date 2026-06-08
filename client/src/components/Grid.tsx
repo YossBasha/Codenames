@@ -71,7 +71,7 @@ export default function Grid({ cards, isSpymaster, disabled, playerTeam, gameMod
   };
 
   return (
-    <div className="grid grid-cols-5 gap-1 sm:gap-2 lg:gap-3 w-full mx-auto px-1 sm:px-4">
+    <div className="grid grid-cols-5 gap-1 sm:gap-2 lg:gap-3 w-full mx-auto px-1 sm:px-4" dir="ltr">
       {cards.map((c) => {
         return (
           <Card
