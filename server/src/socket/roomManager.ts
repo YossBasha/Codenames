@@ -282,6 +282,18 @@ function applyRandomModifier(room: Room) {
         c.duetTypeB = data.duetTypeB as any;
       }
     });
+  } else if (randomModifier.id === 'forced-acronym') {
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const arabicLetters = 'ابتثجحخدذرزسشصضطظعغفقكلمنهوي';
+    const useArabic = gameState.language === 'ar';
+    const alphabet = useArabic ? arabicLetters : letters;
+    
+    const seq = Array.from({length: 3}, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('-');
+    gameState.modifierState = { acronym: seq };
+  } else if (randomModifier.id === 'the-dictator') {
+    const numbers = [4, 5, 6];
+    const forcedNumber = numbers[Math.floor(Math.random() * numbers.length)];
+    gameState.modifierState = { forcedNumber };
   }
 }
 
@@ -492,7 +504,49 @@ function processGuess(io: Server, room: Room, player: Player, cardId: number) {
     
   if (room.gameState.successfulGuessesThisTurn >= maxGuesses) return;
 
-  const card = room.gameState.cards.find(c => c.id === cardId);
+  // Implement Slippery Fingers
+  let actualCardId = cardId;
+  if (room.gameState.activeModifier === 'slippery-fingers' && Math.random() < 0.25) {
+    const targetIndex = room.gameState.cards.findIndex(c => c.id === cardId);
+    if (targetIndex !== -1) {
+      const row = Math.floor(targetIndex / 5);
+      const col = targetIndex % 5;
+      const neighbors: number[] = [];
+      
+      for (let r = Math.max(0, row - 1); r <= Math.min(4, row + 1); r++) {
+        for (let c = Math.max(0, col - 1); c <= Math.min(4, col + 1); c++) {
+          if (r === row && c === col) continue;
+          
+          const neighborIdx = r * 5 + c;
+          const neighborCard = room.gameState.cards[neighborIdx];
+          
+          const isRevealed = isDuet 
+              ? (expectedGuessTeam === 'blue' ? neighborCard.revealedByB : neighborCard.revealedByA)
+              : neighborCard.revealed;
+              
+          if (!isRevealed && !(neighborCard.shieldedTurns && neighborCard.shieldedTurns > 0)) {
+            neighbors.push(neighborCard.id);
+          }
+        }
+      }
+      
+      if (neighbors.length > 0) {
+        actualCardId = neighbors[Math.floor(Math.random() * neighbors.length)];
+        
+        // Broadcast the slip event to clients for visual feedback (optional)
+        io.to(room.id).emit('chat_message', {
+          id: Date.now().toString(),
+          text: `Whoops! ${player.name}'s finger slipped...`,
+          sender: 'System',
+          isSystem: true,
+          team: player.team,
+          timestamp: Date.now()
+        });
+      }
+    }
+  }
+
+  const card = room.gameState.cards.find(c => c.id === actualCardId);
   if (!card) return;
   
   if (card.shieldedTurns && card.shieldedTurns > 0) return;
@@ -847,15 +901,28 @@ export function setupRoomManager(io: Server) {
               return; 
             }
             finalCue = words.join(' ');
-          } else if (room.gameState.activeModifier === 'boolean-search') {
+            } else if (room.gameState.activeModifier === 'boolean-search') {
             const matches = cue.match(/\s+(AND|OR|NOT)\s+/g);
             if (!matches || matches.length !== 1) {
               return;
             }
+          } else if (room.gameState.activeModifier === 'forced-acronym') {
+            const letters = room.gameState.modifierState?.acronym?.split('-') || [];
+            const words = cue.trim().split(/\s+/).filter(Boolean);
+            if (words.length !== letters.length) return;
+            for (let i = 0; i < letters.length; i++) {
+              if (words[i][0].toLowerCase() !== letters[i].toLowerCase()) {
+                return;
+              }
+            }
           }
 
           let finalNumber = number;
-          if (room.gameState.activeModifier === 'off-by-one') {
+          if (room.gameState.activeModifier === 'the-dictator') {
+            if (room.gameState.modifierState?.forcedNumber !== undefined) {
+              finalNumber = room.gameState.modifierState.forcedNumber;
+            }
+          } else if (room.gameState.activeModifier === 'off-by-one') {
             if (number === 99) {
               finalNumber = 99;
             } else if (number === 0) {

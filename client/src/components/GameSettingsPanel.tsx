@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { 
   BookOpen, Clock, X, Globe, Check, Keyboard, Upload, Volume2, VolumeX, PenTool,
   Binary, FileText, HelpCircle, EyeOff, Shuffle, Ghost, Wind, Zap, HeartHandshake, Dices, Shield, WifiOff, Flame, Type, Eye,
-  Skull, Gift, Swords, FastForward, Activity, Scissors, Copy, Crosshair, Terminal
+  Skull, Gift, Swords, FastForward, Activity, Scissors, Copy, Crosshair, Terminal, SpellCheck, CaseUpper, Lock, MousePointer2, Timer, Palette, CloudFog
 } from 'lucide-react';
 import { cn } from '../utils';
 import type { Language, CustomWordWeight, TimerSettings, ClueType } from '../../../shared/types';
@@ -35,7 +35,15 @@ export const MODIFIER_ICONS: Record<string, React.ComponentType<any>> = {
   'Scissors': Scissors,
   'Copy': Copy,
   'Crosshair': Crosshair,
-  'Terminal': Terminal
+  'Terminal': Terminal,
+  'SpellCheck': SpellCheck,
+  'CaseUpper': CaseUpper,
+  'Lock': Lock,
+  'MousePointer2': MousePointer2,
+  'Timer': Timer,
+  'Palette': Palette,
+  'CloudFog': CloudFog,
+  'Globe': Globe
 };
 
 interface GameSettingsPanelProps {

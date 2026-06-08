@@ -1,5 +1,7 @@
+import { useState, useRef } from "react";
 import type { Card as CardType } from "../../../shared/types";
 import Card from "./Card";
+import { cn } from "../utils";
 
 import type { Player } from "../../../shared/types";
 
@@ -70,8 +72,69 @@ export default function Grid({ cards, isSpymaster, disabled, playerTeam, gameMod
     return 0;
   };
 
+  const [swipedCardId, setSwipedCardId] = useState<number | null>(null);
+  const [isTouchMode, setIsTouchMode] = useState(false);
+  const lastTouchTimeRef = useRef<number>(0);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!isTouchMode) setIsTouchMode(true);
+    if (activeModifier !== 'fog-of-war') return;
+    
+    const touch = e.touches[0];
+    if (!touch) return;
+    
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    const cardEl = element?.closest('[data-card-id]');
+    
+    if (cardEl) {
+      const id = Number(cardEl.getAttribute('data-card-id'));
+      setSwipedCardId(id);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (activeModifier !== 'fog-of-war') return;
+    
+    const now = Date.now();
+    if (now - lastTouchTimeRef.current < 40) return; // Throttle to ~25fps to prevent layout thrashing
+    lastTouchTimeRef.current = now;
+    
+    const touch = e.touches[0];
+    if (!touch) return;
+    
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    const cardEl = element?.closest('[data-card-id]');
+    
+    if (cardEl) {
+      const id = Number(cardEl.getAttribute('data-card-id'));
+      if (id !== swipedCardId) {
+        setSwipedCardId(id);
+      }
+    } else {
+      if (swipedCardId !== null) {
+        setSwipedCardId(null);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (swipedCardId !== null) {
+      setSwipedCardId(null);
+    }
+  };
+
   return (
-    <div className="grid grid-cols-5 gap-1 sm:gap-2 lg:gap-3 w-full mx-auto px-1 sm:px-4" dir="ltr">
+    <div 
+      className={cn(
+        "grid grid-cols-5 gap-1 sm:gap-2 lg:gap-3 w-full mx-auto px-1 sm:px-4",
+        activeModifier === 'fog-of-war' && "touch-none"
+      )}
+      dir="ltr"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
+    >
       {cards.map((c) => {
         return (
           <Card
@@ -98,6 +161,8 @@ export default function Grid({ cards, isSpymaster, disabled, playerTeam, gameMod
             gachaHighlight={gachaHighlightId === c.id}
             d20FreeReveal={d20FreeReveal}
             isPoltergeistInverted={invertedCardIds.includes(c.id)}
+            isSwipedHover={swipedCardId === c.id}
+            isTouchMode={isTouchMode}
           />
         );
       })}

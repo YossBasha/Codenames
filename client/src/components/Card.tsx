@@ -2,7 +2,7 @@ import { useState, useLayoutEffect, useRef, memo } from "react";
 import type { Card as CardType, Player } from "../../../shared/types";
 import { cn } from "../utils";
 import { playCardHoverSfx, playCardSelectSfx } from "../utils/sfx";
-import { Lock } from "lucide-react";
+import { Lock, CloudFog } from "lucide-react";
 
 interface CardProps {
   card: CardType;
@@ -27,9 +27,11 @@ interface CardProps {
   d20FreeReveal?: boolean;
   isScramblePending?: boolean;
   isPoltergeistInverted?: boolean;
+  isSwipedHover?: boolean;
+  isTouchMode?: boolean;
 }
 
-function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, isClueTarget = false, isGivingClue = false, highlightedBy = [], currentPlayerId, onClick, onContextMenu, onGuess, activeModifier, currentPhase, scrambleDx, scrambleDy, isGuesser = false, gachaHighlight = false, d20FreeReveal = false, isScramblePending = false, isPoltergeistInverted = false }: CardProps) {
+function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, isClueTarget = false, isGivingClue = false, highlightedBy = [], currentPlayerId, onClick, onContextMenu, onGuess, activeModifier, currentPhase, scrambleDx, scrambleDy, isGuesser = false, gachaHighlight = false, d20FreeReveal = false, isScramblePending = false, isPoltergeistInverted = false, isSwipedHover = false, isTouchMode = false }: CardProps) {
   let isRevealedForMe = card.revealed;
   if (gameMode === 'duet' && !card.revealed) {
     if (playerTeam === 'red' && card.revealedByA) {
@@ -137,6 +139,7 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
 
   return (
     <div
+      data-card-id={card.id}
       style={
         (scrambleDx !== undefined || scrambleDy !== undefined) && activeModifier === 'earthquake'
           ? {
@@ -171,7 +174,7 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
       }}
       aria-disabled={isDisabled}
       className={cn(
-        "relative w-full aspect-[4/3] sm:aspect-[3/2] max-h-[calc((100vh-250px)/5)] sm:max-h-[calc((100vh-300px)/5)] rounded-lg sm:rounded-xl font-black transition-all duration-300 transform",
+        "group relative w-full aspect-[4/3] sm:aspect-[3/2] max-h-[calc((100vh-250px)/5)] sm:max-h-[calc((100vh-300px)/5)] rounded-lg sm:rounded-xl font-black transition-all duration-300 transform",
         !(scrambleDx !== undefined || scrambleDy !== undefined) && "overflow-hidden",
         isEmoji ? "text-4xl sm:text-5xl lg:text-7xl" : "text-[9px] xs:text-[11px] sm:text-sm lg:text-lg tracking-tighter sm:tracking-tight",
         isDisabled && !isRevealedForMe && !isGivingClue && !d20FreeReveal
@@ -224,6 +227,16 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
             colorClasses[typeToDisplay]
           )}
         />
+      )}
+
+      {/* Fog of War Overlay */}
+      {activeModifier === 'fog-of-war' && !card.revealed && (
+        <div className={cn(
+          "absolute inset-0 z-20 bg-slate-400/90 backdrop-blur-md transition-opacity duration-300 flex items-center justify-center pointer-events-none",
+          isSwipedHover ? "opacity-0" : cn("opacity-100", !isTouchMode && "group-hover:opacity-0")
+        )}>
+          <CloudFog className="w-8 h-8 sm:w-10 sm:h-10 text-slate-100/70" />
+        </div>
       )}
 
       {/* Base Word - only hide text for globally revealed green/red/blue cards (correct guesses) */}
@@ -343,6 +356,8 @@ function areEqual(prevProps: CardProps, nextProps: CardProps) {
   if (prevProps.scrambleDy !== nextProps.scrambleDy) return false;
   if (prevProps.isGuesser !== nextProps.isGuesser) return false;
   if (prevProps.gachaHighlight !== nextProps.gachaHighlight) return false;
+  if (prevProps.isSwipedHover !== nextProps.isSwipedHover) return false;
+  if (prevProps.isTouchMode !== nextProps.isTouchMode) return false;
 
   // Check card fields
   const c1 = prevProps.card;

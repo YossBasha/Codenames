@@ -164,6 +164,13 @@ export const translations = {
 
     // Settings
     game_settings: 'Game Settings',
+    chaos_mode_toggle: 'Chaos Mode',
+    modifiers: 'MODIFIERS',
+    your_turn: "It's Your Turn!",
+    dismiss: "Dismiss",
+    duet_announcer_desc: "Give clues to {team}",
+    spymaster_announcer_desc: "Give clues to your operatives",
+    operative_announcer_desc: "Find the secret word(s)",
     game_mode: 'Game Mode',
     word_packs: 'WORD PACKS',
     timer_settings: 'TIMER SETTINGS',
@@ -229,7 +236,9 @@ export const translations = {
     give_clue_btn: 'Give Clue',
     oracle_error: '⚠️ Must be exactly 2 rhyming words! (e.g. "red bed")',
     five_letter_error: '⚠️ Clue must be exactly 5 letters long!',
-    boolean_error: '⚠️ Must contain exactly one AND, OR, or NOT (with spaces)!',
+    boolean_error: 'Must contain exactly one AND, OR, or NOT.',
+    acronym_requirement: 'Required starting letters',
+    dictator_warning: 'THE DICTATOR HAS SPOKEN. YOU MUST CLUE THIS NUMBER.',
 
     // Active Clue Bar
     doodle_clue: 'Doodle Clue',
@@ -434,6 +443,13 @@ export const translations = {
 
     // Settings
     game_settings: 'إعدادات اللعبة',
+    chaos_mode_toggle: 'وضع الفوضى',
+    modifiers: 'المعدلات',
+    your_turn: "إنه دورك!",
+    dismiss: "إخفاء",
+    duet_announcer_desc: "أعط أدلة لـ {team}",
+    spymaster_announcer_desc: "أعط أدلة لعملائك",
+    operative_announcer_desc: "ابحث عن الكلمة (الكلمات) السرية",
     game_mode: 'طور اللعبة',
     word_packs: 'حزم الكلمات',
     timer_settings: 'إعدادات المؤقت',
@@ -499,7 +515,9 @@ export const translations = {
     give_clue_btn: 'إعطاء الدليل',
     oracle_error: '⚠️ يجب أن تكون كلمتين متقافيتين بالضبط! (مثل "علم قلم")',
     five_letter_error: '⚠️ يجب أن يكون الدليل مكوناً من 5 أحرف بالضبط!',
-    boolean_error: '⚠️ يجب أن يحتوي على AND أو OR أو NOT واحدة بالضبط (مع مسافات)!',
+    boolean_error: 'يجب أن يحتوي على AND أو OR أو NOT واحدة فقط.',
+    acronym_requirement: 'الأحرف الأولى المطلوبة',
+    dictator_warning: 'لقد تحدث الدكتاتور. يجب عليك تقديم الدليل بهذا الرقم.',
 
     // Active Clue Bar
     doodle_clue: 'دليل الرسم',

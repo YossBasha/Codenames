@@ -11,6 +11,7 @@ interface GiveClueBarProps {
   activeModifier?: string | null;
   clueTargetCount?: number;
   isRTL?: boolean;
+  modifierState?: any;
 }
 
 export default function GiveClueBar({
@@ -18,7 +19,8 @@ export default function GiveClueBar({
   clueType = 'both',
   activeModifier,
   clueTargetCount = 0,
-  isRTL = false
+  isRTL = false,
+  modifierState
 }: GiveClueBarProps) {
   const [cueInput, setCueInput] = useState('');
   const [numInput, setNumInput] = useState<number | ''>('');
@@ -26,13 +28,18 @@ export default function GiveClueBar({
   const { t } = useI18n();
 
   useEffect(() => {
-    if (clueTargetCount > 0) {
+    if (activeModifier === 'the-dictator' && modifierState?.forcedNumber !== undefined) {
+      setNumInput(modifierState.forcedNumber);
+    } else if (clueTargetCount > 0) {
       setNumInput(clueTargetCount);
     }
-  }, [clueTargetCount]);
+  }, [clueTargetCount, activeModifier, modifierState]);
 
   const isNumberValid = () => {
     if (numInput === '') return false;
+    if (activeModifier === 'the-dictator') {
+      return numInput === modifierState?.forcedNumber;
+    }
     if (numInput === 99) return clueTargetCount === 0;
     if (clueTargetCount > 0) {
       return numInput === clueTargetCount;
@@ -56,6 +63,20 @@ export default function GiveClueBar({
     if (activeModifier !== 'boolean-search') return true;
     const matches = cueInput.match(/\s+(AND|OR|NOT)\s+/g);
     return matches !== null && matches.length === 1;
+  };
+
+  const isForcedAcronymValid = () => {
+    if (activeModifier !== 'forced-acronym' || !modifierState?.acronym) return true;
+    const letters = modifierState.acronym.split('-');
+    const words = cueInput.trim().split(/\s+/).filter(Boolean);
+    if (words.length !== letters.length) return false;
+    
+    for (let i = 0; i < letters.length; i++) {
+      if (words[i][0].toLowerCase() !== letters[i].toLowerCase()) {
+        return false;
+      }
+    }
+    return true;
   };
 
   const handleSubmitCue = (e: React.FormEvent) => {
@@ -106,11 +127,16 @@ export default function GiveClueBar({
                 readOnly={cueInput.startsWith('data:image')}
                 onChange={(e) => {
                   let val = e.target.value;
-                  if (activeModifier === 'oracle-riddle' || activeModifier === 'boolean-search') {
-                    const cleanVal = val.replace(/[^a-zA-Z0-9\u0600-\u06FF\s]/g, '');
+                  if (activeModifier === 'oracle-riddle' || activeModifier === 'boolean-search' || activeModifier === 'forced-acronym') {
+                    const cleanVal = val.replace(/[^a-zA-Z0-9\u0600-\u06FF\s-]/g, '');
                     if (activeModifier === 'oracle-riddle') {
                       const words = cleanVal.trim().split(/\s+/).filter(Boolean);
                       if (words.length > 2) {
+                        return;
+                      }
+                    } else if (activeModifier === 'forced-acronym') {
+                      const words = cleanVal.trim().split(/\s+/).filter(Boolean);
+                      if (words.length > (modifierState?.acronym?.split('-').length || 3)) {
                         return;
                       }
                     }
@@ -129,7 +155,8 @@ export default function GiveClueBar({
             <select 
               value={numInput} 
               onChange={(e) => setNumInput(e.target.value ? Number(e.target.value) : '')}
-              className="bg-slate-900 border border-slate-700/50 text-white h-10 sm:h-12 px-3 rounded-xl sm:rounded-full outline-none text-sm sm:text-base font-bold cursor-pointer min-w-[50px] sm:min-w-[65px] text-center appearance-none"
+              disabled={activeModifier === 'the-dictator'}
+              className={`bg-slate-900 border border-slate-700/50 text-white h-10 sm:h-12 px-3 rounded-xl sm:rounded-full outline-none text-sm sm:text-base font-bold min-w-[50px] sm:min-w-[65px] text-center appearance-none ${activeModifier === 'the-dictator' ? 'opacity-50 cursor-not-allowed bg-red-900/40 text-red-400 border-red-500/50' : 'cursor-pointer'}`}
             >
               <option value="" disabled>-</option>
               {[0,1,2,3,4,5,6,7,8,9].map(n => <option key={n} value={n}>{n}</option>)}
@@ -143,7 +170,8 @@ export default function GiveClueBar({
                 !isNumberValid() ||
                 (activeModifier === 'oracle-riddle' && !isOracleRiddleValid()) ||
                 (activeModifier === 'five-letter-curse' && !isFiveLetterCurseValid()) ||
-                (activeModifier === 'boolean-search' && !isBooleanSearchValid())
+                (activeModifier === 'boolean-search' && !isBooleanSearchValid()) ||
+                (activeModifier === 'forced-acronym' && !isForcedAcronymValid())
               }
               className="h-10 sm:h-12 px-4 sm:px-6 bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black rounded-xl sm:rounded-full transition-all shadow-lg shadow-emerald-500/20 active:scale-95 text-xs sm:text-sm flex items-center gap-1.5 uppercase tracking-wider whitespace-nowrap cursor-pointer"
             >
@@ -165,6 +193,16 @@ export default function GiveClueBar({
         {activeModifier === 'boolean-search' && cueInput.trim().length > 0 && !isBooleanSearchValid() && (
           <div className="mt-2 text-[10px] sm:text-xs text-red-400 font-bold tracking-wide animate-pulse bg-slate-900/90 rounded-lg py-1 px-3 border border-red-500/30 shadow-lg text-center">
             {t('boolean_error')}
+          </div>
+        )}
+        {activeModifier === 'forced-acronym' && (
+          <div className={`mt-2 text-[10px] sm:text-xs font-bold tracking-wide rounded-lg py-1 px-3 border shadow-lg text-center ${!isForcedAcronymValid() && cueInput.trim().length > 0 ? 'text-red-400 animate-pulse bg-slate-900/90 border-red-500/30' : 'text-slate-300 bg-slate-800/80 border-slate-600'}`}>
+            {t('acronym_requirement')}: {modifierState?.acronym}
+          </div>
+        )}
+        {activeModifier === 'the-dictator' && (
+          <div className="mt-2 text-[10px] sm:text-xs text-red-400 font-black tracking-widest uppercase bg-slate-900/90 rounded-lg py-1 px-3 border border-red-500/50 shadow-lg text-center">
+            {t('dictator_warning')}
           </div>
         )}
       </div>

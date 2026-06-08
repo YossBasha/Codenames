@@ -677,8 +677,10 @@ export default function PassAndPlay() {
               <GiveClueBar 
                 onSubmitCue={handleSubmitCue}
                 clueType={gameState.clueType}
+                activeModifier={gameState.activeModifier}
                 clueTargetCount={clueTargets.length}
                 isRTL={gameState.language === 'ar'}
+                modifierState={gameState.modifierState}
               />
             )}
             

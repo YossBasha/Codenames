@@ -67,14 +67,14 @@ export const MODIFIERS: Modifier[] = [
   },
   {
     id: "scrambled-comms",
-    name: "Scrambled Comms",
-    nameAr: "اتصالات مشوشة",
+    name: "Forced Anagram",
+    nameAr: "الجناس الإجباري",
     category: "board",
     description:
       "All words on the board are anagrammed (letters shuffled) for the guessers until they click to reveal them.",
     descriptionAr:
       "يتم خلط حروف جميع الكلمات الموجودة على اللوحة بالنسبة للمخمنين حتى ينقروا عليها للكشف عنها.",
-    icon: "Shuffle",
+    icon: "SpellCheck",
   },
   {
     id: "the-mimic",
@@ -139,8 +139,19 @@ export const MODIFIERS: Modifier[] = [
     description:
       'Lock a card down! Click "Lock Card" and select any card to disable guesses on it for the next 2 turns.',
     descriptionAr:
-      'اقفل بطاقة! انقر على "قفل البطاقة" وحدد أي بطاقة لتعطيل التخمينات عليها للدورين القادمين.',
+      'أغلق بطاقة! انقر على "قفل البطاقة" وحدد أي بطاقة لتعطيل التخمينات عليها خلال الدورتين القادمتين.',
     icon: "Shield",
+  },
+  {
+    id: "slippery-fingers",
+    name: "Slippery Fingers",
+    nameAr: "أصابع زلقة",
+    category: "guesser",
+    description:
+      "Precision is thrown out the window. When a guesser attempts to click a card on the board, there is a 25% chance their mouse slips. Instead of revealing the card they clicked, the system intercepts it and reveals a completely random adjacent card.",
+    descriptionAr:
+      "يتم التخلي عن الدقة. عندما يحاول المخمن النقر على بطاقة على اللوحة، هناك فرصة 25٪ أن تنزلق فأرته. بدلاً من الكشف عن البطاقة التي نقر عليها، يعترضها النظام ويكشف عن بطاقة مجاورة عشوائية تماماً.",
+    icon: "MousePointer2",
   },
   {
     id: "lag-spike",
@@ -293,6 +304,28 @@ export const MODIFIERS: Modifier[] = [
     description: "Exactly half of the unrevealed cards flip upside down.",
     descriptionAr: "نصف البطاقات غير المكشوفة ينقلب رأساً على عقب.",
     icon: "Ghost",
+  },
+  {
+    id: "forced-acronym",
+    name: "Forced Acronym",
+    nameAr: "اختصار إجباري",
+    category: "spymaster",
+    description:
+      "The game randomly assigns a 3-letter sequence to the Spymaster. The Spymaster is required to provide a 3-word clue where the starting letters of each word perfectly match the sequence in order.",
+    descriptionAr:
+      "تُعين اللعبة تسلسلاً عشوائياً من 3 أحرف لمدير الشبكة. يُطلب منه تقديم دليل مكون من 3 كلمات حيث تتطابق الأحرف الأولى لكل كلمة تماماً مع التسلسل بالترتيب.",
+    icon: "CaseUpper",
+  },
+  {
+    id: "the-dictator",
+    name: "The Dictator",
+    nameAr: "الدكتاتور",
+    category: "spymaster",
+    description:
+      "The Spymaster does not get to choose their clue number. The system violently forces the number dropdown to a random, usually aggressive number and locks it.",
+    descriptionAr:
+      "لا يحق لمدير الشبكة اختيار رقم الدليل الخاص به. يفرض النظام بعنف رقم عشوائي (غالباً ما يكون كبيراً) ويغلق القائمة المنسدلة.",
+    icon: "Lock",
   },
   {
     id: "boolean-search",

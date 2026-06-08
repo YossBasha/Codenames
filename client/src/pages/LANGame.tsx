@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { Check } from "lucide-react";
 import { useGameContext } from "../context/GameContext";
 import { useI18n } from "../context/I18nContext";
 import type { GameState } from "../../../shared/types";
@@ -26,6 +27,13 @@ export default function LANGame() {
   const [hostDisconnected, setHostDisconnected] = useState(false);
   const [showPrankMenu, setShowPrankMenu] = useState(false);
 
+  // Turn Announcer
+  const [showTurnAnnouncer, setShowTurnAnnouncer] = useState(false);
+  const [queuedModifierBanner, setQueuedModifierBanner] = useState<string | null>(null);
+  const prevPhaseForTurnRef = useRef<string | null>(null);
+  const prevTurnTeamForTurnRef = useRef<string | null>(null);
+  const modifierBannerTimerRef = useRef<any>(null);
+
   // Chaos Modifiers Local States
   const [showModifierBanner, setShowModifierBanner] = useState<string | null>(null);
   const [sensoryTimeLeft, setSensoryTimeLeft] = useState<number | null>(null);
@@ -36,39 +44,33 @@ export default function LANGame() {
   const [gachaHighlightCardId, setGachaHighlightCardId] = useState<number | null>(null);
 
   // Trigger announcement banner on turn / modifier change
-  const prevModifierRef = useRef<string | null>(null);
-  const prevTurnRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (gameState?.activeModifier) {
-      const isNewModifier = gameState.activeModifier !== prevModifierRef.current || gameState.currentTurn !== prevTurnRef.current;
-      if (isNewModifier) {
-        setShowModifierBanner(gameState.activeModifier);
-        setScrambleActive(false);
-        const timer = setTimeout(() => {
-          setShowModifierBanner(null);
-          if (gameState.activeModifier === 'dimensional-scramble' || gameState.activeModifier === 'earthquake') {
-            setScrambleActive(true);
-            setTimeout(() => setScrambleActive(false), 2000);
-          }
-        }, 3500);
-        
-        setIsLockToggleActive(false);
-        setIsBloodPactToggleActive(false);
-        setSensoryTimeLeft(null);
-        setLagSpikeSecondsLeft(null);
-        
-        return () => clearTimeout(timer);
-      }
-    } else {
-      setShowModifierBanner(null);
-      setScrambleActive(false);
-    }
+  const triggerModifierBanner = (mod: string) => {
+    if (modifierBannerTimerRef.current) clearTimeout(modifierBannerTimerRef.current);
     
-    if (gameState) {
-      prevModifierRef.current = gameState.activeModifier || null;
-      prevTurnRef.current = gameState.currentTurn;
-    }
-  }, [gameState?.activeModifier, gameState?.currentTurn]);
+    setShowModifierBanner(mod);
+    setScrambleActive(false);
+    
+    modifierBannerTimerRef.current = setTimeout(() => {
+      setShowModifierBanner(null);
+      if (mod === 'dimensional-scramble' || mod === 'earthquake') {
+        setScrambleActive(true);
+        setTimeout(() => setScrambleActive(false), 2000);
+      }
+    }, 3500);
+    
+    setIsLockToggleActive(false);
+    setIsBloodPactToggleActive(false);
+    setSensoryTimeLeft(null);
+    setLagSpikeSecondsLeft(null);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (modifierBannerTimerRef.current) clearTimeout(modifierBannerTimerRef.current);
+    };
+  }, []);
+
+
 
   // Sensory Deprivation color fade timer
   const isSpymasterTurn = gameState?.currentPhase === 'spymaster';
@@ -95,9 +97,71 @@ export default function LANGame() {
   const expectedGuessTeam = gameState?.gameMode === 'duet' ? 
     (gameState.currentTurn === 'red' ? 'blue' : 'red') : 
     gameState?.currentTurn;
-  const isMyTurnToGuess = gameState && player && (roomPlayers.find(p => p.id === player?.id) || player).team === expectedGuessTeam && (
-    gameState.gameMode === 'duet' || (roomPlayers.find(p => p.id === player?.id) || player).role === 'operative'
-  );
+    
+  const myPlayer = player ? (roomPlayers.find(p => p.id === player.id) || player) : null;
+  
+  const isMyTurnToGuess = !!(gameState && myPlayer && myPlayer.team === expectedGuessTeam && (
+    gameState.gameMode === 'duet' || myPlayer.role === 'operative'
+  ));
+  
+  const isMyTurnToGiveClue = !!(gameState && myPlayer && myPlayer.team === gameState.currentTurn && (
+    gameState.gameMode === 'duet' || myPlayer.role === 'spymaster'
+  ));
+  
+  const isMyTurn = gameState?.currentPhase === 'spymaster' ? isMyTurnToGiveClue : isMyTurnToGuess;
+
+  const prevModifierRef = useRef<string | null>(null);
+  const prevTurnRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (gameState?.activeModifier) {
+      // Modifiers only change when the turn changes (or when a new modifier is explicitly applied)
+      const isNewModifier = gameState.activeModifier !== prevModifierRef.current || 
+                            gameState.currentTurn !== prevTurnRef.current;
+      
+      if (isNewModifier) {
+        // If turn announcer is about to show or is currently showing, queue the modifier banner
+        const willShowTurnAnnouncer = isMyTurn && !gameState.winner && 
+                                      (gameState.currentPhase !== prevPhaseForTurnRef.current || 
+                                       gameState.currentTurn !== prevTurnTeamForTurnRef.current);
+        
+        if (showTurnAnnouncer || willShowTurnAnnouncer) {
+          setQueuedModifierBanner(gameState.activeModifier);
+        } else {
+          triggerModifierBanner(gameState.activeModifier);
+        }
+      }
+    } else {
+      setShowModifierBanner(null);
+      setScrambleActive(false);
+      setQueuedModifierBanner(null);
+    }
+    
+    if (gameState) {
+      prevModifierRef.current = gameState.activeModifier || null;
+      prevTurnRef.current = gameState.currentTurn;
+    }
+  }, [gameState?.activeModifier, gameState?.currentTurn, gameState?.currentPhase, gameState?.winner, isMyTurn, showTurnAnnouncer]);
+
+  useEffect(() => {
+    if (gameState && !gameState.winner) {
+      if (isMyTurn) {
+        if (gameState.currentPhase !== prevPhaseForTurnRef.current || gameState.currentTurn !== prevTurnTeamForTurnRef.current) {
+          setShowTurnAnnouncer(true);
+        }
+      }
+      prevPhaseForTurnRef.current = gameState.currentPhase;
+      prevTurnTeamForTurnRef.current = gameState.currentTurn;
+    }
+  }, [isMyTurn, gameState?.currentPhase, gameState?.currentTurn, gameState?.winner]);
+
+  const dismissTurnAnnouncer = () => {
+    setShowTurnAnnouncer(false);
+    if (queuedModifierBanner) {
+      triggerModifierBanner(queuedModifierBanner);
+      setQueuedModifierBanner(null);
+    }
+  };
   useEffect(() => {
     if (isOperativeGuessing && isLagSpike && isMyTurnToGuess) {
       if (lagSpikeSecondsLeft === null) {
@@ -499,6 +563,33 @@ export default function LANGame() {
         </div>
       )}
 
+      {showTurnAnnouncer && !gameState.winner && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-slate-900 border border-emerald-500/30 rounded-3xl p-6 sm:p-10 shadow-2xl flex flex-col items-center max-w-sm w-full animate-scale-up relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent pointer-events-none" />
+            <div className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
+              <Check className="w-10 h-10 text-emerald-400" />
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-black text-white text-center mb-2 tracking-wide uppercase">
+              {t('your_turn')}
+            </h2>
+            <p className="text-slate-400 text-center text-sm sm:text-base font-medium mb-8">
+              {gameState.currentPhase === 'spymaster'
+                ? (gameState.gameMode === 'duet' 
+                    ? t('duet_announcer_desc').replace('{team}', myPlayer?.team === 'red' ? t('side_b') : t('side_a'))
+                    : t('spymaster_announcer_desc'))
+                : t('operative_announcer_desc')}
+            </p>
+            <button
+              onClick={dismissTurnAnnouncer}
+              className="w-full h-14 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-black rounded-2xl transition-all shadow-lg shadow-emerald-500/25 active:scale-[0.98] uppercase tracking-widest text-sm sm:text-base"
+            >
+              {t('dismiss')}
+            </button>
+          </div>
+        </div>
+      )}
+
       <TopBar
         redScore={gameState.redScore}
         blueScore={gameState.blueScore}
@@ -889,6 +980,7 @@ export default function LANGame() {
                       activeModifier={gameState.activeModifier}
                       clueTargetCount={clueTargets.length}
                       isRTL={gameState.isRTL}
+                      modifierState={gameState.modifierState}
                     />
                   )}
 
