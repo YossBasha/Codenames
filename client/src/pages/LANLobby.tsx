@@ -4,7 +4,7 @@ import { io } from 'socket.io-client';
 import { useGameContext } from '../context/GameContext';
 import { useI18n } from '../context/I18nContext';
 import type { Player, Team, Role, CustomWordWeight, TimerSettings, ClueType } from '../../../shared/types';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Bot, X } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import GameSettingsPanel from '../components/GameSettingsPanel';
 import { twMerge } from 'tailwind-merge';
@@ -323,6 +323,37 @@ export default function LANLobby() {
     }
   };
 
+  const handleAddBot = (team: Team, role: Role) => {
+    if (socket && roomId && isHost) {
+      socket.emit('add_bot', { roomId, team, role });
+      playLobbyClickSfx();
+    }
+  };
+
+  const handleRemoveBot = (botId: string) => {
+    if (socket && roomId && isHost) {
+      socket.emit('remove_bot', { roomId, botId });
+      playLobbyClickSfx();
+    }
+  };
+
+  const renderPlayerEntry = (p: Player, colorClass: string) => (
+    <div key={p.id} className={cn(colorClass, "px-2 py-1 lg:px-4 lg:py-2 rounded-xl text-center font-bold text-sm lg:text-base truncate flex items-center justify-center gap-1.5 relative group/entry")}>
+      {p.isBot && <Bot className="w-3.5 h-3.5 lg:w-4 lg:h-4 shrink-0 opacity-70" />}
+      <span className="truncate">{p.name}</span>
+      {p.id === player?.id && <span className="shrink-0">(You)</span>}
+      {p.isBot && isHost && (
+        <button
+          onClick={(e) => { e.stopPropagation(); handleRemoveBot(p.id); }}
+          className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 hover:bg-red-400 rounded-full flex items-center justify-center opacity-0 group-hover/entry:opacity-100 transition-opacity shadow-lg"
+          title="Remove Bot"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      )}
+    </div>
+  );
+
   const blueOperatives = roomPlayers.filter(p => p.team === 'blue' && p.role === 'operative');
   const blueSpymasters = roomPlayers.filter(p => p.team === 'blue' && p.role === 'spymaster');
   const redOperatives = roomPlayers.filter(p => p.team === 'red' && p.role === 'operative');
@@ -422,11 +453,7 @@ export default function LANLobby() {
               <div className="w-full text-center flex-1 flex flex-col lg:min-h-0 mb-3">
                 <h3 className="font-bold mb-1.5 tracking-widest text-xs lg:text-sm">{t('operatives_role')}</h3>
                 <div className="flex flex-col gap-1.5 overflow-y-auto lg:min-h-0 pr-1 scrollbar-thin">
-                  {blueOperatives.map(p => (
-                    <div key={p.id} className="bg-blue-600/50 px-2 py-1 lg:px-4 lg:py-2 rounded-xl text-center font-bold text-sm lg:text-base truncate">
-                      {p.name} {p.id === player?.id && '(You)'}
-                    </div>
-                  ))}
+                  {blueOperatives.map(p => renderPlayerEntry(p, 'bg-blue-600/50'))}
                 </div>
               </div>
               <button 
@@ -437,17 +464,21 @@ export default function LANLobby() {
               >
                 {isConnected ? t('join_team') : t('connecting_btn')}
               </button>
+              {isHost && isConnected && (
+                <button
+                  onClick={() => handleAddBot('blue', 'operative')}
+                  className="w-full py-1.5 mt-1 bg-blue-500/20 hover:bg-blue-500/40 border border-blue-400/30 rounded-full font-bold text-blue-300 text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Bot className="w-3.5 h-3.5" /> Add Bot
+                </button>
+              )}
             </div>
 
             <div className="flex-none lg:flex-1 bg-blue-400/20 border-2 border-blue-300 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(96,165,250,0.3)]">
               <div className="w-full text-center flex-1 flex flex-col lg:min-h-0 mb-3">
                 <h3 className="font-bold mb-1.5 tracking-widest text-xs lg:text-sm">{t('spymasters_role')}</h3>
                 <div className="flex flex-col gap-1.5 overflow-y-auto lg:min-h-0 pr-1 scrollbar-thin">
-                  {blueSpymasters.map(p => (
-                    <div key={p.id} className="bg-blue-500/50 px-2 py-1 lg:px-4 lg:py-2 rounded-xl text-center font-bold text-sm lg:text-base truncate">
-                      {p.name} {p.id === player?.id && '(You)'}
-                    </div>
-                  ))}
+                  {blueSpymasters.map(p => renderPlayerEntry(p, 'bg-blue-500/50'))}
                 </div>
               </div>
               <button 
@@ -458,6 +489,14 @@ export default function LANLobby() {
               >
                 {isConnected ? t('join_team') : t('connecting_btn')}
               </button>
+              {isHost && isConnected && (
+                <button
+                  onClick={() => handleAddBot('blue', 'spymaster')}
+                  className="w-full py-1.5 mt-1 bg-blue-500/20 hover:bg-blue-500/40 border border-blue-400/30 rounded-full font-bold text-blue-300 text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Bot className="w-3.5 h-3.5" /> Add Bot
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -602,11 +641,7 @@ export default function LANLobby() {
               <div className="w-full text-center flex-1 flex flex-col lg:min-h-0 mb-3">
                 <h3 className="font-bold mb-1.5 tracking-widest text-xs lg:text-sm">{t('operatives_role')}</h3>
                 <div className="flex flex-col gap-1.5 overflow-y-auto lg:min-h-0 pr-1 scrollbar-thin">
-                  {redOperatives.map(p => (
-                    <div key={p.id} className="bg-red-600/50 px-2 py-1 lg:px-4 lg:py-2 rounded-xl text-center font-bold text-sm lg:text-base truncate">
-                      {p.name} {p.id === player?.id && '(You)'}
-                    </div>
-                  ))}
+                  {redOperatives.map(p => renderPlayerEntry(p, 'bg-red-600/50'))}
                 </div>
               </div>
               <button 
@@ -617,17 +652,21 @@ export default function LANLobby() {
               >
                 {isConnected ? t('join_team') : t('connecting_btn')}
               </button>
+              {isHost && isConnected && (
+                <button
+                  onClick={() => handleAddBot('red', 'operative')}
+                  className="w-full py-1.5 mt-1 bg-red-500/20 hover:bg-red-500/40 border border-red-400/30 rounded-full font-bold text-red-300 text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Bot className="w-3.5 h-3.5" /> Add Bot
+                </button>
+              )}
             </div>
 
             <div className="flex-none lg:flex-1 bg-red-400/20 border-2 border-red-300 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(248,113,113,0.3)]">
               <div className="w-full text-center flex-1 flex flex-col lg:min-h-0 mb-3">
                 <h3 className="font-bold mb-1.5 tracking-widest text-xs lg:text-sm">{t('spymasters_role')}</h3>
                 <div className="flex flex-col gap-1.5 overflow-y-auto lg:min-h-0 pr-1 scrollbar-thin">
-                  {redSpymasters.map(p => (
-                    <div key={p.id} className="bg-red-500/50 px-2 py-1 lg:px-4 lg:py-2 rounded-xl text-center font-bold text-sm lg:text-base truncate">
-                      {p.name} {p.id === player?.id && '(You)'}
-                    </div>
-                  ))}
+                  {redSpymasters.map(p => renderPlayerEntry(p, 'bg-red-500/50'))}
                 </div>
               </div>
               <button 
@@ -638,6 +677,14 @@ export default function LANLobby() {
               >
                 {isConnected ? t('join_team') : t('connecting_btn')}
               </button>
+              {isHost && isConnected && (
+                <button
+                  onClick={() => handleAddBot('red', 'spymaster')}
+                  className="w-full py-1.5 mt-1 bg-red-500/20 hover:bg-red-500/40 border border-red-400/30 rounded-full font-bold text-red-300 text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Bot className="w-3.5 h-3.5" /> Add Bot
+                </button>
+              )}
             </div>
           </div>
         ) : (
@@ -649,11 +696,7 @@ export default function LANLobby() {
               </div>
               <div className="w-full text-center pt-8 z-10 mb-2 flex-1 flex flex-col lg:min-h-0">
                 <div className="flex flex-col gap-1.5 w-full overflow-y-auto lg:min-h-0 pr-1 scrollbar-thin">
-                  {redPlayers.map(p => (
-                    <div key={p.id} className="bg-green-600/50 px-2 py-1 lg:px-4 lg:py-2 rounded-xl text-center font-bold border border-green-500/50 text-sm lg:text-base truncate">
-                      {p.name} {p.id === player?.id && '(You)'}
-                    </div>
-                  ))}
+                  {redPlayers.map(p => renderPlayerEntry(p, 'bg-green-600/50 border border-green-500/50'))}
                 </div>
               </div>
               <button 
@@ -663,6 +706,14 @@ export default function LANLobby() {
               >
                 {t('join_team')}
               </button>
+              {isHost && isConnected && (
+                <button
+                  onClick={() => handleAddBot('red', 'spymaster')}
+                  className="w-full py-1.5 mt-1 bg-green-500/20 hover:bg-green-500/40 border border-green-400/30 rounded-full font-bold text-green-300 text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 z-10"
+                >
+                  <Bot className="w-3.5 h-3.5" /> Add Bot
+                </button>
+              )}
             </div>
 
             {/* DUET SIDE B */}
@@ -672,11 +723,7 @@ export default function LANLobby() {
               </div>
               <div className="w-full text-center pt-8 z-10 mb-2 flex-1 flex flex-col lg:min-h-0">
                 <div className="flex flex-col gap-1.5 w-full overflow-y-auto lg:min-h-0 pr-1 scrollbar-thin">
-                  {bluePlayers.map(p => (
-                    <div key={p.id} className="bg-teal-600/50 px-2 py-1 lg:px-4 lg:py-2 rounded-xl text-center font-bold border border-teal-500/50 text-sm lg:text-base truncate">
-                      {p.name} {p.id === player?.id && '(You)'}
-                    </div>
-                  ))}
+                  {bluePlayers.map(p => renderPlayerEntry(p, 'bg-teal-600/50 border border-teal-500/50'))}
                 </div>
               </div>
               <button 
@@ -686,6 +733,14 @@ export default function LANLobby() {
               >
                 {t('join_team')}
               </button>
+              {isHost && isConnected && (
+                <button
+                  onClick={() => handleAddBot('blue', 'spymaster')}
+                  className="w-full py-1.5 mt-1 bg-teal-500/20 hover:bg-teal-500/40 border border-teal-400/30 rounded-full font-bold text-teal-300 text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 z-10"
+                >
+                  <Bot className="w-3.5 h-3.5" /> Add Bot
+                </button>
+              )}
             </div>
           </div>
         )}

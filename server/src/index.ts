@@ -4,6 +4,9 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import { setupRoomManager, getPublicRooms } from './socket/roomManager';
 import { startBroadcasting, stopBroadcasting, startListening, stopListening, getDiscoveredRooms, getLocalIPAddress, getHostingInfo } from './discovery';
+import { loadEmbeddings } from './utils/aiLogic';
+
+loadEmbeddings();
 
 const app = express();
 const server = http.createServer(app);

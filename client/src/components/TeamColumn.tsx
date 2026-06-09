@@ -1,6 +1,7 @@
 import type { Player, Team } from '../../../shared/types';
 import { cn } from '../utils';
 import { useI18n } from '../context/I18nContext';
+import { Bot } from 'lucide-react';
 
 interface TeamColumnProps {
   team: Team;
@@ -33,9 +34,10 @@ export default function TeamColumn({ team, score, operatives, spymasters, gameMo
             ) : (
               allPlayers.map(p => (
                 <div key={p.id} className={cn(
-                  "text-white text-xs lg:text-base font-bold bg-black/40 px-2 py-1 lg:px-4 lg:py-2 rounded-xl text-center w-full whitespace-nowrap overflow-hidden text-ellipsis border-t border-white/10 shadow-lg transition-opacity",
+                  "text-white text-xs lg:text-base font-bold bg-black/40 px-2 py-1 lg:px-4 lg:py-2 rounded-xl text-center w-full whitespace-nowrap overflow-hidden text-ellipsis border-t border-white/10 shadow-lg transition-opacity flex items-center justify-center gap-1.5",
                   p.connected === false && "opacity-50 grayscale"
                 )}>
+                  {p.isBot && <Bot className="w-3.5 h-3.5 shrink-0 opacity-70" />}
                   {p.name} {p.connected === false && t('offline')}
                 </div>
               ))
@@ -62,9 +64,10 @@ export default function TeamColumn({ team, score, operatives, spymasters, gameMo
           ) : (
             operatives.map(p => (
               <div key={p.id} className={cn(
-                "text-white text-[10px] lg:text-sm font-bold bg-black/30 px-2 lg:px-3 py-0.5 lg:py-1 rounded-full whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px] lg:max-w-none transition-opacity",
+                "text-white text-[10px] lg:text-sm font-bold bg-black/30 px-2 lg:px-3 py-0.5 lg:py-1 rounded-full whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px] lg:max-w-none transition-opacity flex items-center gap-1",
                 p.connected === false && "opacity-50 grayscale"
               )}>
+                {p.isBot && <Bot className="w-3 h-3 shrink-0 opacity-70" />}
                 {p.name} {p.connected === false && t('offline')}
               </div>
             ))
@@ -96,9 +99,10 @@ export default function TeamColumn({ team, score, operatives, spymasters, gameMo
           ) : (
             spymasters.map(p => (
               <div key={p.id} className={cn(
-                "text-white text-[10px] lg:text-sm font-bold bg-black/30 px-2 lg:px-3 py-0.5 lg:py-1 rounded-full whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px] lg:max-w-none transition-opacity",
+                "text-white text-[10px] lg:text-sm font-bold bg-black/30 px-2 lg:px-3 py-0.5 lg:py-1 rounded-full whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px] lg:max-w-none transition-opacity flex items-center gap-1",
                 p.connected === false && "opacity-50 grayscale"
               )}>
+                {p.isBot && <Bot className="w-3 h-3 shrink-0 opacity-70" />}
                 {p.name} {p.connected === false && t('offline')}
               </div>
             ))

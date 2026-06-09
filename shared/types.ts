@@ -23,6 +23,7 @@ export interface Player {
   name: string;
   team: Team | 'spectator';
   role: Role | 'spectator';
+  isBot?: boolean;
   avatarBase64?: string;
 }
 
