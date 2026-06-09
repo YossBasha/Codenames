@@ -58,6 +58,13 @@ function stopTimer(room: Room) {
   }
 }
 
+function getBotDelayMs(room: Room): number {
+  if (room.gameState?.chaosMode) {
+    return 5000;
+  }
+  return 2000;
+}
+
 function revertActiveModifier(room: Room) {
   const gameState = room.gameState;
   if (!gameState || !gameState.activeModifier) return;
@@ -445,7 +452,10 @@ function transitionToNewTurn(io: Server, room: Room) {
         p.team === gameState.currentTurn && p.role === "spymaster" && p.isBot,
     );
     if (spymasterBots.length > 0) {
-      setTimeout(() => triggerBotSpymaster(io, room, spymasterBots[0]), 2000);
+      setTimeout(
+        () => triggerBotSpymaster(io, room, spymasterBots[0]),
+        getBotDelayMs(room),
+      );
     }
   }
 }
@@ -460,6 +470,8 @@ function triggerBotSpymaster(io: Server, room: Room, bot: Player) {
     bot.team as any,
     gameState.language,
     gameState.gameMode === "duet",
+    gameState.activeModifier,
+    gameState.modifierState,
   );
   if (clue) {
     gameState.activeCue = clue.word;
@@ -483,7 +495,14 @@ function triggerBotSpymaster(io: Server, room: Room, bot: Player) {
     // Trigger Operative bots if applicable
     const operativeBots = room.players.filter(
       (p) =>
-        p.team === gameState.currentTurn && p.role === "operative" && p.isBot,
+        p.team ===
+          (gameState.gameMode === "duet"
+            ? gameState.currentTurn === "red"
+              ? "blue"
+              : "red"
+            : gameState.currentTurn) &&
+        p.role === "operative" &&
+        p.isBot,
     );
     if (operativeBots.length > 0) {
       setTimeout(
@@ -495,7 +514,7 @@ function triggerBotSpymaster(io: Server, room: Room, bot: Player) {
             clue.count,
             operativeBots[0],
           ),
-        2000,
+        getBotDelayMs(room),
       );
     }
   } else {
@@ -579,7 +598,10 @@ function triggerBotOperatives(
       room.gameState.currentPhase === "operative" &&
       room.gameState.activeCue === clue
     ) {
-      setTimeout(nextGuess, 2000 + Math.random() * 2000);
+      const guessDelayMs = room.gameState?.chaosMode
+        ? 3000 + Math.random() * 1000
+        : 2000 + Math.random() * 2000;
+      setTimeout(nextGuess, guessDelayMs);
     }
   }
 
@@ -1254,7 +1276,7 @@ export function setupRoomManager(io: Server) {
             if (spymasterBots.length > 0) {
               setTimeout(
                 () => triggerBotSpymaster(io, room, spymasterBots[0]),
-                3000,
+                getBotDelayMs(room) + 1000,
               );
             }
           }
@@ -1416,7 +1438,7 @@ export function setupRoomManager(io: Server) {
                       finalNumber,
                       operativeBots[0],
                     ),
-                  2000,
+                  getBotDelayMs(room),
                 );
               }
             }
