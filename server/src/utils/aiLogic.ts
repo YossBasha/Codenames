@@ -1,7 +1,19 @@
+import * as dotenv from "dotenv";
+dotenv.config(); // MUST be first — loads GROQ_API_KEY before Groq client initializes
+
 import * as fs from "fs";
 import * as path from "path";
+import Groq from "groq-sdk";
 import { wordPackRegistry } from "../../../shared/wordPacks";
 import { checkRhyme } from "../../../shared/modifiers";
+
+const groq = process.env.GROQ_API_KEY
+  ? new Groq({ apiKey: process.env.GROQ_API_KEY })
+  : null;
+
+console.log(
+  `[AI-INIT] GROQ_API_KEY present: ${!!process.env.GROQ_API_KEY}, Groq client ready: ${!!groq}`,
+);
 
 let embeddings: Record<string, number[]> = {};
 
@@ -146,7 +158,7 @@ function applyModifierRules(
 
 /**
  * NEW ALGORITHM: Safety-First, Strict Threshold Spymaster Clue Generation
- * 
+ *
  * Core principle: Build clues that connect to multiple friendly words ONLY if all
  * connections exceed high similarity thresholds. Heavily penalize danger associations.
  * Try target counts from 4 down to 1, always preferring safer, smaller clues.
@@ -158,7 +170,7 @@ export function getBotSpymasterClue(
   isDuet: boolean,
   activeModifier: string | null = null,
   modifierState: any = null,
-): { word: string; count: number } | null {
+): { word: string; count: number; reasoning?: string } | null {
   // === PHASE 1: CATEGORIZE BOARD ===
   const unrevealedCards = cards.filter((c) => {
     if (isDuet) {
@@ -198,13 +210,44 @@ export function getBotSpymasterClue(
   );
 
   const allDictWords = getAllDictionaryWords().filter(
-    (w) =>
-      !boardWords.has(w.toLowerCase()) &&
-      w.length > 1 &&
-      !w.includes(" "),
+    (w) => !boardWords.has(w.toLowerCase()) && w.length > 1 && !w.includes(" "),
   );
 
-  if (allDictWords.length === 0) return null;
+  // Hardcoded safe fallback words when embeddings are not loaded
+  const HARDCODED_FALLBACK_WORDS = [
+    "animal",
+    "vehicle",
+    "nature",
+    "ocean",
+    "forest",
+    "mountain",
+    "weather",
+    "color",
+    "metal",
+    "fabric",
+    "planet",
+    "season",
+    "texture",
+    "liquid",
+    "energy",
+    "journey",
+    "signal",
+    "origin",
+    "pattern",
+    "surface",
+  ].filter((w) => !boardWords.has(w.toLowerCase()));
+
+  if (allDictWords.length === 0 && HARDCODED_FALLBACK_WORDS.length > 0) {
+    const word =
+      HARDCODED_FALLBACK_WORDS[
+        Math.floor(Math.random() * HARDCODED_FALLBACK_WORDS.length)
+      ];
+    return { word, count: 1 };
+  }
+
+  if (allDictWords.length === 0) {
+    return { word: "nature", count: 1 };
+  }
 
   // === PHASE 3: DYNAMIC TARGET COUNT ===
   // Try to find clues for 4 targets, then 3, then 2, then 1
@@ -267,7 +310,34 @@ export function getBotSpymasterClue(
   }
 
   // No valid clue found even for single targets
-  return null;
+  // Fallback to avoid skipping turn: randomly select a dictionary word not on the board
+  if (allDictWords.length > 0) {
+    const randomWord =
+      allDictWords[Math.floor(Math.random() * allDictWords.length)];
+    const fallbackClue = applyModifierRules(
+      randomWord,
+      1,
+      activeModifier,
+      modifierState,
+      allDictWords,
+    );
+    return fallbackClue
+      ? {
+          ...fallbackClue,
+          reasoning: "Fallback random word (no strong connections found)",
+        }
+      : {
+          word: randomWord,
+          count: 1,
+          reasoning: "Fallback random word (no strong connections found)",
+        };
+  }
+
+  return {
+    word: "skip",
+    count: 0,
+    reasoning: "No dictionary words available.",
+  };
 }
 
 /**
@@ -344,12 +414,12 @@ function generateRefinedCandidates(
  * - Raw Positive: ALL target words must exceed similarity 0.70 with the clue.
  *   baseScore = min(similarities to all targets)
  *   If baseScore < 0.70, return -Infinity (FATAL: not connected to all targets)
- * 
+ *
  * - Negative Penalties:
  *   1. Assassin: if similarity > 0.40, return -Infinity (FATAL: too close to assassin)
  *   2. Enemy: if similarity > 0.65, return -Infinity (FATAL: too close to opponent)
  *   3. Neutral: if similarity > 0.60, heavy penalty (-5.0 per occurrence)
- * 
+ *
  * - Final Score: baseScore - penalties
  */
 function scoreClueCandidate(
@@ -364,17 +434,16 @@ function scoreClueCandidate(
   if (!candidateVec) return -Infinity;
 
   // === POSITIVE: Must connect strongly to ALL target words ===
-  const targetSimilarities = targetCards
-    .map((card) => {
-      const cardVec = getWordVector(card.word, language);
-      if (!cardVec) return 0;
-      return cosineSimilarity(candidateVec, cardVec);
-    });
+  const targetSimilarities = targetCards.map((card) => {
+    const cardVec = getWordVector(card.word, language);
+    if (!cardVec) return 0;
+    return cosineSimilarity(candidateVec, cardVec);
+  });
 
   const minTargetSim = Math.min(...targetSimilarities);
 
   // FATAL: If candidate doesn't connect to at least one target with high confidence
-  if (minTargetSim < 0.70) {
+  if (minTargetSim < 0.7) {
     return -Infinity;
   }
 
@@ -387,7 +456,7 @@ function scoreClueCandidate(
 
     const assassinSim = cosineSimilarity(candidateVec, assassinVec);
     // FATAL: Any meaningful connection to assassin is game-losing
-    if (assassinSim > 0.40) {
+    if (assassinSim > 0.4) {
       return -Infinity;
     }
   }
@@ -405,7 +474,7 @@ function scoreClueCandidate(
     }
 
     // Moderate penalty for weaker enemy connections
-    if (enemySim > 0.50) {
+    if (enemySim > 0.5) {
       enemyPenalty += enemySim * 2.0;
     }
   }
@@ -418,9 +487,9 @@ function scoreClueCandidate(
 
     const neutralSim = cosineSimilarity(candidateVec, neutralVec);
     // Heavy penalty for neutral: it's a turn-ender
-    if (neutralSim > 0.60) {
+    if (neutralSim > 0.6) {
       neutralPenalty += 5.0;
-    } else if (neutralSim > 0.50) {
+    } else if (neutralSim > 0.5) {
       neutralPenalty += 2.0;
     }
   }
@@ -458,4 +527,251 @@ export function rankCardsForOperative(
 
   scoredCards.sort((a, b) => b.score - a.score);
   return scoredCards.map((sc) => sc.card);
+}
+
+export async function getLLMSpymasterClue(
+  cards: import("../../../shared/types").Card[],
+  team: import("../../../shared/types").Team,
+  language: string,
+  isDuet: boolean,
+  activeModifier: string | null = null,
+  modifierState: any = null,
+): Promise<{ word: string; count: number; reasoning?: string } | null> {
+  console.log(
+    `[AI-SPY] getLLMSpymasterClue called. Team: ${team}, groqReady: ${!!groq}, modifier: ${activeModifier}`,
+  );
+
+  if (!groq) {
+    console.warn(`[AI-SPY] No Groq client — falling back to local AI.`);
+    return getBotSpymasterClue(
+      cards,
+      team,
+      language,
+      isDuet,
+      activeModifier,
+      modifierState,
+    );
+  }
+
+  const unrevealedCards = cards.filter((c) => {
+    if (isDuet) {
+      return team === "red" ? !c.revealedByB : !c.revealedByA;
+    }
+    return !c.revealed;
+  });
+
+  const friendlyWords: string[] = [];
+  const enemyWords: string[] = [];
+  const neutralWords: string[] = [];
+  const assassinWords: string[] = [];
+
+  unrevealedCards.forEach((c) => {
+    let type = c.type;
+    if (isDuet) {
+      type = team === "red" ? c.duetTypeA! : c.duetTypeB!;
+    }
+
+    if (isDuet) {
+      if (type === "green") friendlyWords.push(c.word);
+      else if (type === "assassin") assassinWords.push(c.word);
+      else if (type === "neutral") neutralWords.push(c.word);
+    } else {
+      if (type === team) friendlyWords.push(c.word);
+      else if (type === "neutral") neutralWords.push(c.word);
+      else if (type === "assassin") assassinWords.push(c.word);
+      else enemyWords.push(c.word);
+    }
+  });
+
+  if (friendlyWords.length === 0) return null;
+
+  const systemPrompt = `You are an expert Spymaster in the game Codenames.
+Your goal is to provide a clue and a number that connects your team's words without risking the assassin, neutral, or enemy words.
+To mimic real human play, your clue may be a single word, a hyphenated word, or a natural short phrase.
+It cannot be any word currently visible on the board, nor contain any of the exact words on the board.
+
+CRITICAL RULES FOR LOGIC:
+1. Connections MUST be direct, immediate, and obvious. DO NOT use multi-step leaps of logic or "six degrees of separation" (e.g., "Toe" -> "Print" -> "Art" -> "Canvas" is an illegal leap).
+2. DO NOT force high numbers. A safe, strong clue for 2 words is always better than a weak, risky clue for 4 words. Only use counts of 3 or 4 if the category is undeniably perfect.
+3. Be factually strictly accurate. Do not categorize items incorrectly just to make them fit.
+
+You must output ONLY valid JSON in the format: {"reasoning": "Explain your thought process here", "clue": "YOUR_CLUE_PHRASE", "count": YOUR_NUMBER}.
+Language: ${language}
+${activeModifier ? `\nACTIVE CHAOS MODIFIER: ${activeModifier}\nModifier State: ${JSON.stringify(modifierState)}\nEnsure your clue adheres to the rules of this modifier.` : ""}`;
+
+  const userPrompt = `Board State:
+Team Words to connect: ${friendlyWords.join(", ")}
+Enemy Words (AVOID): ${enemyWords.join(", ")}
+Neutral Words (AVOID): ${neutralWords.join(", ")}
+Assassin Words (FATAL TO AVOID): ${assassinWords.join(", ")}
+
+Generate a clue! Remember to output ONLY JSON.`;
+
+  try {
+    const response = await groq.chat.completions.create({
+      model: "llama-3.1-8b-instant", // Kept on 8B for fast generation
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.2, // Bumped slightly to encourage creative human-style phrases
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (content) {
+      const parsed = JSON.parse(content);
+      if (parsed.clue && parsed.count !== undefined) {
+        let finalClue = parsed.clue.trim();
+        const finalCount = Number(parsed.count);
+        if (finalClue.includes(" ")) {
+          console.warn(
+            `[AI-SPY] LLM returned a phrase "${finalClue}" — taking first word.`,
+          );
+          finalClue = finalClue.split(" ")[0];
+        }
+        if (!isNaN(finalCount)) {
+          console.log(
+            `[AI-SPY] Valid clue parsed: "${finalClue}" x${finalCount}`,
+          );
+          return {
+            word: finalClue,
+            count: finalCount,
+            reasoning: parsed.reasoning || "No reasoning provided.",
+          };
+        } else {
+          console.warn(
+            `[AI-SPY] Count could not be parsed as a number:`,
+            parsed.count,
+          );
+        }
+      } else {
+        console.warn(
+          `[AI-SPY] Parsed JSON but missing clue/count fields:`,
+          parsed,
+        );
+      }
+    }
+  } catch (err) {
+    console.error("[AI-SPY] Groq request failed:", err);
+  }
+
+  // Fallback if LLM fails
+  console.warn(`[AI-SPY] Falling back to local AI after Groq failure.`);
+  return getBotSpymasterClue(
+    cards,
+    team,
+    language,
+    isDuet,
+    activeModifier,
+    modifierState,
+  );
+}
+
+export async function getLLMOperativeRankings(
+  clue: string,
+  count: number,
+  cards: import("../../../shared/types").Card[],
+  team: import("../../../shared/types").Team,
+  language: string,
+  isDuet: boolean,
+  activeModifier: string | null = null,
+  modifierState: any = null,
+): Promise<{
+  cards: import("../../../shared/types").Card[];
+  reasoning?: string;
+}> {
+  console.log(
+    `[AI-OP] getLLMOperativeRankings called. Team: ${team}, clue: "${clue}" x${count}, groqReady: ${!!groq}`,
+  );
+
+  if (!groq) {
+    console.warn(`[AI-OP] No Groq client — falling back to local AI.`);
+    return {
+      cards: await rankCardsForOperative(clue, cards, team, language, isDuet),
+      reasoning: "Local AI fallback (No Groq key)",
+    };
+  }
+
+  const unrevealed = cards.filter((c) => {
+    if (isDuet) return team === "red" ? !c.revealedByB : !c.revealedByA;
+    return !c.revealed;
+  });
+
+  const availableWords = unrevealed.map((c) => c.word);
+
+  if (availableWords.length === 0) return { cards: [] };
+
+  const systemPrompt = `You are an expert Operative in Codenames.
+You have received a clue from your Spymaster. This clue may be a single word or a multi-word phrase.
+Your task is to extract the core semantic meaning from the phrase and map that meaning to the provided array of available board cards.
+You MUST STRICTLY select words ONLY from the exact strings in the board array. Under no circumstances can you select a word not present on the board.
+You must output ONLY valid JSON in the format: {"reasoning": "Explain your logic step-by-step", "rankedWords": ["word1", "word2", ...]}.
+Order the words from most likely to least likely.
+Language: ${language}
+${activeModifier ? `\nACTIVE CHAOS MODIFIER: ${activeModifier}\nModifier State: ${JSON.stringify(modifierState)}\nThe board words may be altered or the rules changed.` : ""}`;
+
+  const userPrompt = `Spymaster Clue: "${clue}" for ${count} cards.
+Available Words on Board: ${availableWords.join(", ")}
+
+Rank the available words by how well they match the clue's semantic meaning. Include ALL available words in your ranking. Output ONLY JSON.`;
+
+  try {
+    const response = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.1,
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (content) {
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed.rankedWords)) {
+        console.log(`[AI-OP] Ranked words from LLM:`, parsed.rankedWords);
+        const rankedCards: import("../../../shared/types").Card[] = [];
+        for (const w of parsed.rankedWords) {
+          const card = unrevealed.find(
+            (c) => c.word.toLowerCase() === (w as string).toLowerCase(),
+          );
+          if (card) rankedCards.push(card);
+        }
+
+        // Append any missed cards to the end
+        unrevealed.forEach((c) => {
+          if (!rankedCards.find((rc) => rc.id === c.id)) {
+            rankedCards.push(c);
+          }
+        });
+
+        console.log(
+          `[AI-OP] Final ranked cards (${rankedCards.length}):`,
+          rankedCards.slice(0, 5).map((c) => c.word),
+        );
+        return {
+          cards: rankedCards,
+          reasoning: parsed.reasoning || "No reasoning provided.",
+        };
+      } else {
+        console.warn(
+          `[AI-OP] Parsed JSON but missing rankedWords array:`,
+          parsed,
+        );
+      }
+    }
+  } catch (err) {
+    console.error("[AI-OP] Groq request failed:", err);
+  }
+
+  // Fallback
+  console.warn(
+    `[AI-OP] Falling back to local operative ranking after Groq failure.`,
+  );
+  return {
+    cards: await rankCardsForOperative(clue, cards, team, language, isDuet),
+    reasoning: "Local AI fallback (Groq error)",
+  };
 }

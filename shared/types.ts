@@ -35,6 +35,7 @@ export interface CueEntry {
   cueWord: string;
   cueNumber: number;
   targets?: number[];
+  reasoning?: string;
   timestamp: number;
 }
 

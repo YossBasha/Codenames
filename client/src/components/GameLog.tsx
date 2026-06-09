@@ -65,6 +65,13 @@ export default function GameLog({ logs, gameMode = 'classic' }: GameLogProps) {
                     )}
                   </div>
                   
+                  {log.reasoning && (
+                    <div className="mt-2 px-2 py-1.5 bg-black/30 rounded-md text-[10px] text-white/70 italic leading-snug border border-white/5 shadow-inner">
+                      <span className="font-semibold text-white/90 block mb-0.5">💭 Inner Monologue:</span>
+                      {log.reasoning}
+                    </div>
+                  )}
+                  
                   <div className={cn(
                     "absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shadow-md border-2 border-slate-900 text-white",
                     badgeBg

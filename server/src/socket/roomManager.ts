@@ -15,7 +15,7 @@ import {
 } from "../../../shared/gameLogic";
 import { MODIFIERS, checkRhyme } from "../../../shared/modifiers";
 import { wordPackRegistry } from "../../../shared/wordPacks";
-import { getBotSpymasterClue, rankCardsForOperative } from "../utils/aiLogic";
+import { getBotSpymasterClue, rankCardsForOperative, getLLMSpymasterClue, getLLMOperativeRankings } from "../utils/aiLogic";
 
 interface Room {
   id: string;
@@ -460,71 +460,115 @@ function transitionToNewTurn(io: Server, room: Room) {
   }
 }
 
-function triggerBotSpymaster(io: Server, room: Room, bot: Player) {
+async function triggerBotSpymaster(io: Server, room: Room, bot: Player) {
   const gameState = room.gameState;
-  if (!gameState || gameState.currentPhase !== "spymaster" || gameState.winner)
+  console.log(`[BOT-SPY] triggerBotSpymaster called. Bot: ${bot.name} (${bot.team}), Phase: ${gameState?.currentPhase}, Turn: ${gameState?.currentTurn}, Winner: ${gameState?.winner}`);
+
+  if (!gameState || gameState.currentPhase !== "spymaster" || gameState.winner) {
+    console.warn(`[BOT-SPY] Early exit — gameState invalid or wrong phase/winner.`);
     return;
+  }
 
-  const clue = getBotSpymasterClue(
-    gameState.cards,
-    bot.team as any,
-    gameState.language,
-    gameState.gameMode === "duet",
-    gameState.activeModifier,
-    gameState.modifierState,
-  );
-  if (clue) {
-    gameState.activeCue = clue.word;
-    gameState.activeCueNumber = clue.count;
-    gameState.currentPhase = "operative";
-    gameState.successfulGuessesThisTurn = 0;
+  stopTimer(room); // Pause timer during API call
 
-    gameState.gameLog.push({
-      id: Math.random().toString(36).substring(7),
-      type: "cue",
-      player: { name: bot.name, avatarUrl: bot.avatarBase64! },
-      team: bot.team as "red" | "blue",
-      cueWord: clue.word,
-      cueNumber: clue.count,
+  io.to(room.id).emit("chat_message", {
+    id: Date.now().toString(),
+    text: `${bot.name} is thinking of a clue...`,
+    sender: "System",
+    isSystem: true,
+    team: bot.team,
+    timestamp: Date.now(),
+  });
+
+  try {
+    console.log(`[BOT-SPY] Calling getLLMSpymasterClue for team ${bot.team}...`);
+    const clue = await getLLMSpymasterClue(
+      gameState.cards,
+      bot.team as any,
+      gameState.language,
+      gameState.gameMode === "duet",
+      gameState.activeModifier,
+      gameState.modifierState,
+    );
+    console.log(`[BOT-SPY] getLLMSpymasterClue returned:`, clue);
+
+    if (!room.gameState || room.gameState.currentPhase !== "spymaster" || room.gameState.winner) {
+      console.warn(`[BOT-SPY] State changed while awaiting clue — aborting.`);
+      return;
+    }
+
+    if (clue) {
+      console.log(`[BOT-SPY] Using clue "${clue.word}" for ${clue.count}. Transitioning to operative phase.`);
+      room.gameState.activeCue = clue.word;
+      room.gameState.activeCueNumber = clue.count;
+      room.gameState.currentPhase = "operative";
+      room.gameState.successfulGuessesThisTurn = 0;
+
+      room.gameState.gameLog.push({
+        id: Math.random().toString(36).substring(7),
+        type: "cue",
+        player: { name: bot.name, avatarUrl: bot.avatarBase64! },
+        team: bot.team as "red" | "blue",
+        cueWord: clue.word,
+        cueNumber: clue.count,
+        reasoning: clue.reasoning,
+        timestamp: Date.now(),
+      });
+
+      startTimer(io, room);
+      io.to(room.id).emit("game_update", room.gameState);
+
+      // Trigger Operative bots if applicable
+      const operativeBots = room.players.filter(
+        (p) =>
+          p.team ===
+            (room.gameState!.gameMode === "duet"
+              ? room.gameState!.currentTurn === "red"
+                ? "blue"
+                : "red"
+              : room.gameState!.currentTurn) &&
+          p.role === "operative" &&
+          p.isBot,
+      );
+      console.log(`[BOT-SPY] Found ${operativeBots.length} operative bot(s) for team ${room.gameState.currentTurn}.`);
+      if (operativeBots.length > 0) {
+        setTimeout(
+          () =>
+            triggerBotOperatives(
+              io,
+              room,
+              clue.word,
+              clue.count,
+              operativeBots[0],
+            ),
+          getBotDelayMs(room),
+        );
+      }
+    } else {
+      console.error(`[BOT-SPY] Clue was null/undefined — throwing to trigger fallback.`);
+      throw new Error("No clue generated");
+    }
+  } catch (error) {
+    console.error("[BOT-SPY] CATCH ERROR:", error);
+    if (!room.gameState || room.gameState.currentPhase !== "spymaster" || room.gameState.winner) {
+      console.warn(`[BOT-SPY] State invalid in catch block — not transitioning.`);
+      return;
+    }
+    io.to(room.id).emit("chat_message", {
+      id: Date.now().toString(),
+      text: `${bot.name} couldn't find a safe clue and passed the turn.`,
+      sender: "System",
+      isSystem: true,
+      team: bot.team,
       timestamp: Date.now(),
     });
-
-    startTimer(io, room);
-    io.to(room.id).emit("game_update", gameState);
-
-    // Trigger Operative bots if applicable
-    const operativeBots = room.players.filter(
-      (p) =>
-        p.team ===
-          (gameState.gameMode === "duet"
-            ? gameState.currentTurn === "red"
-              ? "blue"
-              : "red"
-            : gameState.currentTurn) &&
-        p.role === "operative" &&
-        p.isBot,
-    );
-    if (operativeBots.length > 0) {
-      setTimeout(
-        () =>
-          triggerBotOperatives(
-            io,
-            room,
-            clue.word,
-            clue.count,
-            operativeBots[0],
-          ),
-        getBotDelayMs(room),
-      );
-    }
-  } else {
-    // If bot can't find a clue, skip turn
+    console.warn(`[BOT-SPY] Calling transitionToNewTurn due to error.`);
     transitionToNewTurn(io, room);
-    io.to(room.id).emit("game_update", gameState);
+    io.to(room.id).emit("game_update", room.gameState);
   }
 }
 
-function triggerBotOperatives(
+async function triggerBotOperatives(
   io: Server,
   room: Room,
   clue: string,
@@ -532,80 +576,161 @@ function triggerBotOperatives(
   bot: Player,
 ) {
   const gameState = room.gameState;
+  console.log(`[BOT-OP] triggerBotOperatives called. Bot: ${bot.name} (${bot.team}), Clue: "${clue}" x${count}, Phase: ${gameState?.currentPhase}, ActiveCue: ${gameState?.activeCue}`);
+
   if (
     !gameState ||
     gameState.currentPhase !== "operative" ||
     gameState.winner ||
     gameState.activeCue !== clue
-  )
+  ) {
+    console.warn(`[BOT-OP] Early exit — gameState invalid, wrong phase, winner set, or clue mismatch. Expected cue: "${clue}", Actual: "${gameState?.activeCue}"`);
     return;
-
-  const rankedCards = rankCardsForOperative(
-    clue,
-    gameState.cards,
-    bot.team as any,
-    gameState.language,
-    gameState.gameMode === "duet",
-  );
-  if (rankedCards.length === 0) return;
-
-  // Emulate clicking top cards one by one with a delay
-  // Calculate how many guesses allowed (count + 1)
-  const maxGuesses = count === 0 ? 99 : count + 1;
-  const numGuesses = Math.min(maxGuesses, rankedCards.length);
-
-  let i = 0;
-
-  function nextGuess() {
-    const currentGameState = room.gameState;
-    if (
-      !currentGameState ||
-      currentGameState.currentPhase !== "operative" ||
-      currentGameState.winner ||
-      currentGameState.activeCue !== clue
-    )
-      return;
-
-    // Check if we hit the limit or successful guesses exhausted
-    if (currentGameState.successfulGuessesThisTurn >= maxGuesses) return;
-
-    if (i >= numGuesses) {
-      // Bot is done guessing and decides to pass voluntarily
-      transitionToNewTurn(io, room);
-      io.to(room.id).emit("game_update", currentGameState);
-      return;
-    }
-
-    const targetCard = rankedCards[i];
-    i++;
-
-    // Only click if it's still unrevealed
-    const stillUnrevealed =
-      currentGameState.gameMode === "duet"
-        ? bot.team === "blue"
-          ? !targetCard.revealedByB
-          : !targetCard.revealedByA
-        : !targetCard.revealed;
-
-    if (stillUnrevealed) {
-      // Synthesize a guess event
-      processGuess(io, room, bot, targetCard.id);
-    }
-
-    // Schedule next guess if it's still the bot's turn
-    if (
-      room.gameState &&
-      room.gameState.currentPhase === "operative" &&
-      room.gameState.activeCue === clue
-    ) {
-      const guessDelayMs = room.gameState?.chaosMode
-        ? 3000 + Math.random() * 1000
-        : 2000 + Math.random() * 2000;
-      setTimeout(nextGuess, guessDelayMs);
-    }
   }
 
-  nextGuess();
+  stopTimer(room); // Pause timer during API call
+
+  io.to(room.id).emit("chat_message", {
+    id: Date.now().toString(),
+    text: `${bot.name} is examining the board...`,
+    sender: "System",
+    isSystem: true,
+    team: bot.team,
+    timestamp: Date.now(),
+  });
+
+  try {
+    console.log(`[BOT-OP] Calling getLLMOperativeRankings for clue "${clue}"...`);
+    const { cards: rankedCards, reasoning } = await getLLMOperativeRankings(
+      clue,
+      count,
+      gameState.cards,
+      bot.team as any,
+      gameState.language,
+      gameState.gameMode === "duet",
+      gameState.activeModifier,
+      gameState.modifierState,
+    );
+    console.log(`[BOT-OP] Ranked ${rankedCards.length} cards. Reasoning: ${reasoning}. Top 3:`, rankedCards.slice(0, 3).map(c => c.word));
+
+    if (reasoning) {
+      io.to(room.id).emit("chat_message", {
+        id: Date.now().toString(),
+        text: `Inner Monologue: ${reasoning}`,
+        sender: bot.name,
+        isSystem: false,
+        team: bot.team,
+        timestamp: Date.now(),
+      });
+    }
+
+    if (
+      !room.gameState ||
+      room.gameState.currentPhase !== "operative" ||
+      room.gameState.winner ||
+      room.gameState.activeCue !== clue
+    ) {
+      console.warn(`[BOT-OP] State changed while awaiting rankings — aborting.`);
+      return;
+    }
+
+    if (rankedCards.length === 0) {
+      throw new Error("No cards ranked");
+    }
+
+    startTimer(io, room); // Resume timer for actual clicking
+
+    // Emulate clicking top cards one by one with a delay
+    // Calculate how many guesses allowed (count + 1)
+    const maxGuesses = count === 0 ? 99 : count + 1;
+    const numGuesses = Math.min(maxGuesses, rankedCards.length);
+    console.log(`[BOT-OP] Will guess up to ${numGuesses} cards (maxGuesses: ${maxGuesses}).`);
+
+    let i = 0;
+
+    function nextGuess() {
+      const currentGameState = room.gameState;
+      if (
+        !currentGameState ||
+        currentGameState.currentPhase !== "operative" ||
+        currentGameState.winner ||
+        currentGameState.activeCue !== clue
+      ) {
+        console.warn(`[BOT-OP] nextGuess: exiting — state changed or cue no longer active.`);
+        return;
+      }
+
+      // Check if we hit the limit or successful guesses exhausted
+      if (currentGameState.successfulGuessesThisTurn >= maxGuesses) {
+        console.log(`[BOT-OP] nextGuess: successfulGuesses (${currentGameState.successfulGuessesThisTurn}) >= maxGuesses (${maxGuesses}), stopping.`);
+        return;
+      }
+
+      if (i >= numGuesses) {
+        // Bot is done guessing and decides to pass voluntarily
+        console.log(`[BOT-OP] nextGuess: reached numGuesses (${numGuesses}), passing turn.`);
+        transitionToNewTurn(io, room);
+        io.to(room.id).emit("game_update", currentGameState);
+        return;
+      }
+
+      const targetCard = rankedCards[i];
+      console.log(`[BOT-OP] nextGuess: guessing card [${i}] = "${targetCard.word}"`);
+      i++;
+
+      // Only click if it's still unrevealed
+      const stillUnrevealed =
+        currentGameState.gameMode === "duet"
+          ? bot.team === "blue"
+            ? !targetCard.revealedByB
+            : !targetCard.revealedByA
+          : !targetCard.revealed;
+
+      if (stillUnrevealed) {
+        // Synthesize a guess event
+        processGuess(io, room, bot, targetCard.id);
+      } else {
+        console.warn(`[BOT-OP] Card "${targetCard.word}" was already revealed, skipping.`);
+      }
+
+      // Schedule next guess if it's still the bot's turn
+      if (
+        room.gameState &&
+        room.gameState.currentPhase === "operative" &&
+        room.gameState.activeCue === clue
+      ) {
+        const guessDelayMs = room.gameState?.chaosMode
+          ? 3000 + Math.random() * 1000
+          : 2000 + Math.random() * 2000;
+        setTimeout(nextGuess, guessDelayMs);
+      }
+    }
+
+    nextGuess();
+  } catch (error) {
+    console.error("[BOT-OP] CATCH ERROR:", error);
+    if (
+      !room.gameState ||
+      room.gameState.currentPhase !== "operative" ||
+      room.gameState.winner ||
+      room.gameState.activeCue !== clue
+    ) {
+      console.warn(`[BOT-OP] State invalid in catch block — not transitioning.`);
+      return;
+    }
+      
+    io.to(room.id).emit("chat_message", {
+      id: Date.now().toString(),
+      text: `${bot.name} couldn't understand the board and passed the turn.`,
+      sender: "System",
+      isSystem: true,
+      team: bot.team,
+      timestamp: Date.now(),
+    });
+    console.warn(`[BOT-OP] Calling transitionToNewTurn due to error.`);
+    transitionToNewTurn(io, room);
+    io.to(room.id).emit("game_update", room.gameState);
+  }
 }
 
 function startTimer(io: Server, room: Room) {
