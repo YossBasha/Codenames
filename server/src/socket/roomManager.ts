@@ -197,8 +197,10 @@ function applyRandomModifier(room: Room) {
         for (const packName in sourcePacks) {
           const packWords = sourcePacks[packName];
           const idx = packWords.indexOf(card.word);
-          if (idx !== -1 && targetPacks[packName] && targetPacks[packName][idx]) {
-            card.word = targetPacks[packName][idx];
+          if (idx !== -1 && targetPacks[packName] && targetPacks[packName].length > 0) {
+            // If the target pack is missing words (shorter than source pack), wrap around to ensure a translation
+            const targetIdx = idx % targetPacks[packName].length;
+            card.word = targetPacks[packName][targetIdx];
             found = true;
             break;
           }
