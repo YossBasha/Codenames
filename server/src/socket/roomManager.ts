@@ -412,12 +412,38 @@ function transitionToNewTurn(io: Server, room: Room) {
 
   revertActiveModifier(room);
 
-  const nextTurn =
+  let nextTurn =
     gameState.gameMode === "duet"
       ? getNextTurnDuet(gameState)
       : gameState.currentTurn === "red"
         ? "blue"
         : "red";
+
+  // --- Intercept Penalty: skip this team's turn ---
+  if (
+    gameState.modifierState?.interceptPenalty === nextTurn &&
+    gameState.gameMode === "classic"
+  ) {
+    const penaltyTeam = nextTurn;
+    gameState.modifierState.interceptPenalty = null;
+
+    // Switch to the team AFTER the penalised one
+    nextTurn = penaltyTeam === "red" ? "blue" : "red";
+
+    gameState.gameLog.push({
+      id: Math.random().toString(36).substring(7),
+      type: "guess",
+      player: {
+        name: "⚡ The Intercept",
+        avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=intercept&backgroundColor=7c3aed`,
+      },
+      guessingTeam: penaltyTeam as "red" | "blue",
+      cardWord: `${penaltyTeam === "red" ? "🔴 Red" : "🔵 Blue"} team received the intercept penalty — their turn has been skipped!`,
+      revealedColor: "neutral",
+      timestamp: Date.now(),
+    });
+  }
+  // ------------------------------------------------
 
   gameState.currentTurn = nextTurn;
   gameState.currentPhase = "spymaster";
@@ -514,6 +540,57 @@ async function triggerBotSpymaster(io: Server, room: Room, bot: Player) {
         reasoning: clue.reasoning,
         timestamp: Date.now(),
       });
+
+      if (
+        room.gameState.activeModifier === "the-intercept" &&
+        room.gameState.gameMode === "classic"
+      ) {
+        if (!room.gameState.modifierState)
+          room.gameState.modifierState = {};
+        room.gameState.modifierState.interceptPhase = true;
+        room.gameState.modifierState.interceptTimeLeft = 5;
+
+        const interceptInterval = setInterval(() => {
+          if (
+            !room.gameState ||
+            room.gameState.modifierState?.interceptPhase !== true
+          ) {
+            clearInterval(interceptInterval);
+            return;
+          }
+          room.gameState.modifierState.interceptTimeLeft--;
+          if (room.gameState.modifierState.interceptTimeLeft <= 0) {
+            room.gameState.modifierState.interceptPhase = false;
+            room.gameState.modifierState.interceptTimeLeft = 0;
+            clearInterval(interceptInterval);
+            startTimer(io, room);
+
+            const operativeBots = room.players.filter(
+              (p) =>
+                p.team === room.gameState!.currentTurn &&
+                p.role === "operative" &&
+                p.isBot,
+            );
+            if (operativeBots.length > 0) {
+              setTimeout(
+                () =>
+                  triggerBotOperatives(
+                    io,
+                    room,
+                    room.gameState!.activeCue || "",
+                    room.gameState!.activeCueNumber || 1,
+                    operativeBots[0],
+                  ),
+                getBotDelayMs(room),
+              );
+            }
+          }
+          io.to(room.id).emit("game_update", room.gameState);
+        }, 1000);
+
+        io.to(room.id).emit("game_update", room.gameState);
+        return;
+      }
 
       startTimer(io, room);
       io.to(room.id).emit("game_update", room.gameState);
@@ -1531,6 +1608,27 @@ export function setupRoomManager(io: Server) {
                   room.gameState.modifierState.interceptTimeLeft = 0;
                   clearInterval(interceptInterval);
                   startTimer(io, room);
+
+                  // Trigger Operative bots for the active team if applicable
+                  const operativeBots = room.players.filter(
+                    (p) =>
+                      p.team === room.gameState!.currentTurn &&
+                      p.role === "operative" &&
+                      p.isBot,
+                  );
+                  if (operativeBots.length > 0) {
+                    setTimeout(
+                      () =>
+                        triggerBotOperatives(
+                          io,
+                          room,
+                          room.gameState!.activeCue || "",
+                          room.gameState!.activeCueNumber || 1,
+                          operativeBots[0],
+                        ),
+                      getBotDelayMs(room),
+                    );
+                  }
                 }
                 io.to(roomId).emit("game_update", room.gameState);
               }, 1000);
@@ -1721,42 +1819,100 @@ export function setupRoomManager(io: Server) {
           const card = room.gameState.cards.find((c) => c.id === cardId);
           if (!card || card.revealed) return;
 
+          // End the intercept phase regardless of outcome
           room.gameState.modifierState.interceptPhase = false;
           room.gameState.modifierState.interceptTimeLeft = 0;
 
-          card.revealed = true;
-          let revealedColor = card.type;
+          const isHit = card.type === activeTeam;
 
-          if (card.type === activeTeam) {
-            card.type = enemyTeam;
-            revealedColor = enemyTeam;
+          if (isHit) {
+            // ✅ HIT — reveal the card (active team keeps the point), skip active team's turn
+            card.revealed = true;
+
+            if (activeTeam === "red") {
+              room.gameState.redScore--;
+              if (room.gameState.redScore <= 0) room.gameState.winner = "red";
+            } else {
+              room.gameState.blueScore--;
+              if (room.gameState.blueScore <= 0) room.gameState.winner = "blue";
+            }
+
+            room.gameState.gameLog.push({
+              id: Math.random().toString(36).substring(7),
+              type: "guess",
+              player: {
+                name: `${player.name} (Intercept)`,
+                avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=${player.team === "red" ? "ef4444" : "3b82f6"}`,
+              },
+              guessingTeam: enemyTeam,
+              cardWord: getLoggedWord(room, card),
+              revealedColor: card.type,
+              timestamp: Date.now(),
+            });
+
+            if (!room.gameState.winner) {
+              room.gameState.gameLog.push({
+                id: Math.random().toString(36).substring(7),
+                type: "guess",
+                player: {
+                  name: "⚡ The Intercept",
+                  avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=intercept&backgroundColor=7c3aed`,
+                },
+                guessingTeam: enemyTeam,
+                cardWord: `${enemyTeam === "red" ? "🔴 Red" : "🔵 Blue"} team's shot landed! ${activeTeam === "red" ? "🔴 Red" : "🔵 Blue"} team's turn has been skipped!`,
+                revealedColor: "neutral",
+                timestamp: Date.now(),
+              });
+
+              // Skip active team's turn — go straight to enemy (intercepting) team
+              transitionToNewTurn(io, room);
+              io.to(roomId).emit("game_update", room.gameState);
+            } else {
+              io.to(roomId).emit("game_update", room.gameState);
+            }
+          } else {
+            // ❌ MISS — don't reveal the card, apply penalty to enemy team's next turn
+            if (!room.gameState.modifierState) room.gameState.modifierState = {};
+            room.gameState.modifierState.interceptPenalty = enemyTeam;
+
+            room.gameState.gameLog.push({
+              id: Math.random().toString(36).substring(7),
+              type: "guess",
+              player: {
+                name: `${player.name} (Intercept)`,
+                avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=${player.team === "red" ? "ef4444" : "3b82f6"}`,
+              },
+              guessingTeam: enemyTeam,
+              cardWord: `${enemyTeam === "red" ? "🔴 Red" : "🔵 Blue"} team missed! ${activeTeam === "red" ? "🔴 Red" : "🔵 Blue"} team continues...`,
+              revealedColor: "neutral",
+              timestamp: Date.now(),
+            });
+
+            // Active team resumes their turn
+            startTimer(io, room);
+            io.to(roomId).emit("game_update", room.gameState);
+
+            // Trigger operative bots for the active team
+            const operativeBots = room.players.filter(
+              (p) =>
+                p.team === room.gameState!.currentTurn &&
+                p.role === "operative" &&
+                p.isBot,
+            );
+            if (operativeBots.length > 0) {
+              setTimeout(
+                () =>
+                  triggerBotOperatives(
+                    io,
+                    room,
+                    room.gameState!.activeCue || "",
+                    room.gameState!.activeCueNumber || 1,
+                    operativeBots[0],
+                  ),
+                getBotDelayMs(room),
+              );
+            }
           }
-
-          room.gameState.gameLog.push({
-            id: Math.random().toString(36).substring(7),
-            type: "guess",
-            player: {
-              name: `${player.name} (Intercept)`,
-              avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=${player.team === "red" ? "ef4444" : "3b82f6"}`,
-            },
-            guessingTeam: enemyTeam,
-            cardWord: getLoggedWord(room, card),
-            revealedColor: revealedColor,
-            timestamp: Date.now(),
-          });
-
-          if (revealedColor === "assassin") {
-            room.gameState.winner = activeTeam;
-          } else if (revealedColor === "red") {
-            room.gameState.redScore--;
-            if (room.gameState.redScore <= 0) room.gameState.winner = "red";
-          } else if (revealedColor === "blue") {
-            room.gameState.blueScore--;
-            if (room.gameState.blueScore <= 0) room.gameState.winner = "blue";
-          }
-
-          startTimer(io, room);
-          io.to(roomId).emit("game_update", room.gameState);
         }
       },
     );

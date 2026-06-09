@@ -192,9 +192,9 @@ export const MODIFIERS: Modifier[] = [
     nameAr: "عمى الألوان",
     category: "board",
     description:
-      "All unrevealed cards turn completely gray for the operatives. (Classic only)",
+      "Spymasters are suddenly colorblind. Spymasters see cards of their own team's color as the opposite team's color, and the opposite team's color as their own team's color. (Classic only)",
     descriptionAr:
-      "تتحول جميع البطاقات غير المكشوفة إلى اللون الرمادي بالكامل للعملاء. (للكلاسيكي فقط)",
+      "رؤساء الجواسيس مصابون بالعمى اللوني فجأة. يرى رؤساء الجواسيس بطاقات ألوان فرقهم على أنها ألوان الفرق الأخرى، وألوان الفرق الأخرى على أنها ألوان فرقهم. (للكلاسيكي فقط)",
     icon: "Palette",
   },
   {
@@ -214,9 +214,9 @@ export const MODIFIERS: Modifier[] = [
     nameAr: "الاعتراض",
     category: "guesser",
     description:
-      'The enemy team gets exactly 5 seconds to lock in one "steal" guess before your team can play. (Classic only)',
+      "After a clue is given, the enemy team has 5 seconds to guess one of the active team's cards. A correct guess reveals that card (the active team gets the point) but skips the active team's turn. A wrong guess doesn't reveal any card but skips the enemy team's own next turn as a penalty. (Classic only)",
     descriptionAr:
-      "يحصل فريق العدو على 5 ثوانٍ بالضبط لتخمين وسرقة بطاقة قبل أن يتمكن فريقك من اللعب. (للكلاسيكي فقط)",
+      "بعد إعطاء الدليل، يملك فريق العدو 5 ثوانٍ لتخمين بطاقة من بطاقات الفريق النشط. إذا أصابوا، تُكشف البطاقة (يحصل الفريق النشط على النقطة) ويُتخطى دوره. إذا أخطأوا، لا تُكشف أي بطاقة ويُتخطى دور فريق العدو القادم كعقوبة. (للكلاسيكي فقط)",
     icon: "Crosshair",
   },
   {
@@ -324,7 +324,7 @@ export const MODIFIERS: Modifier[] = [
     description:
       "The Spymaster does not get to choose their clue number. The system violently forces the number dropdown to a random, usually aggressive number and locks it.",
     descriptionAr:
-      "لا يحق لمدير الشبكة اختيار رقم الدليل الخاص به. يفرض النظام بعنف رقم عشوائي (غالباً ما يكون كبيراً) ويغلق القائمة المنسدلة.",
+      "لا يحق لرئيس الجواسيس اختيار رقم الدليل الخاص به. يفرض النظام بعنف رقم عشوائي (غالباً ما يكون كبيراً) ويغلق القائمة المنسدلة.",
     icon: "Lock",
   },
   {
