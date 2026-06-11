@@ -529,6 +529,86 @@ export function rankCardsForOperative(
   return scoredCards.map((sc) => sc.card);
 }
 
+function findBestCluster(
+  friendlyCards: import("../../../shared/types").Card[],
+  language: string
+): { targetWords: string[]; targetCount: number } {
+  const wordsWithVecs = friendlyCards
+    .map((c) => ({
+      word: c.word,
+      vec: getWordVector(c.word, language)
+    }))
+    .filter((item) => item.vec !== null) as Array<{
+    word: string;
+    vec: number[];
+  }>;
+
+  if (wordsWithVecs.length === 0) {
+    return { targetWords: [friendlyCards[0].word], targetCount: 1 };
+  }
+
+  if (wordsWithVecs.length === 1) {
+    return { targetWords: [wordsWithVecs[0].word], targetCount: 1 };
+  }
+
+  if (wordsWithVecs.length === 2) {
+    return { targetWords: [wordsWithVecs[0].word, wordsWithVecs[1].word], targetCount: 2 };
+  }
+
+  // Find best triplet
+  let bestTriplet: string[] = [];
+  let bestTripletSim = -Infinity;
+
+  if (wordsWithVecs.length >= 3) {
+    for (let i = 0; i < wordsWithVecs.length; i++) {
+      for (let j = i + 1; j < wordsWithVecs.length; j++) {
+        for (let k = j + 1; k < wordsWithVecs.length; k++) {
+          const simAB = cosineSimilarity(wordsWithVecs[i].vec, wordsWithVecs[j].vec);
+          const simBC = cosineSimilarity(wordsWithVecs[j].vec, wordsWithVecs[k].vec);
+          const simAC = cosineSimilarity(wordsWithVecs[i].vec, wordsWithVecs[k].vec);
+          const avgSim = (simAB + simBC + simAC) / 3;
+          if (avgSim > bestTripletSim) {
+            bestTripletSim = avgSim;
+            bestTriplet = [wordsWithVecs[i].word, wordsWithVecs[j].word, wordsWithVecs[k].word];
+          }
+        }
+      }
+    }
+  }
+
+  // Find best pair
+  let bestPair: string[] = [];
+  let bestPairSim = -Infinity;
+  for (let i = 0; i < wordsWithVecs.length; i++) {
+    for (let j = i + 1; j < wordsWithVecs.length; j++) {
+      const sim = cosineSimilarity(wordsWithVecs[i].vec, wordsWithVecs[j].vec);
+      if (sim > bestPairSim) {
+        bestPairSim = sim;
+        bestPair = [wordsWithVecs[i].word, wordsWithVecs[j].word];
+      }
+    }
+  }
+
+  // If the best triplet is strong, use it
+  if (bestTripletSim > 0.40 && bestTriplet.length === 3) {
+    return { targetWords: bestTriplet, targetCount: 3 };
+  }
+
+  // Otherwise, if we have a pair, use it
+  if (bestPairSim > 0.30 && bestPair.length === 2) {
+    return { targetWords: bestPair, targetCount: 2 };
+  }
+
+  // Fallback: single best norm vector
+  const sortedByNorm = [...wordsWithVecs].sort((a, b) => {
+    const normA = Math.sqrt(a.vec.reduce((sum, v) => sum + v * v, 0));
+    const normB = Math.sqrt(b.vec.reduce((sum, v) => sum + v * v, 0));
+    return normB - normA;
+  });
+
+  return { targetWords: [sortedByNorm[0].word], targetCount: 1 };
+}
+
 export async function getLLMSpymasterClue(
   cards: import("../../../shared/types").Card[],
   team: import("../../../shared/types").Team,
@@ -560,7 +640,7 @@ export async function getLLMSpymasterClue(
     return !c.revealed;
   });
 
-  const friendlyWords: string[] = [];
+  const friendlyCards: import("../../../shared/types").Card[] = [];
   const enemyWords: string[] = [];
   const neutralWords: string[] = [];
   const assassinWords: string[] = [];
@@ -572,50 +652,62 @@ export async function getLLMSpymasterClue(
     }
 
     if (isDuet) {
-      if (type === "green") friendlyWords.push(c.word);
+      if (type === "green") friendlyCards.push(c);
       else if (type === "assassin") assassinWords.push(c.word);
       else if (type === "neutral") neutralWords.push(c.word);
     } else {
-      if (type === team) friendlyWords.push(c.word);
+      if (type === team) friendlyCards.push(c);
       else if (type === "neutral") neutralWords.push(c.word);
       else if (type === "assassin") assassinWords.push(c.word);
       else enemyWords.push(c.word);
     }
   });
 
-  if (friendlyWords.length === 0) return null;
+  if (friendlyCards.length === 0) return null;
+
+  // Pre-cluster target words using cosine similarity of embeddings
+  const { targetWords, targetCount } = findBestCluster(friendlyCards, language);
 
   const systemPrompt = `You are an expert Spymaster in the game Codenames.
-Your goal is to provide a clue and a number that connects your team's words without risking the assassin, neutral, or enemy words.
-To mimic real human play, your clue may be a single word, a hyphenated word, or a natural short phrase.
+Your goal is to provide a clue and a number that connects your team's target words without risking the assassin, neutral, or enemy words.
 It cannot be any word currently visible on the board, nor contain any of the exact words on the board.
 
 CRITICAL RULES FOR LOGIC:
-1. Connections MUST be direct, immediate, and obvious. DO NOT use multi-step leaps of logic or "six degrees of separation" (e.g., "Toe" -> "Print" -> "Art" -> "Canvas" is an illegal leap).
-2. DO NOT force high numbers. A safe, strong clue for 2 words is always better than a weak, risky clue for 4 words. Only use counts of 3 or 4 if the category is undeniably perfect.
-3. Be factually strictly accurate. Do not categorize items incorrectly just to make them fit.
+1. STRICT POSITIVE FRAMEWORK: Find the lowest common hypernym (category) that encompasses the target words. Focus on actual shared properties, classifications, or direct common denominators (e.g. if target words are "ZOMBIE" and "DRACULA", the lowest common hypernym is "MONSTER" or "UNDEAD").
+2. STRICT TARGET FOCUS: Your target words are strictly: [${targetWords.join(", ")}]. You MUST generate a clue that connects ONLY these ${targetCount} target words. Do not attempt to connect any other words on the board.
+3. STRICT TRUTHFULNESS & COMMON SENSE: Connections must be universally acknowledged, direct, and obvious. Do NOT hallucinate false facts, geographical fallacies, or weak associative leaps.
+4. NO STORYTELLING OR WEAK SCHEMAS: Do not create highly circumstantial scenarios to link words. If a connection is not something a normal player would immediately think of in 2 seconds, do NOT use it.
+5. ABSOLUTE DANGER AVOIDANCE: Ensure the chosen clue has absolutely zero semantic overlap with the Assassin word, and minimal overlap with neutral or enemy words.
 
-You must output ONLY valid JSON in the format: {"reasoning": "Explain your thought process here", "clue": "YOUR_CLUE_PHRASE", "count": YOUR_NUMBER}.
+EXAMPLES OF ILLEGAL STORYTELLING (DO NOT DO THIS):
+- Target Words: [PILLOW, SWORD, AFTERNOON]. Clue: "Knight". Reasoning: "A knight rests on a pillow, uses a sword, and quests in the afternoon." (REJECTED: Circumstantial narrative).
+- Target Words: [TAVERN, OCEAN, VIDEO]. Clue: "Clear". Reasoning: "A tavern has clear drinks, oceans are clear water, video is clear resolution." (REJECTED: Weak, pun-based semantic stretch).
+
+EXAMPLES OF LEGAL CONNECTIONS:
+- Target Words: [OCEAN, RIVER, PUDDLE]. Clue: "Water". Reasoning: "All three are bodies or collections of water."
+- Target Words: [SWORD, SHIELD, ARMOR]. Clue: "Knight". Reasoning: "All three are standard equipment directly associated with knights."
+
+You must output ONLY valid JSON in the format: {"reasoning": "Explain your thought process here", "clue": "YOUR_CLUE_WORD", "count": ${targetCount}}.
 Language: ${language}
 ${activeModifier ? `\nACTIVE CHAOS MODIFIER: ${activeModifier}\nModifier State: ${JSON.stringify(modifierState)}\nEnsure your clue adheres to the rules of this modifier.` : ""}`;
 
   const userPrompt = `Board State:
-Team Words to connect: ${friendlyWords.join(", ")}
-Enemy Words (AVOID): ${enemyWords.join(", ")}
-Neutral Words (AVOID): ${neutralWords.join(", ")}
+Target Words to connect: [${targetWords.join(", ")}]
+Enemy Words to avoid: ${enemyWords.join(", ")}
+Neutral Words to avoid: ${neutralWords.join(", ")}
 Assassin Words (FATAL TO AVOID): ${assassinWords.join(", ")}
 
 Generate a clue! Remember to output ONLY JSON.`;
 
   try {
     const response = await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant", // Kept on 8B for fast generation
+      model: "llama-3.3-70b-versatile",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
       response_format: { type: "json_object" },
-      temperature: 0.2, // Bumped slightly to encourage creative human-style phrases
+      temperature: 0.2,
     });
 
     const content = response.choices[0]?.message?.content;
@@ -706,6 +798,13 @@ export async function getLLMOperativeRankings(
 You have received a clue from your Spymaster. This clue may be a single word or a multi-word phrase.
 Your task is to extract the core semantic meaning from the phrase and map that meaning to the provided array of available board cards.
 You MUST STRICTLY select words ONLY from the exact strings in the board array. Under no circumstances can you select a word not present on the board.
+
+CRITICAL RULES FOR LOGIC:
+1. NO STORYTELLING OR NARRATIVE CHAINING: Do NOT invent complex scenarios, stories, or circumstantial setups to link words (e.g., "people drinking from straws at stadium stands because they are cold and disease spreads in stadiums" is a completely illegal, fabricated chain connection). 
+2. DIRECT 1-TO-1 SEMANTIC MATCHES ONLY: A card must share a direct, immediate, dictionary-grade relation to the clue (e.g., synonyms, direct hypernyms/hyponyms, or extremely strong, direct, universally recognized associations).
+3. STRICT REJECTION OF SPECULATIVE LINKS: If a connection requires more than a single obvious hop or relies on a convoluted "what-if" context, score it as zero connection and rank it at the bottom.
+4. If a word has multiple possible meanings, evaluate only direct, standard associations for those specific meanings.
+
 You must output ONLY valid JSON in the format: {"reasoning": "Explain your logic step-by-step", "rankedWords": ["word1", "word2", ...]}.
 Order the words from most likely to least likely.
 Language: ${language}
