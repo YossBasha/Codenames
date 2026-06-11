@@ -53,6 +53,12 @@ export default function LANLobby() {
     return !player?.name && !savedNickname;
   });
   
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+  } | null>(null);
+  
   const [gameMode, setGameMode] = useState<'classic'|'duet'>(() => (localStorage.getItem('host_gameMode') as 'classic'|'duet') || 'classic');
   const [selectedPacks, setSelectedPacks] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('host_selectedPacks') || '["classic"]'); } catch { return ['classic']; }
@@ -182,10 +188,6 @@ export default function LANLobby() {
 
       newSocket.on('disconnect', () => {
         setIsConnected(false);
-        if (!isHost) {
-          setHostDisconnected(true);
-          setTimeout(() => navigate('/'), 4000);
-        }
       });
 
       newSocket.on('room_update', (room) => {
@@ -263,8 +265,22 @@ export default function LANLobby() {
   }, [socket, isHost, setLanguage]);
 
   const handleJoinTeam = (team: Team, role: Role) => {
-    if (!socket || !roomId || !isConnected) { setTimeout(() => alert("Not connected to server yet."), 10); return; }
-    if (!name.trim()) { setTimeout(() => alert("Please enter a Display Name."), 10); return; }
+    if (!socket || !roomId || !isConnected) {
+      setAlertModal({
+        isOpen: true,
+        title: t('alert_warning'),
+        description: t('alert_not_connected')
+      });
+      return;
+    }
+    if (!name.trim()) {
+      setAlertModal({
+        isOpen: true,
+        title: t('alert_warning'),
+        description: t('alert_enter_name')
+      });
+      return;
+    }
 
     const newPlayer: Player = {
       ...(player || {}),
@@ -291,7 +307,14 @@ export default function LANLobby() {
   };
 
   const handleStartGame = () => {
-    if (!player || player.team === 'spectator') { setTimeout(() => alert("You must join a team before starting the game."), 10); return; }
+    if (!player || player.team === 'spectator') {
+      setAlertModal({
+        isOpen: true,
+        title: t('alert_warning'),
+        description: t('alert_join_team_first')
+      });
+      return;
+    }
     if (socket && roomId) {
       socket.emit('start_game', { 
         roomId, 
@@ -338,14 +361,14 @@ export default function LANLobby() {
   };
 
   const renderPlayerEntry = (p: Player, colorClass: string) => (
-    <div key={p.id} className={cn(colorClass, "px-2 py-1 lg:px-4 lg:py-2 rounded-xl text-center font-bold text-sm lg:text-base truncate flex items-center justify-center gap-1.5 relative group/entry")}>
+    <div key={p.id} className={cn(colorClass, "px-2 py-1 lg:px-4 lg:py-2 rounded-xl text-center font-bold text-sm lg:text-base flex items-center justify-center gap-1.5 relative group/entry", p.isBot && isHost && "pr-8 lg:pr-10")}>
       {p.isBot && <Bot className="w-3.5 h-3.5 lg:w-4 lg:h-4 shrink-0 opacity-70" />}
       <span className="truncate">{p.name}</span>
       {p.id === player?.id && <span className="shrink-0">(You)</span>}
       {p.isBot && isHost && (
         <button
           onClick={(e) => { e.stopPropagation(); handleRemoveBot(p.id); }}
-          className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 hover:bg-red-400 rounded-full flex items-center justify-center opacity-0 group-hover/entry:opacity-100 transition-opacity shadow-lg"
+          className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 bg-red-500 hover:bg-red-400 rounded-full flex items-center justify-center opacity-0 group-hover/entry:opacity-100 transition-opacity shadow-md"
           title="Remove Bot"
         >
           <X className="w-3 h-3" />
@@ -763,6 +786,31 @@ export default function LANLobby() {
           </div>
         )}
       </div>
+
+      {/* Reusable Custom Alert Modal */}
+      {alertModal && alertModal.isOpen && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-[200] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-[#1e1e1e] border-2 border-slate-700/60 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center flex flex-col items-center gap-5 animate-scale-up z-[200]">
+            <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 text-2xl font-bold select-none">
+              ⚠️
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-white tracking-wide uppercase leading-tight">
+              {alertModal.title}
+            </h2>
+            <p className="text-slate-400 text-sm leading-relaxed font-bold">
+              {alertModal.description}
+            </p>
+            <div className="flex w-full mt-2">
+              <button
+                onClick={() => setAlertModal(null)}
+                className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white font-black rounded-2xl transition-all shadow-lg shadow-amber-500/20 active:scale-95 text-sm uppercase tracking-wider cursor-pointer"
+              >
+                {t('ok')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

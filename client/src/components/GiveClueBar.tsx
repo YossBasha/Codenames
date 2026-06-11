@@ -27,6 +27,18 @@ export default function GiveClueBar({
   const [showDrawingModal, setShowDrawingModal] = useState(false);
   const { t } = useI18n();
 
+  const disableDoodleModifiers = [
+    'off-by-one',
+    'vowel-void',
+    'oracle-riddle',
+    'five-letter-curse',
+    'forced-acronym',
+    'boolean-search'
+  ];
+  const isDoodleDisabled = !!(activeModifier && disableDoodleModifiers.includes(activeModifier));
+  const effectiveClueType: ClueType = isDoodleDisabled ? 'text' : clueType;
+  const limit = activeModifier === 'five-letter-curse' ? 5 : 32;
+
   useEffect(() => {
     if (activeModifier === 'the-dictator' && modifierState?.forcedNumber !== undefined) {
       setNumInput(modifierState.forcedNumber);
@@ -107,7 +119,7 @@ export default function GiveClueBar({
           onSubmit={handleSubmitCue} 
           className="w-full bg-slate-800/95 backdrop-blur-md border border-slate-700/80 rounded-2xl sm:rounded-full p-2 flex items-center gap-2 shadow-2xl"
         >
-          {clueType !== 'text' && (
+          {effectiveClueType !== 'text' && (
             <button
               type="button"
               onClick={() => setShowDrawingModal(true)}
@@ -118,7 +130,7 @@ export default function GiveClueBar({
             </button>
           )}
 
-          {clueType !== 'doodle' && (
+          {effectiveClueType !== 'doodle' && (
             <div className="flex-1 min-w-0 relative">
               <input 
                 type="text" 
@@ -127,6 +139,7 @@ export default function GiveClueBar({
                 readOnly={cueInput.startsWith('data:image')}
                 onChange={(e) => {
                   let val = e.target.value;
+                  if (val.length > limit) return;
                   if (activeModifier === 'oracle-riddle' || activeModifier === 'boolean-search' || activeModifier === 'forced-acronym') {
                     const cleanVal = val.replace(/[^a-zA-Z0-9\u0600-\u06FF\s-]/g, '');
                     if (activeModifier === 'oracle-riddle') {
@@ -145,9 +158,14 @@ export default function GiveClueBar({
                     setCueInput(val.replace(/[^a-zA-Z0-9\u0600-\u06FF\s]/g, ''));
                   }
                 }}
-                className="w-full bg-slate-900/80 border border-slate-700/50 focus:border-slate-500/80 text-white px-3.5 py-2.5 sm:py-3.5 rounded-xl sm:rounded-full outline-none text-sm sm:text-base placeholder:text-slate-500 font-bold"
-                maxLength={activeModifier === 'five-letter-curse' ? 5 : 32}
+                className="w-full bg-slate-900/80 border border-slate-700/50 focus:border-slate-500/80 text-white pl-3.5 pr-14 py-2.5 sm:py-3.5 rounded-xl sm:rounded-full outline-none text-sm sm:text-base placeholder:text-slate-500 font-bold"
+                maxLength={limit}
               />
+              {!cueInput.startsWith('data:image') && (
+                <span className={`absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] sm:text-xs font-bold pointer-events-none select-none transition-colors ${cueInput.length >= limit ? 'text-red-500' : 'text-slate-500'}`}>
+                  {cueInput.length}/{limit}
+                </span>
+              )}
             </div>
           )}
 

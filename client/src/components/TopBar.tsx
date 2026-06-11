@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from 'react';
 import type { Team, ClueType } from '../../../shared/types';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -28,6 +29,7 @@ interface TopBarProps {
   clueType?: ClueType;
   activeModifier?: string | null;
   isRTL?: boolean;
+  onLeave?: () => void;
 }
 
 export default function TopBar({
@@ -47,10 +49,27 @@ export default function TopBar({
   isSpymaster,
   amHost = false,
   onRestartGame,
-  activeModifier
+  activeModifier,
+  onLeave
 }: TopBarProps) {
   const navigate = useNavigate();
   const { t, uiLanguage } = useI18n();
+  const [showTooltip, setShowTooltip] = useState(false);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent | TouchEvent) {
+      if (tooltipRef.current && !tooltipRef.current.contains(event.target as Node)) {
+        setShowTooltip(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, []);
 
   const isActiveSpymaster = currentPhase === 'spymaster' && (
     (gameMode === 'classic' && playerTeam === currentTurn && playerRole === 'spymaster') ||
@@ -61,7 +80,13 @@ export default function TopBar({
     <div className="relative z-50 w-full shrink-0 flex flex-row items-center justify-between py-1 px-2.5 sm:py-1.5 sm:px-4 bg-slate-900/50 backdrop-blur-md shadow-md gap-2 sm:gap-4">
       <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
         <button 
-          onClick={() => navigate('/')}
+          onClick={() => {
+            if (onLeave) {
+              onLeave();
+            } else {
+              navigate('/');
+            }
+          }}
           className="absolute left-2.5 sm:left-4 p-1 sm:p-1.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer z-10"
         >
           <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -99,13 +124,25 @@ export default function TopBar({
             if (!mod) return null;
             const IconComponent = MODIFIER_ICONS[mod.icon] || MODIFIER_ICONS['HelpCircle'];
             return (
-              <div className="relative group cursor-pointer z-50">
+              <div 
+                ref={tooltipRef}
+                className="relative group cursor-pointer z-50"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowTooltip(!showTooltip);
+                }}
+              >
                 <div className="flex items-center gap-1 bg-red-500/20 border border-red-500/40 hover:bg-red-500/30 transition-all rounded-full px-2 py-0.5 shadow-[0_0_10px_rgba(239,68,68,0.2)]">
                   <IconComponent className="w-3 h-3 sm:w-4 sm:h-4 text-red-400" />
                   <span className="text-[7px] sm:text-[9px] font-black tracking-widest text-red-400 uppercase">{mod.name}</span>
                 </div>
                 
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-slate-950/95 border border-red-500/30 rounded-2xl p-4 shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50">
+                <div className={cn(
+                  "absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-slate-950/95 border border-red-500/30 rounded-2xl p-4 shadow-2xl transition-opacity duration-200 z-50",
+                  showTooltip 
+                    ? "opacity-100 pointer-events-auto" 
+                    : "pointer-events-none opacity-0 group-hover:opacity-100"
+                )}>
                   <div className="flex items-center gap-2 mb-2 text-red-400">
                     <IconComponent className="w-5 h-5" />
                     <h4 className="font-black tracking-wider text-xs uppercase">{uiLanguage === 'ar' ? mod.nameAr || mod.name : mod.name}</h4>

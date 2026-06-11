@@ -80,7 +80,7 @@ export default function Home() {
             <button
               onMouseEnter={playMenuHoverSfx}
               onClick={() => { playMenuClickSfx(); navigate('/join-game'); }}
-              className="flex-1 py-4 px-4 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold shadow-lg shadow-black/20 transition-all transform hover:-translate-y-1 text-[15px]"
+              className="flex-1 py-4 px-6 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl font-bold text-lg transition-all transform hover:-translate-y-1"
             >
               {t('join_game')}
             </button>

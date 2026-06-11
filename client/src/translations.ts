@@ -3,6 +3,7 @@ export const translations = {
     // General
     back: 'Back',
     cancel: 'Cancel',
+    confirm: 'Confirm',
     save: 'Save',
     on: 'On',
     off: 'Off',
@@ -148,6 +149,12 @@ export const translations = {
     confirm_free_reveal: 'Use your free reveal on this card?',
     confirm_reject_clue: 'Reject this clue? The Spymaster will have to give a new one, but your max guesses will drop by 1.',
     confirm_gacha_pull: 'Leverage pure chance? Clicking this will reveal a card based on the generated odds!',
+    confirm_leave_game: 'Are you sure you want to leave this game and return to the main menu?',
+    alert_not_connected: 'Not connected to server yet.',
+    alert_enter_name: 'Please enter a Display Name.',
+    alert_join_team_first: 'You must join a team before starting the game.',
+    alert_warning: 'Warning',
+    ok: 'OK',
 
     // Top Bar
     green_tokens: '{count} GREEN',
@@ -282,6 +289,7 @@ export const translations = {
     // General
     back: 'رجوع',
     cancel: 'إلغاء',
+    confirm: 'تأكيد',
     save: 'حفظ',
     on: 'مفعل',
     off: 'معطل',
@@ -427,6 +435,12 @@ export const translations = {
     confirm_free_reveal: 'استخدام الكشف المجاني على هذه البطاقة؟',
     confirm_reject_clue: 'رفض هذا الدليل؟ سيتعين على رئيس الجواسيس إعطاء دليل جديد، لكن الحد الأقصى لتخميناتك سينخفض بمقدار 1.',
     confirm_gacha_pull: 'استغلال الصدفة البحتة؟ سيؤدي النقر على هذا إلى الكشف عن بطاقة بناءً على الاحتمالات التي تم إنشاؤها!',
+    confirm_leave_game: 'هل أنت متأكد أنك تريد مغادرة هذه اللعبة والعودة إلى القائمة الرئيسية؟',
+    alert_not_connected: 'غير متصل بالخادم بعد.',
+    alert_enter_name: 'يرجى إدخال اسم العرض.',
+    alert_join_team_first: 'يجب عليك الانضمام إلى فريق قبل بدء اللعبة.',
+    alert_warning: 'تحذير',
+    ok: 'موافق',
 
     // Top Bar
     green_tokens: '{count} أخضر',

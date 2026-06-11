@@ -58,8 +58,20 @@ export function getLocalIPAddress(): string {
   // Hotspot interface patterns on Android
   const hotspotPatterns = ['ap', 'wlan1', 'wlan2', 'softap', 'rndis'];
 
+  const isVirtual = (name: string) => {
+    const lower = name.toLowerCase();
+    return lower.includes('virtual') || 
+           lower.includes('vbox') || 
+           lower.includes('vmware') || 
+           lower.includes('wsl') || 
+           lower.includes('hyper-v') || 
+           lower.includes('vethernet') || 
+           lower.includes('host-only');
+  };
+
   // First Pass: Look specifically for active Hotspot interfaces standard on mobile
   for (const interfaceName in interfaces) {
+    if (isVirtual(interfaceName)) continue;
     const lowerName = interfaceName.toLowerCase();
     if (hotspotPatterns.some(p => lowerName.includes(p))) {
       const iface = interfaces[interfaceName];
@@ -76,7 +88,9 @@ export function getLocalIPAddress(): string {
 
   // Second Pass: Look for active wlan (Wi-Fi) interfaces
   for (const interfaceName in interfaces) {
-    if (interfaceName.toLowerCase().includes('wlan')) {
+    if (isVirtual(interfaceName)) continue;
+    const lowerName = interfaceName.toLowerCase();
+    if (lowerName.includes('wlan') || lowerName.includes('wi-fi') || lowerName.includes('wireless')) {
       const iface = interfaces[interfaceName];
       if (!iface) continue;
       for (const alias of iface) {
@@ -90,13 +104,12 @@ export function getLocalIPAddress(): string {
 
   // Third Pass: Standard fallback logic for desktop/ethernet interfaces
   for (const interfaceName in interfaces) {
+    if (isVirtual(interfaceName)) continue;
     const iface = interfaces[interfaceName];
     if (!iface) continue;
     for (const alias of iface) {
       if (alias.family === 'IPv4' && !alias.internal) {
-        if (!interfaceName.toLowerCase().includes('virtual') && !interfaceName.toLowerCase().includes('vbox')) {
-          backupIp = alias.address;
-        }
+        return alias.address;
       }
     }
   }

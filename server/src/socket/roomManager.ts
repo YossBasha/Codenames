@@ -15,13 +15,19 @@ import {
 } from "../../../shared/gameLogic";
 import { MODIFIERS, checkRhyme } from "../../../shared/modifiers";
 import { wordPackRegistry } from "../../../shared/wordPacks";
-import { getBotSpymasterClue, rankCardsForOperative, getLLMSpymasterClue, getLLMOperativeRankings } from "../utils/aiLogic";
+import {
+  getBotSpymasterClue,
+  rankCardsForOperative,
+  getLLMSpymasterClue,
+  getLLMOperativeRankings,
+} from "../utils/aiLogic";
 
 interface Room {
   id: string;
   players: Player[];
   gameState: GameState | null;
   timerInterval?: NodeJS.Timeout;
+  rogueAssassinInterval?: NodeJS.Timeout;
   settings?: any;
 }
 
@@ -51,11 +57,73 @@ export function getPublicRooms() {
   }));
 }
 
+function stopRogueAssassinInterval(room: Room) {
+  if (room.rogueAssassinInterval) {
+    clearInterval(room.rogueAssassinInterval);
+    room.rogueAssassinInterval = undefined;
+  }
+}
+
 function stopTimer(room: Room) {
   if (room.timerInterval) {
     clearInterval(room.timerInterval);
     room.timerInterval = undefined;
   }
+  stopRogueAssassinInterval(room);
+}
+
+function startRogueAssassinInterval(io: Server, room: Room) {
+  stopRogueAssassinInterval(room);
+  if (!room.gameState || room.gameState.winner) return;
+  if (room.gameState.activeModifier !== "rogue-assassin") return;
+
+  room.rogueAssassinInterval = setInterval(() => {
+    const state = room.gameState;
+    if (!state || state.winner || state.activeModifier !== "rogue-assassin") {
+      stopRogueAssassinInterval(room);
+      return;
+    }
+
+    const isDuet = state.gameMode === "duet";
+    if (isDuet) {
+      const expectedGuessTeam = state.currentTurn === "red" ? "blue" : "red";
+      const guesserKey: 'duetTypeA' | 'duetTypeB' = expectedGuessTeam === "blue" ? "duetTypeA" : "duetTypeB";
+      const revealedKey: 'revealedByA' | 'revealedByB' = expectedGuessTeam === "blue" ? "revealedByB" : "revealedByA";
+
+      // Swap cards that are unrevealed for the guesser team
+      const unrevealedAssassins = state.cards.filter(
+        (c) => !c[revealedKey] && c[guesserKey] === "assassin"
+      );
+      const unrevealedNeutrals = state.cards.filter(
+        (c) => !c[revealedKey] && c[guesserKey] === "neutral"
+      );
+
+      if (unrevealedAssassins.length > 0 && unrevealedNeutrals.length > 0) {
+        const assassinCard = unrevealedAssassins[Math.floor(Math.random() * unrevealedAssassins.length)];
+        const neutralCard = unrevealedNeutrals[Math.floor(Math.random() * unrevealedNeutrals.length)];
+
+        // Swap ONLY the duetType corresponding to the guesser's key
+        const temp = assassinCard[guesserKey];
+        assassinCard[guesserKey] = neutralCard[guesserKey];
+        neutralCard[guesserKey] = temp;
+      }
+    } else {
+      // Classic mode
+      const unrevealedAssassins = state.cards.filter((c) => !c.revealed && c.type === "assassin");
+      const unrevealedNeutrals = state.cards.filter((c) => !c.revealed && c.type === "neutral");
+
+      if (unrevealedAssassins.length > 0 && unrevealedNeutrals.length > 0) {
+        const assassinCard = unrevealedAssassins[Math.floor(Math.random() * unrevealedAssassins.length)];
+        const neutralCard = unrevealedNeutrals[Math.floor(Math.random() * unrevealedNeutrals.length)];
+
+        const tempType = assassinCard.type;
+        assassinCard.type = neutralCard.type;
+        neutralCard.type = tempType;
+      }
+    }
+
+    io.to(room.id).emit("game_update", state);
+  }, 3000);
 }
 
 function getBotDelayMs(room: Room): number {
@@ -260,8 +328,8 @@ function applyRandomModifier(room: Room) {
       let redactedCount = 0;
       while (redactedCount < numToRedact) {
         const randIdx = Math.floor(Math.random() * chars.length);
-        if (chars[randIdx] !== "*" && chars[randIdx] !== " ") {
-          chars[randIdx] = "*";
+        if (chars[randIdx] !== "█" && chars[randIdx] !== " ") {
+          chars[randIdx] = "█";
           redactedCount++;
         }
       }
@@ -488,10 +556,18 @@ function transitionToNewTurn(io: Server, room: Room) {
 
 async function triggerBotSpymaster(io: Server, room: Room, bot: Player) {
   const gameState = room.gameState;
-  console.log(`[BOT-SPY] triggerBotSpymaster called. Bot: ${bot.name} (${bot.team}), Phase: ${gameState?.currentPhase}, Turn: ${gameState?.currentTurn}, Winner: ${gameState?.winner}`);
+  console.log(
+    `[BOT-SPY] triggerBotSpymaster called. Bot: ${bot.name} (${bot.team}), Phase: ${gameState?.currentPhase}, Turn: ${gameState?.currentTurn}, Winner: ${gameState?.winner}`,
+  );
 
-  if (!gameState || gameState.currentPhase !== "spymaster" || gameState.winner) {
-    console.warn(`[BOT-SPY] Early exit — gameState invalid or wrong phase/winner.`);
+  if (
+    !gameState ||
+    gameState.currentPhase !== "spymaster" ||
+    gameState.winner
+  ) {
+    console.warn(
+      `[BOT-SPY] Early exit — gameState invalid or wrong phase/winner.`,
+    );
     return;
   }
 
@@ -507,7 +583,9 @@ async function triggerBotSpymaster(io: Server, room: Room, bot: Player) {
   });
 
   try {
-    console.log(`[BOT-SPY] Calling getLLMSpymasterClue for team ${bot.team}...`);
+    console.log(
+      `[BOT-SPY] Calling getLLMSpymasterClue for team ${bot.team}...`,
+    );
     const clue = await getLLMSpymasterClue(
       gameState.cards,
       bot.team as any,
@@ -518,13 +596,19 @@ async function triggerBotSpymaster(io: Server, room: Room, bot: Player) {
     );
     console.log(`[BOT-SPY] getLLMSpymasterClue returned:`, clue);
 
-    if (!room.gameState || room.gameState.currentPhase !== "spymaster" || room.gameState.winner) {
+    if (
+      !room.gameState ||
+      room.gameState.currentPhase !== "spymaster" ||
+      room.gameState.winner
+    ) {
       console.warn(`[BOT-SPY] State changed while awaiting clue — aborting.`);
       return;
     }
 
     if (clue) {
-      console.log(`[BOT-SPY] Using clue "${clue.word}" for ${clue.count}. Transitioning to operative phase.`);
+      console.log(
+        `[BOT-SPY] Using clue "${clue.word}" for ${clue.count}. Transitioning to operative phase.`,
+      );
       room.gameState.activeCue = clue.word;
       room.gameState.activeCueNumber = clue.count;
       room.gameState.currentPhase = "operative";
@@ -545,8 +629,7 @@ async function triggerBotSpymaster(io: Server, room: Room, bot: Player) {
         room.gameState.activeModifier === "the-intercept" &&
         room.gameState.gameMode === "classic"
       ) {
-        if (!room.gameState.modifierState)
-          room.gameState.modifierState = {};
+        if (!room.gameState.modifierState) room.gameState.modifierState = {};
         room.gameState.modifierState.interceptPhase = true;
         room.gameState.modifierState.interceptTimeLeft = 5;
 
@@ -607,7 +690,9 @@ async function triggerBotSpymaster(io: Server, room: Room, bot: Player) {
           p.role === "operative" &&
           p.isBot,
       );
-      console.log(`[BOT-SPY] Found ${operativeBots.length} operative bot(s) for team ${room.gameState.currentTurn}.`);
+      console.log(
+        `[BOT-SPY] Found ${operativeBots.length} operative bot(s) for team ${room.gameState.currentTurn}.`,
+      );
       if (operativeBots.length > 0) {
         setTimeout(
           () =>
@@ -622,13 +707,21 @@ async function triggerBotSpymaster(io: Server, room: Room, bot: Player) {
         );
       }
     } else {
-      console.error(`[BOT-SPY] Clue was null/undefined — throwing to trigger fallback.`);
+      console.error(
+        `[BOT-SPY] Clue was null/undefined — throwing to trigger fallback.`,
+      );
       throw new Error("No clue generated");
     }
   } catch (error) {
     console.error("[BOT-SPY] CATCH ERROR:", error);
-    if (!room.gameState || room.gameState.currentPhase !== "spymaster" || room.gameState.winner) {
-      console.warn(`[BOT-SPY] State invalid in catch block — not transitioning.`);
+    if (
+      !room.gameState ||
+      room.gameState.currentPhase !== "spymaster" ||
+      room.gameState.winner
+    ) {
+      console.warn(
+        `[BOT-SPY] State invalid in catch block — not transitioning.`,
+      );
       return;
     }
     io.to(room.id).emit("chat_message", {
@@ -653,7 +746,9 @@ async function triggerBotOperatives(
   bot: Player,
 ) {
   const gameState = room.gameState;
-  console.log(`[BOT-OP] triggerBotOperatives called. Bot: ${bot.name} (${bot.team}), Clue: "${clue}" x${count}, Phase: ${gameState?.currentPhase}, ActiveCue: ${gameState?.activeCue}`);
+  console.log(
+    `[BOT-OP] triggerBotOperatives called. Bot: ${bot.name} (${bot.team}), Clue: "${clue}" x${count}, Phase: ${gameState?.currentPhase}, ActiveCue: ${gameState?.activeCue}`,
+  );
 
   if (
     !gameState ||
@@ -661,7 +756,9 @@ async function triggerBotOperatives(
     gameState.winner ||
     gameState.activeCue !== clue
   ) {
-    console.warn(`[BOT-OP] Early exit — gameState invalid, wrong phase, winner set, or clue mismatch. Expected cue: "${clue}", Actual: "${gameState?.activeCue}"`);
+    console.warn(
+      `[BOT-OP] Early exit — gameState invalid, wrong phase, winner set, or clue mismatch. Expected cue: "${clue}", Actual: "${gameState?.activeCue}"`,
+    );
     return;
   }
 
@@ -677,7 +774,9 @@ async function triggerBotOperatives(
   });
 
   try {
-    console.log(`[BOT-OP] Calling getLLMOperativeRankings for clue "${clue}"...`);
+    console.log(
+      `[BOT-OP] Calling getLLMOperativeRankings for clue "${clue}"...`,
+    );
     const { cards: rankedCards, reasoning } = await getLLMOperativeRankings(
       clue,
       count,
@@ -688,7 +787,10 @@ async function triggerBotOperatives(
       gameState.activeModifier,
       gameState.modifierState,
     );
-    console.log(`[BOT-OP] Ranked ${rankedCards.length} cards. Reasoning: ${reasoning}. Top 3:`, rankedCards.slice(0, 3).map(c => c.word));
+    console.log(
+      `[BOT-OP] Ranked ${rankedCards.length} cards. Reasoning: ${reasoning}. Top 3:`,
+      rankedCards.slice(0, 3).map((c) => c.word),
+    );
 
     if (reasoning) {
       io.to(room.id).emit("chat_message", {
@@ -707,7 +809,9 @@ async function triggerBotOperatives(
       room.gameState.winner ||
       room.gameState.activeCue !== clue
     ) {
-      console.warn(`[BOT-OP] State changed while awaiting rankings — aborting.`);
+      console.warn(
+        `[BOT-OP] State changed while awaiting rankings — aborting.`,
+      );
       return;
     }
 
@@ -721,7 +825,9 @@ async function triggerBotOperatives(
     // Calculate how many guesses allowed (count + 1)
     const maxGuesses = count === 0 ? 99 : count + 1;
     const numGuesses = Math.min(maxGuesses, rankedCards.length);
-    console.log(`[BOT-OP] Will guess up to ${numGuesses} cards (maxGuesses: ${maxGuesses}).`);
+    console.log(
+      `[BOT-OP] Will guess up to ${numGuesses} cards (maxGuesses: ${maxGuesses}).`,
+    );
 
     let i = 0;
 
@@ -733,26 +839,34 @@ async function triggerBotOperatives(
         currentGameState.winner ||
         currentGameState.activeCue !== clue
       ) {
-        console.warn(`[BOT-OP] nextGuess: exiting — state changed or cue no longer active.`);
+        console.warn(
+          `[BOT-OP] nextGuess: exiting — state changed or cue no longer active.`,
+        );
         return;
       }
 
       // Check if we hit the limit or successful guesses exhausted
       if (currentGameState.successfulGuessesThisTurn >= maxGuesses) {
-        console.log(`[BOT-OP] nextGuess: successfulGuesses (${currentGameState.successfulGuessesThisTurn}) >= maxGuesses (${maxGuesses}), stopping.`);
+        console.log(
+          `[BOT-OP] nextGuess: successfulGuesses (${currentGameState.successfulGuessesThisTurn}) >= maxGuesses (${maxGuesses}), stopping.`,
+        );
         return;
       }
 
       if (i >= numGuesses) {
         // Bot is done guessing and decides to pass voluntarily
-        console.log(`[BOT-OP] nextGuess: reached numGuesses (${numGuesses}), passing turn.`);
+        console.log(
+          `[BOT-OP] nextGuess: reached numGuesses (${numGuesses}), passing turn.`,
+        );
         transitionToNewTurn(io, room);
         io.to(room.id).emit("game_update", currentGameState);
         return;
       }
 
       const targetCard = rankedCards[i];
-      console.log(`[BOT-OP] nextGuess: guessing card [${i}] = "${targetCard.word}"`);
+      console.log(
+        `[BOT-OP] nextGuess: guessing card [${i}] = "${targetCard.word}"`,
+      );
       i++;
 
       // Only click if it's still unrevealed
@@ -767,7 +881,9 @@ async function triggerBotOperatives(
         // Synthesize a guess event
         processGuess(io, room, bot, targetCard.id);
       } else {
-        console.warn(`[BOT-OP] Card "${targetCard.word}" was already revealed, skipping.`);
+        console.warn(
+          `[BOT-OP] Card "${targetCard.word}" was already revealed, skipping.`,
+        );
       }
 
       // Schedule next guess if it's still the bot's turn
@@ -792,10 +908,12 @@ async function triggerBotOperatives(
       room.gameState.winner ||
       room.gameState.activeCue !== clue
     ) {
-      console.warn(`[BOT-OP] State invalid in catch block — not transitioning.`);
+      console.warn(
+        `[BOT-OP] State invalid in catch block — not transitioning.`,
+      );
       return;
     }
-      
+
     io.to(room.id).emit("chat_message", {
       id: Date.now().toString(),
       text: `${bot.name} couldn't understand the board and passed the turn.`,
@@ -813,6 +931,10 @@ async function triggerBotOperatives(
 function startTimer(io: Server, room: Room) {
   stopTimer(room);
   if (!room.gameState) return;
+
+  if (room.gameState.activeModifier === "rogue-assassin" && !room.gameState.winner) {
+    startRogueAssassinInterval(io, room);
+  }
 
   const isHaste =
     room.gameState.activeModifier === "haste" &&
@@ -895,7 +1017,7 @@ function startTimer(io: Server, room: Room) {
 }
 
 function getSafeRoom(room: Room) {
-  const { timerInterval, ...safeRoom } = room;
+  const { timerInterval, rogueAssassinInterval, ...safeRoom } = room;
   return safeRoom;
 }
 
@@ -1872,7 +1994,8 @@ export function setupRoomManager(io: Server) {
             }
           } else {
             // ❌ MISS — don't reveal the card, apply penalty to enemy team's next turn
-            if (!room.gameState.modifierState) room.gameState.modifierState = {};
+            if (!room.gameState.modifierState)
+              room.gameState.modifierState = {};
             room.gameState.modifierState.interceptPenalty = enemyTeam;
 
             room.gameState.gameLog.push({
@@ -2420,12 +2543,17 @@ export function setupRoomManager(io: Server) {
         const room = rooms[roomId];
         const playerIndex = room.players.findIndex((p) => p.id === socket.id);
         if (playerIndex !== -1) {
+          const player = room.players[playerIndex];
+          player.connected = false;
+          io.to(roomId).emit("room_update", getSafeRoom(room));
+
           if (playerIndex === 0) {
+            console.log(
+              `Host ${player.name} disconnected from room ${roomId}. Deleting room immediately.`,
+            );
+            stopTimer(room);
             io.to(roomId).emit("host_disconnected");
             delete rooms[roomId];
-          } else {
-            room.players[playerIndex].connected = false;
-            io.to(roomId).emit("room_update", getSafeRoom(room));
           }
         }
       }

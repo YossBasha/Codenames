@@ -553,7 +553,7 @@ export default function PassAndPlay() {
   }
 
   return (
-    <div className={cn(`min-h-screen ${bgClass} transition-colors duration-1000 flex flex-col relative overflow-hidden`)}>
+    <div className={cn(`min-h-screen lg:h-screen lg:max-h-screen ${bgClass} transition-colors duration-1000 flex flex-col relative overflow-hidden lg:overflow-hidden`)}>
       <TopBar
         redScore={gameState.redScore}
         blueScore={gameState.blueScore}
@@ -574,7 +574,7 @@ export default function PassAndPlay() {
         isRTL={gameState.language === 'ar'}
       />
 
-      <div className="flex-1 flex flex-col items-center p-2 sm:p-4 sm:pt-6">
+      <div className="flex-1 flex flex-col items-center p-2 sm:p-4 sm:pt-6 lg:min-h-0 lg:overflow-hidden">
         {gameState.winner && (
           <div className="mb-8 p-6 glass rounded-2xl text-center shadow-[0_0_50px_rgba(0,0,0,0.5)] z-20 animate-fade-in-up">
             {gameState.gameMode === 'duet' ? (
@@ -646,8 +646,8 @@ export default function PassAndPlay() {
           </div>
         )}
 
-        <div className="w-full max-w-[1600px] mx-auto flex-1 flex flex-col lg:flex-row gap-6 justify-center pb-4 lg:pb-0 transition-all duration-1000">
-          <div className="flex-1 flex flex-col justify-center">
+        <div className="w-full max-w-[1600px] mx-auto flex-1 flex flex-col lg:flex-row gap-6 justify-center pb-4 lg:pb-0 transition-all duration-1000 lg:min-h-0">
+          <div className="flex-1 flex flex-col justify-center lg:min-h-0 lg:overflow-y-auto custom-scrollbar">
             <Grid
               cards={gameState.cards}
               isSpymaster={gameState.gameMode === 'duet' || isSpymasterVisible || !!gameState.winner}
@@ -685,13 +685,13 @@ export default function PassAndPlay() {
             )}
             
             {/* MOBILE GAME LOG */}
-            <div className="flex lg:hidden flex-col w-full max-w-lg mx-auto mt-8">
+            <div className="flex lg:hidden flex-col w-full max-w-lg mx-auto mt-6 h-36 shrink-0">
               <GameLog logs={gameState.gameLog || []} gameMode={gameState.gameMode} />
             </div>
           </div>
           
           {/* DESKTOP GAME LOG */}
-          <div className="hidden lg:flex flex-col w-64 xl:w-80 flex-shrink-0">
+          <div className="hidden lg:flex flex-col w-64 xl:w-80 flex-shrink-0 lg:min-h-0 lg:max-h-full lg:overflow-y-auto scrollbar-none">
              <GameLog logs={gameState.gameLog || []} gameMode={gameState.gameMode} />
           </div>
         </div>

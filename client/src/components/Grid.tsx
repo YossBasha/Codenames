@@ -126,9 +126,10 @@ export default function Grid({ cards, isSpymaster, disabled, playerTeam, gameMod
   return (
     <div 
       className={cn(
-        "grid grid-cols-5 gap-1 sm:gap-2 lg:gap-3 w-full mx-auto px-1 sm:px-4",
+        "grid grid-cols-5 gap-0.5 sm:gap-2 lg:gap-3 w-full mx-auto px-0.5 sm:px-4",
         activeModifier === 'fog-of-war' && "touch-none"
       )}
+      style={{ maxWidth: 'min(896px, calc(1.5 * (100vh - 340px)))' }}
       dir="ltr"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
@@ -138,7 +139,7 @@ export default function Grid({ cards, isSpymaster, disabled, playerTeam, gameMod
       {cards.map((c) => {
         return (
           <Card
-            key={c.id}
+            key={`${c.id}-${activeModifier || 'none'}-${currentPhase}`}
             card={c}
             isSpymaster={isSpymaster}
             disabled={disabled}

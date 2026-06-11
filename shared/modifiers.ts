@@ -66,15 +66,15 @@ export const MODIFIERS: Modifier[] = [
     icon: "Shuffle",
   },
   {
-    id: "scrambled-comms",
-    name: "Forced Anagram",
-    nameAr: "الجناس الإجباري",
+    id: "rogue-assassin",
+    name: "The Rogue Assassin",
+    nameAr: "القاتل المتمرد",
     category: "board",
     description:
-      "All words on the board are anagrammed (letters shuffled) for the guessers until they click to reveal them.",
+      "The Assassin card refuses to stay still. Every 3 seconds, the underlying Assassin secretly swaps positions with a random unrevealed Neutral card. The Spymaster has to watch the Assassin bounce around in real-time.",
     descriptionAr:
-      "يتم خلط حروف جميع الكلمات الموجودة على اللوحة بالنسبة للمخمنين حتى ينقروا عليها للكشف عنها.",
-    icon: "SpellCheck",
+      "بطاقة القاتل ترفض البقاء ساكنة. كل 3 ثوانٍ، يتبادل القاتل موقعه سراً مع بطاقة محايدة عشوائية غير مكشوفة. يتعين على رئيس الجواسيس مراقبة القاتل وهو يتحرك في الوقت الفعلي.",
+    icon: "UserMinus",
   },
   {
     id: "the-mimic",
@@ -214,9 +214,9 @@ export const MODIFIERS: Modifier[] = [
     nameAr: "الاعتراض",
     category: "guesser",
     description:
-      "After a clue is given, the enemy team has 5 seconds to guess one of the active team's cards. A correct guess reveals that card (the active team gets the point) but skips the active team's turn. A wrong guess doesn't reveal any card but skips the enemy team's own next turn as a penalty. (Classic only)",
+      "After a clue is given, the enemy team has 5 seconds to guess one of the active team's cards. A correct guess reveals that card (the active team gets the point) but skips the active team's turn. A wrong guess doesn't reveal any card. (Classic only)",
     descriptionAr:
-      "بعد إعطاء الدليل، يملك فريق العدو 5 ثوانٍ لتخمين بطاقة من بطاقات الفريق النشط. إذا أصابوا، تُكشف البطاقة (يحصل الفريق النشط على النقطة) ويُتخطى دوره. إذا أخطأوا، لا تُكشف أي بطاقة ويُتخطى دور فريق العدو القادم كعقوبة. (للكلاسيكي فقط)",
+      "بعد إعطاء الدليل، يملك فريق العدو 5 ثوانٍ لتخمين بطاقة من بطاقات الفريق النشط. إذا أصابوا، تُكشف البطاقة (يحصل الفريق النشط على النقطة) ويُتخطى دوره. إذا أخطأوا، لا تُكشف أي بطاقة. (للكلاسيكي فقط)",
     icon: "Crosshair",
   },
   {
@@ -269,9 +269,9 @@ export const MODIFIERS: Modifier[] = [
     nameAr: "وثائق خاضعة للرقابة",
     category: "board",
     description:
-      "Random letters in every unrevealed word are redacted with asterisks (*).",
+      "Random letters in every unrevealed word are redacted with black squares (█).",
     descriptionAr:
-      "يتم حجب أحرف عشوائية في كل كلمة غير مكشوفة بعلامات النجمة (*).",
+      "يتم حجب أحرف عشوائية في كل كلمة غير مكشوفة بمربعات سوداء (█).",
     icon: "Scissors",
   },
   {

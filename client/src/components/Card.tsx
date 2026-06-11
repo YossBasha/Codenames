@@ -167,14 +167,15 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
         }
       }}
       onContextMenu={(e) => {
-        if (onContextMenu) onContextMenu(e, card.id);
+        e.preventDefault();
+        if (!isDisabled && onContextMenu) onContextMenu(e, card.id);
       }}
       onMouseEnter={() => {
         if (!isDisabled) playCardHoverSfx();
       }}
       aria-disabled={isDisabled}
       className={cn(
-        "group relative w-full aspect-[4/3] sm:aspect-[3/2] max-h-[calc((100vh-250px)/5)] sm:max-h-[calc((100vh-300px)/5)] rounded-lg sm:rounded-xl font-black transition-all duration-300 transform",
+        "group relative w-full aspect-[4/3] sm:aspect-[3/2] max-h-[calc((100vh_-_220px)_/_5)] sm:max-h-[calc((100vh_-_340px)_/_5)] rounded-lg sm:rounded-xl font-black transition-all duration-300 transform",
         !(scrambleDx !== undefined || scrambleDy !== undefined) && "overflow-hidden",
         isEmoji ? "text-4xl sm:text-5xl lg:text-7xl" : "text-[9px] xs:text-[11px] sm:text-sm lg:text-lg tracking-tighter sm:tracking-tight",
         isDisabled && !isRevealedForMe && !isGivingClue && !d20FreeReveal
@@ -242,6 +243,7 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
       {/* Base Word - only hide text for globally revealed green/red/blue cards (correct guesses) */}
       {!card.revealed || !['green', 'red', 'blue'].includes(typeToDisplay) ? (
         <div 
+          key={`${activeModifier || 'none'}-${currentPhase}`}
           style={
             (scrambleDx !== undefined || scrambleDy !== undefined) && activeModifier !== 'earthquake'
               ? {

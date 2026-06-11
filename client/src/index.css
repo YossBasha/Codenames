@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap');
+
 @import "tailwindcss";
 
 @theme {
@@ -57,16 +59,20 @@
   background-color: var(--color-slate-900);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif, 'Noto Color Emoji';
   background-color: #0f172a;
   color: white;
   overflow-x: hidden;
 }
 
 [dir="rtl"] body {
-  font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+  font-family: 'Cairo', system-ui, -apple-system, sans-serif, 'Noto Color Emoji';
 }
 
 @keyframes shrink-bar {
@@ -166,9 +172,15 @@ body {
 @keyframes eroding-parchment {
   0% {
     opacity: 1;
+    filter: blur(0px);
+  }
+  70% {
+    opacity: 0.8;
+    filter: blur(1.5px);
   }
   100% {
-    opacity: 0.03;
+    opacity: 0;
+    filter: blur(12px);
   }
 }
 
@@ -220,3 +232,53 @@ body {
 .animate-marquee-scroll {
   animation: marquee-scroll 4s linear infinite;
 }
+
+/* Smooth Scrolling & Premium Custom Scrollbar Styles */
+.custom-scrollbar,
+.scrollbar-thin,
+[class*="overflow-y-auto"],
+[class*="overflow-x-auto"] {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar,
+.scrollbar-thin::-webkit-scrollbar,
+[class*="overflow-y-auto"]::-webkit-scrollbar,
+[class*="overflow-x-auto"]::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track,
+.scrollbar-thin::-webkit-scrollbar-track,
+[class*="overflow-y-auto"]::-webkit-scrollbar-track,
+[class*="overflow-x-auto"]::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb,
+.scrollbar-thin::-webkit-scrollbar-thumb,
+[class*="overflow-y-auto"]::-webkit-scrollbar-thumb,
+[class*="overflow-x-auto"]::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+  transition: background 0.2s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover,
+.scrollbar-thin::-webkit-scrollbar-thumb:hover,
+[class*="overflow-y-auto"]::-webkit-scrollbar-thumb:hover,
+[class*="overflow-x-auto"]::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+

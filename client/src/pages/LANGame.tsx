@@ -31,6 +31,26 @@ export default function LANGame() {
   const [hostDisconnected, setHostDisconnected] = useState(false);
   const [showPrankMenu, setShowPrankMenu] = useState(false);
 
+  // Custom Confirm Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  } | null>(null);
+
+  const handleLeaveGame = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: t("confirm_leave_game"),
+      description: t("confirm_leave_game"),
+      onConfirm: () => {
+        setConfirmModal(null);
+        navigate("/");
+      }
+    });
+  };
+
   // Turn Announcer
   const [showTurnAnnouncer, setShowTurnAnnouncer] = useState(false);
   const [queuedModifierBanner, setQueuedModifierBanner] = useState<
@@ -350,12 +370,31 @@ export default function LANGame() {
       navigate(`/lan-lobby?${lobbyParams.toString()}`);
     });
 
-    socket.on("host_disconnected", () => {
-      setHostDisconnected(true);
-      setTimeout(() => navigate("/"), 4000);
-    });
+    let disconnectTimeout: any = null;
+    const handleDisconnect = () => {
+      console.log("Socket disconnected, starting redirect timeout...");
+      if (!disconnectTimeout) {
+        disconnectTimeout = setTimeout(() => {
+          console.log("Connection lost for >5s, redirecting to home...");
+          navigate("/");
+        }, 5000);
+      }
+    };
 
-    socket.on("disconnect", () => {
+    const handleConnect = () => {
+      console.log("Socket reconnected, re-joining room:", roomId);
+      if (disconnectTimeout) {
+        clearTimeout(disconnectTimeout);
+        disconnectTimeout = null;
+      }
+      socket.emit("join_room", { roomId, player });
+    };
+
+    socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("connect_error", handleDisconnect);
+
+    socket.on("host_disconnected", () => {
       setHostDisconnected(true);
       setTimeout(() => navigate("/"), 4000);
     });
@@ -364,6 +403,9 @@ export default function LANGame() {
     socket.emit("join_room", { roomId, player });
 
     return () => {
+      if (disconnectTimeout) {
+        clearTimeout(disconnectTimeout);
+      }
       gachaAnimationTimersRef.current.forEach((timer) =>
         window.clearTimeout(timer),
       );
@@ -375,7 +417,9 @@ export default function LANGame() {
       socket.off("trigger_prank");
       socket.off("return_to_lobby");
       socket.off("host_disconnected");
-      socket.off("disconnect");
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.off("connect_error", handleDisconnect);
     };
   }, [socket, roomId, player, navigate]);
 
@@ -447,17 +491,23 @@ export default function LANGame() {
   const handleCardClick = (id: number) => {
     if (!gameState || gameState.winner || !socket || !roomId) return;
 
-    if (
-      gameState.currentPhase === "spymaster" &&
-      currentPlayer?.role === "spymaster" &&
-      gameState.activeModifier === "d20-roll" &&
-      gameState.modifierState?.canRevealForFree
-    ) {
-      if (window.confirm(t("confirm_free_reveal"))) {
-        socket.emit("d20_free_reveal", { roomId, cardId: id });
+      if (
+        gameState.currentPhase === "spymaster" &&
+        currentPlayer?.role === "spymaster" &&
+        gameState.activeModifier === "d20-roll" &&
+        gameState.modifierState?.canRevealForFree
+      ) {
+        setConfirmModal({
+          isOpen: true,
+          title: t("confirm_free_reveal"),
+          description: t("confirm_free_reveal"),
+          onConfirm: () => {
+            socket.emit("d20_free_reveal", { roomId, cardId: id });
+            setConfirmModal(null);
+          }
+        });
+        return;
       }
-      return;
-    }
 
     if (isLockToggleActive) {
       socket.emit("lock_card", { roomId, cardId: id });
@@ -561,6 +611,20 @@ export default function LANGame() {
 
   const isSpymaster =
     player.role === "spymaster" || gameState?.gameMode === "duet";
+
+  const showCriticalHitTimer = 
+    !!(gameState &&
+    gameState.activeModifier === "critical-hit" &&
+    gameState.currentPhase === "operative" &&
+    gameState.successfulGuessesThisTurn === 0 &&
+    gameState.timerSettings &&
+    gameState.timerSettings.preset !== "off");
+
+  const criticalHitTimeLeft = showCriticalHitTimer 
+    ? gameState.timeRemaining - (gameState.timerSettings.operativeTime - 5) 
+    : 0;
+
+  const isCriticalHitTimerActive = showCriticalHitTimer && criticalHitTimeLeft > 0 && criticalHitTimeLeft <= 5;
   const isSensoryDepActive =
     gameState?.activeModifier === "sensory-deprivation" &&
     gameState?.currentPhase === "spymaster";
@@ -615,15 +679,21 @@ export default function LANGame() {
       roomPlayers[0].id === player?.id);
 
   const handleRestartGame = () => {
-    if (window.confirm(t("confirm_end_game"))) {
-      socket?.emit("play_again", { roomId });
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: t("confirm_end_game"),
+      description: t("confirm_end_game"),
+      onConfirm: () => {
+        socket?.emit("play_again", { roomId });
+        setConfirmModal(null);
+      }
+    });
   };
 
   return (
     <div
       className={cn(
-        `min-h-screen lg:h-screen lg:max-h-screen flex flex-col relative overflow-x-hidden lg:overflow-hidden transition-colors duration-1000`,
+        `min-h-[100dvh] lg:min-h-0 lg:h-screen lg:max-h-screen lg:overflow-hidden flex flex-col relative overflow-y-auto transition-colors duration-1000`,
         bgClass,
       )}
     >
@@ -747,10 +817,11 @@ export default function LANGame() {
         clueType={gameState.clueType}
         activeModifier={gameState.activeModifier}
         isRTL={gameState.isRTL}
+        onLeave={handleLeaveGame}
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col lg:flex-row w-full max-w-[1600px] mx-auto p-2 lg:px-6 lg:py-2 gap-4 lg:gap-3 lg:min-h-0">
+      <div className="flex-1 flex flex-col lg:flex-row w-full max-w-[1600px] mx-auto p-2 lg:px-6 lg:py-2 gap-4 lg:gap-3 min-h-0">
         {/* MOBILE TOP ROW (Teams + Log) - Hidden on lg */}
         {gameState.gameMode === "classic" ? (
           <div className="flex lg:hidden flex-row gap-2 h-48 xs:h-56 sm:h-64 w-full">
@@ -760,7 +831,7 @@ export default function LANGame() {
               operatives={blueOperatives}
               spymasters={blueSpymasters}
               gameMode="classic"
-              className="w-[80px] xs:w-[90px] sm:w-[130px] flex-shrink-0"
+              className="w-[85px] xs:w-[95px] sm:w-[130px] flex-shrink-0"
             />
             <div className="flex-1 min-w-0 flex flex-col bg-[#1a1a1a]/50 rounded-xl overflow-hidden">
               <GameLog logs={gameState.gameLog || []} gameMode="classic" />
@@ -771,12 +842,12 @@ export default function LANGame() {
               operatives={redOperatives}
               spymasters={redSpymasters}
               gameMode="classic"
-              className="w-[80px] xs:w-[90px] sm:w-[130px] flex-shrink-0"
+              className="w-[85px] xs:w-[95px] sm:w-[130px] flex-shrink-0"
             />
           </div>
         ) : (
-          <div className="flex lg:hidden flex-row gap-2 h-64 w-full">
-            <div className="flex-1 min-w-0 flex flex-col">
+          <div className="flex lg:hidden flex-row gap-2 h-56 w-full">
+            <div className="flex-grow min-w-0 flex flex-col bg-[#1a1a1a]/50 rounded-xl overflow-hidden">
               <GameLog
                 logs={gameState.gameLog || []}
                 gameMode={gameState.gameMode}
@@ -798,7 +869,7 @@ export default function LANGame() {
                     <div
                       key={p.id}
                       className={cn(
-                        "flex items-center gap-1 bg-black/40 p-1 lg:p-1.5 rounded-lg border border-white/5 w-full overflow-hidden transition-opacity",
+                        "flex items-center gap-1 bg-black/40 p-1 rounded-lg border border-white/5 w-full overflow-hidden transition-opacity",
                         p.connected === false && "opacity-50 grayscale",
                       )}
                     >
@@ -829,7 +900,7 @@ export default function LANGame() {
                     <div
                       key={p.id}
                       className={cn(
-                        "flex items-center gap-1 bg-black/40 p-1 lg:p-1.5 rounded-lg border border-white/5 w-full overflow-hidden transition-opacity",
+                        "flex items-center gap-1 bg-black/40 p-1 rounded-lg border border-white/5 w-full overflow-hidden transition-opacity",
                         p.connected === false && "opacity-50 grayscale",
                       )}
                     >
@@ -850,7 +921,7 @@ export default function LANGame() {
         )}
 
         {/* DESKTOP LEFT SIDEBAR */}
-        <div className="hidden lg:flex">
+        <div className="hidden lg:flex lg:flex-col lg:overflow-y-auto lg:max-h-full scrollbar-none">
           <TeamColumn
             team="blue"
             score={gameState.blueScore}
@@ -861,7 +932,7 @@ export default function LANGame() {
         </div>
 
         {/* CENTER AREA (Grid & Turn Banner) */}
-        <div className="flex-1 flex flex-col items-center justify-start min-w-0 lg:min-h-0">
+        <div className="flex-1 flex flex-col items-center justify-start min-w-0 min-h-0">
           <div className="w-full text-center py-1 mb-1 lg:py-0.5">
             <h2
               className={`text-lg lg:text-xl xl:text-2xl font-black tracking-widest ${
@@ -939,7 +1010,7 @@ export default function LANGame() {
             </div>
           )}
 
-          <div className="w-full max-w-4xl mx-auto flex-1 flex flex-col items-center justify-start pb-8 lg:pb-0 lg:min-h-0">
+          <div className="flex-1 w-full max-w-4xl mx-auto flex flex-col items-center min-h-0 pb-2 lg:pb-1">
             {/* Sensory Deprivation Warning */}
             {sensoryTimeLeft !== null && sensoryTimeLeft > 0 && (
               <div className="w-full max-w-md bg-purple-950/40 border border-purple-500/50 rounded-xl p-2 mb-2 text-center animate-pulse shadow-[0_0_15px_rgba(168,85,247,0.15)]">
@@ -954,7 +1025,6 @@ export default function LANGame() {
                 </span>
               </div>
             )}
-
             {/* Lag Spike Warning */}
             {lagSpikeSecondsLeft !== null && lagSpikeSecondsLeft > 0 && (
               <div className="w-full max-w-md bg-yellow-950/40 border border-yellow-500/50 rounded-xl p-2 mb-2 text-center animate-pulse shadow-[0_0_15px_rgba(234,179,8,0.15)]">
@@ -969,7 +1039,6 @@ export default function LANGame() {
                 </span>
               </div>
             )}
-
             {/* Intercept Phase Warning */}
             {gameState.activeModifier === "the-intercept" &&
               gameState.modifierState?.interceptPhase && (
@@ -989,7 +1058,6 @@ export default function LANGame() {
                   </span>
                 </div>
               )}
-
             {(() => {
               const expectedGuessTeam =
                 gameState.gameMode === "duet"
@@ -1046,45 +1114,57 @@ export default function LANGame() {
               }
 
               return (
-                <div className="w-full flex flex-col items-center transition-all duration-1000">
-                  <Grid
-                    cards={displayCards}
-                    isSpymaster={
-                      (gameState.gameMode === "duet" ||
-                        isSpymaster ||
-                        !!gameState.winner) &&
-                      shouldShowColors
-                    }
-                    disabled={isDisabled}
-                    onCardClick={handleCardClick}
-                    playerTeam={currentPlayer!.team}
-                    gameMode={gameState.gameMode}
-                    isRTL={gameState.isRTL}
-                    clueTargets={clueTargets}
-                    isGivingClue={isGivingClue || false}
-                    highlightedCards={gameState.highlightedCards || {}}
-                    players={roomPlayers}
-                    currentPlayerId={player?.id}
-                    onCardContextMenu={handleCardContextMenu}
-                    onGuess={handleGuessCard}
-                    activeModifier={gameState.activeModifier}
-                    currentPhase={gameState.currentPhase}
-                    scrambleActive={
-                      scrambleActive && !!(isSpymaster || isGivingClue)
-                    }
-                    isScramblePending={isScramblePending}
-                    originalWords={gameState.modifierState?.originalWords}
-                    isGuesser={!!isMyTurnToGuess}
-                    gachaHighlightId={gachaHighlightCardId}
-                    d20FreeReveal={
-                      gameState.activeModifier === "d20-roll" &&
-                      gameState.modifierState?.canRevealForFree &&
-                      isSpymaster
-                    }
-                    invertedCardIds={
-                      gameState.modifierState?.invertedCardIds || []
-                    }
-                  />
+                <div className="flex-1 w-full flex flex-col items-center justify-start gap-2.5 lg:gap-2 min-h-0 transition-all duration-1000">
+                  <div className="flex-1 min-h-0 w-full flex items-center justify-center py-1 relative">
+                    <Grid
+                      cards={displayCards}
+                      isSpymaster={
+                        (gameState.gameMode === "duet" ||
+                          isSpymaster ||
+                          !!gameState.winner) &&
+                        shouldShowColors
+                      }
+                      disabled={isDisabled}
+                      onCardClick={handleCardClick}
+                      playerTeam={currentPlayer!.team}
+                      gameMode={gameState.gameMode}
+                      isRTL={gameState.isRTL}
+                      clueTargets={clueTargets}
+                      isGivingClue={isGivingClue || false}
+                      highlightedCards={gameState.highlightedCards || {}}
+                      players={roomPlayers}
+                      currentPlayerId={player?.id}
+                      onCardContextMenu={handleCardContextMenu}
+                      onGuess={handleGuessCard}
+                      activeModifier={gameState.activeModifier}
+                      currentPhase={gameState.currentPhase}
+                      scrambleActive={
+                        scrambleActive && !!(isSpymaster || isGivingClue)
+                      }
+                      isScramblePending={isScramblePending}
+                      originalWords={gameState.modifierState?.originalWords}
+                      isGuesser={!!isMyTurnToGuess}
+                      gachaHighlightId={gachaHighlightCardId}
+                      d20FreeReveal={
+                        gameState.activeModifier === "d20-roll" &&
+                        gameState.modifierState?.canRevealForFree &&
+                        isSpymaster
+                      }
+                      invertedCardIds={
+                        gameState.modifierState?.invertedCardIds || []
+                      }
+                    />
+
+                    {/* Critical Hit 5-Second Timer Overlay */}
+                    {isCriticalHitTimerActive && (
+                      <div className="absolute inset-0 z-40 bg-black/10 backdrop-blur-[0.5px] flex flex-col items-center justify-center pointer-events-none animate-fade-in">
+                        <div className="bg-slate-950/90 border-2 border-red-500 rounded-full w-24 h-24 flex flex-col items-center justify-center shadow-[0_0_30px_rgba(239,68,68,0.6)] animate-pulse">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-red-500 leading-none mb-1">CRITICAL</span>
+                          <span className="text-4xl font-black text-white leading-none">{criticalHitTimeLeft}s</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
                   {/* Chaos Modifiers Spymaster Action Buttons */}
                   {gameState.currentPhase === "spymaster" &&
@@ -1153,9 +1233,15 @@ export default function LANGame() {
                           gameState.successfulGuessesThisTurn === 0 && (
                             <button
                               onClick={() => {
-                                if (window.confirm(t("confirm_reject_clue"))) {
-                                  socket?.emit("reject_clue", { roomId });
-                                }
+                                setConfirmModal({
+                                  isOpen: true,
+                                  title: t("confirm_reject_clue"),
+                                  description: t("confirm_reject_clue"),
+                                  onConfirm: () => {
+                                    socket?.emit("reject_clue", { roomId });
+                                    setConfirmModal(null);
+                                  }
+                                });
                               }}
                               className={cn(
                                 "px-4 py-2 rounded-xl font-black text-xs tracking-wider border transition-all cursor-pointer bg-fuchsia-950/40 text-fuchsia-400 border-fuchsia-500/40 hover:bg-fuchsia-900/30 hover:scale-105 active:scale-95",
@@ -1170,9 +1256,15 @@ export default function LANGame() {
                             <button
                               disabled={!!gameState.modifierState?.gachaPulling}
                               onClick={() => {
-                                if (window.confirm(t("confirm_gacha_pull"))) {
-                                  socket?.emit("gacha_pull", { roomId });
-                                }
+                                setConfirmModal({
+                                  isOpen: true,
+                                  title: t("confirm_gacha_pull"),
+                                  description: t("confirm_gacha_pull"),
+                                  onConfirm: () => {
+                                    socket?.emit("gacha_pull", { roomId });
+                                    setConfirmModal(null);
+                                  }
+                                });
                               }}
                               className={cn(
                                 "px-4 py-3 rounded-xl font-black text-xs sm:text-sm tracking-wider border transition-all text-white shrink-0",
@@ -1324,7 +1416,7 @@ export default function LANGame() {
         </div>
 
         {/* DESKTOP RIGHT SIDEBAR */}
-        <div className="hidden lg:flex flex-col gap-4 lg:w-48 xl:w-56 lg:flex-shrink-0">
+        <div className="hidden lg:flex flex-col gap-4 lg:w-48 xl:w-56 lg:flex-shrink-0 lg:overflow-y-auto lg:max-h-full scrollbar-none">
           <TeamColumn
             team="red"
             score={gameState.redScore}
@@ -1427,6 +1519,39 @@ export default function LANGame() {
             </div>
           );
         })()}
+
+      {/* Reusable Custom Confirm Modal */}
+      {confirmModal && confirmModal.isOpen && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-[200] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-[#1e1e1e] border-2 border-slate-700/60 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center flex flex-col items-center gap-5 animate-scale-up z-[200]">
+            <div className="w-16 h-16 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-white text-2xl font-bold select-none">
+              ❓
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-white tracking-wide uppercase leading-tight">
+              {confirmModal.title}
+            </h2>
+            <p className="text-slate-400 text-sm leading-relaxed font-bold">
+              {confirmModal.description}
+            </p>
+            <div className="flex gap-4 w-full mt-2">
+              <button
+                onClick={() => setConfirmModal(null)}
+                className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-2xl font-bold text-white transition-colors text-sm uppercase tracking-wider cursor-pointer"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                onClick={() => {
+                  confirmModal.onConfirm();
+                }}
+                className="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-black rounded-2xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95 text-sm uppercase tracking-wider cursor-pointer"
+              >
+                {t("confirm")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
