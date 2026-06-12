@@ -7,6 +7,7 @@ import { Palette, X, Check, Globe } from 'lucide-react';
 import { cn } from '../utils';
 import type { ThemeType } from '../../../shared/types';
 import { useState } from 'react';
+import { getLocalServerPort } from '../utils/discovery';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -14,6 +15,32 @@ export default function Home() {
   const { t, uiLanguage, setUiLanguage } = useI18n();
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showHostModal, setShowHostModal] = useState(false);
+  const [isNgrokActive, setIsNgrokActive] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const checkNgrok = async () => {
+      try {
+        const port = await getLocalServerPort();
+        const res = await fetch(`http://127.0.0.1:${port}/api/ngrok-status`);
+        if (res.ok) {
+          const data = await res.json();
+          if (active) {
+            setIsNgrokActive(!!data.active);
+          }
+        }
+      } catch (e) {
+        if (active) setIsNgrokActive(false);
+      }
+    };
+
+    checkNgrok();
+    const interval = setInterval(checkNgrok, 5000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     if (socket) {
@@ -155,11 +182,21 @@ export default function Home() {
 
             <div className="flex flex-col gap-3">
               <button
-                disabled
-                className="w-full text-left p-4 rounded-xl border-2 bg-slate-800/50 border-slate-700 cursor-not-allowed opacity-60 flex flex-col gap-1"
+                disabled={!isNgrokActive}
+                onClick={() => { playMenuClickSfx(); navigate('/lan-lobby?host=true&wan=true'); }}
+                className={cn(
+                  "w-full text-left p-4 rounded-xl border-2 flex flex-col gap-1 transition-all",
+                  isNgrokActive 
+                    ? "bg-[#222] border-[#333] hover:border-slate-500 text-white cursor-pointer" 
+                    : "bg-slate-800/50 border-slate-700 cursor-not-allowed opacity-60 text-slate-400"
+                )}
               >
-                <span className="font-black tracking-widest text-slate-400 uppercase">{t('online_public_coming_soon')}</span>
-                <span className="text-sm font-bold text-slate-500">{t('host_global_internet')}</span>
+                <span className={cn("font-black tracking-widest uppercase", isNgrokActive ? "text-white" : "text-slate-400")}>
+                  {t('online_public_room')}
+                </span>
+                <span className={cn("text-sm font-bold", isNgrokActive ? "text-slate-400" : "text-slate-500")}>
+                  {isNgrokActive ? t('host_global_internet') : t('online_public_coming_soon')}
+                </span>
               </button>
               
               <button

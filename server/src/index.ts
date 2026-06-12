@@ -2,7 +2,10 @@ import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
-import { setupRoomManager, getPublicRooms } from './socket/roomManager';
+import { spawn } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import { setupRoomManager, getPublicRooms, getLocalRoomsForRegistration, registerRooms } from './socket/roomManager';
 import { startBroadcasting, stopBroadcasting, startListening, stopListening, getDiscoveredRooms, getLocalIPAddress, getHostingInfo } from './discovery';
 import { loadEmbeddings } from './utils/aiLogic';
 
@@ -63,6 +66,64 @@ app.get('/api/public-rooms', (req, res) => {
   res.json({ rooms: getPublicRooms() });
 });
 
+// Ngrok status helper
+async function getNgrokUrl(): Promise<string | null> {
+  try {
+    const res = await fetch('http://127.0.0.1:4040/api/tunnels');
+    if (!res.ok) return null;
+    const data = await res.json() as any;
+    if (data && Array.isArray(data.tunnels) && data.tunnels.length > 0) {
+      const httpsTunnel = data.tunnels.find((t: any) => t.proto === 'https' || t.public_url?.startsWith('https'));
+      if (httpsTunnel) {
+        return httpsTunnel.public_url;
+      }
+      return data.tunnels[0].public_url;
+    }
+  } catch (e) {
+    // Ngrok is not running locally
+  }
+  return null;
+}
+
+app.get('/api/ngrok-status', async (req, res) => {
+  const url = await getNgrokUrl();
+  res.json({ active: !!url, publicUrl: url });
+});
+
+app.post('/api/public-rooms/register', (req, res) => {
+  const { serverUrl, rooms } = req.body;
+  if (!serverUrl || !Array.isArray(rooms)) {
+    return res.status(400).json({ error: 'Missing required parameters' });
+  }
+  registerRooms(serverUrl, rooms);
+  res.json({ success: true });
+});
+
+// Periodic local room registration heartbeat (for local hosting servers with active ngrok)
+const WAN_SERVER_URL = process.env.WAN_SERVER_URL || 'https://codenamesserver-bfmmt2mx.b4a.run';
+
+setInterval(async () => {
+  try {
+    const ngrokUrl = await getNgrokUrl();
+    if (ngrokUrl) {
+      // Don't register with ourselves if we are the central server
+      const localRooms = getLocalRoomsForRegistration();
+      await fetch(`${WAN_SERVER_URL}/api/public-rooms/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serverUrl: ngrokUrl,
+          rooms: localRooms
+        }),
+        signal: AbortSignal.timeout(3000)
+      });
+    }
+  } catch (e) {
+    console.error('[Ngrok-Register] Registration failed:', e);
+  }
+}, 5000);
+
+
 // HTTP-based discovery: joiners probe this endpoint on candidate IPs
 app.get('/api/discovery/hosting', (req, res) => {
   const info = getHostingInfo();
@@ -99,7 +160,64 @@ function notifyPort(port: number) {
   } catch (_) {
     // Not running inside Capacitor nodejs — ignore
   }
+
+  startNgrok(port);
 }
+
+let ngrokProcess: any = null;
+
+function shouldLaunchNgrok() {
+  const triggerFileName = 'launch-ngrok.txt';
+  const pathsToCheck = [
+    path.join(__dirname, '..', triggerFileName),
+    path.join(__dirname, '..', '..', triggerFileName),
+    path.join(__dirname, '..', '..', 'client', triggerFileName),
+    path.join(path.dirname(process.execPath), triggerFileName)
+  ];
+  return pathsToCheck.some(p => fs.existsSync(p));
+}
+
+function startNgrok(port: number) {
+  if (!shouldLaunchNgrok()) {
+    console.log('[Ngrok] launch-ngrok.txt not found. Skipping ngrok launch.');
+    return;
+  }
+
+  console.log(`[Ngrok] launch-ngrok.txt found! Starting ngrok tunnel on port ${port}...`);
+  try {
+    ngrokProcess = spawn('ngrok', ['http', String(port)], {
+      shell: true,
+      detached: false
+    });
+
+    ngrokProcess.on('error', (err: any) => {
+      console.error('[Ngrok] Failed to start ngrok process:', err);
+    });
+  } catch (err) {
+    console.error('[Ngrok] Exception spawning ngrok:', err);
+  }
+}
+
+function killNgrok() {
+  if (ngrokProcess) {
+    console.log('[Ngrok] Terminating ngrok process...');
+    try {
+      if (process.platform === 'win32') {
+        const { exec } = require('child_process');
+        exec(`taskkill /pid ${ngrokProcess.pid} /T /F`, () => {});
+      } else {
+        ngrokProcess.kill();
+      }
+    } catch (e) {
+      // Ignore
+    }
+    ngrokProcess = null;
+  }
+}
+
+process.on('exit', killNgrok);
+process.on('SIGINT', () => { killNgrok(); process.exit(); });
+process.on('SIGTERM', () => { killNgrok(); process.exit(); });
 
 function startServer(port: number) {
   server.listen(port, '0.0.0.0', () => {
@@ -117,3 +235,4 @@ function startServer(port: number) {
 }
 
 startServer(PORT);
+

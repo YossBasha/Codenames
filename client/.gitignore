@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Ngrok selective trigger file
+launch-ngrok.txt
+

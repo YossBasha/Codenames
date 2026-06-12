@@ -47,7 +47,9 @@ function getLoggedWord(room: Room, card: CardData): string {
   return card.word;
 }
 
-export function getPublicRooms() {
+const registeredRooms = new Map<string, { rooms: any[], lastSeen: number }>();
+
+export function getLocalRoomsForRegistration() {
   return Object.values(rooms).map((r) => ({
     roomID: r.id,
     players: r.players.length,
@@ -55,6 +57,40 @@ export function getPublicRooms() {
     gameStarted: !!r.gameState,
     gameMode: r.gameState?.gameMode || "classic",
   }));
+}
+
+export function registerRooms(serverUrl: string, roomsList: any[]) {
+  registeredRooms.set(serverUrl, {
+    rooms: roomsList.map(r => ({ ...r, serverUrl })),
+    lastSeen: Date.now()
+  });
+}
+
+function getActiveRegisteredRooms() {
+  const now = Date.now();
+  const all: any[] = [];
+  for (const [serverUrl, data] of registeredRooms.entries()) {
+    if (now - data.lastSeen > 15000) {
+      registeredRooms.delete(serverUrl);
+    } else {
+      all.push(...data.rooms);
+    }
+  }
+  return all;
+}
+
+export function getPublicRooms() {
+  const local = getLocalRoomsForRegistration();
+  const external = getActiveRegisteredRooms();
+  
+  const merged = new Map<string, any>();
+  for (const r of external) {
+    merged.set(r.roomID, r);
+  }
+  for (const r of local) {
+    merged.set(r.roomID, r);
+  }
+  return Array.from(merged.values());
 }
 
 function stopRogueAssassinInterval(room: Room) {
@@ -2544,7 +2580,13 @@ export function setupRoomManager(io: Server) {
         const playerIndex = room.players.findIndex((p) => p.id === socket.id);
         if (playerIndex !== -1) {
           const player = room.players[playerIndex];
-          player.connected = false;
+          
+          if (!room.gameState || player.team === 'spectator') {
+            room.players.splice(playerIndex, 1);
+          } else {
+            player.connected = false;
+          }
+          
           io.to(roomId).emit("room_update", getSafeRoom(room));
 
           if (playerIndex === 0) {

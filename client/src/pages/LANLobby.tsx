@@ -123,6 +123,37 @@ export default function LANLobby() {
     connectionRef.current = { serverIp, inputRoom, name };
   }, [serverIp, inputRoom, name]);
 
+  const [ngrokUrl, setNgrokUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isHost || serverPort === 0) return;
+
+    let active = true;
+    const fetchStatus = () => {
+      fetch(`http://${connectIp}:${serverPort}/api/ngrok-status`)
+        .then(res => res.json())
+        .then(data => {
+          if (active) {
+            if (data.active && data.publicUrl) {
+              setNgrokUrl(data.publicUrl);
+            } else {
+              setNgrokUrl(null);
+            }
+          }
+        })
+        .catch(() => {
+          if (active) setNgrokUrl(null);
+        });
+    };
+
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 3000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [isHost, serverPort, connectIp]);
+
   useEffect(() => {
     if (isHost && !serverPort) {
       const checkPort = setInterval(async () => {
@@ -148,20 +179,23 @@ export default function LANLobby() {
     setIsConnected(false);
     const timeout = setTimeout(() => {
       // Use connectIp (stable, never changes) not serverIp (display only, can update)
-      if (!isWan && (!connectIp || !inputRoom || serverPort === 0)) return;
+      if (isHost && serverPort === 0) return;
+      if (!isWan && (!connectIp || !inputRoom)) return;
       if (isWan && !inputRoom) return;
 
       if (socket) {
         socket.disconnect();
       }
 
-      const socketUrl = isWan 
-        ? (import.meta.env.VITE_WAN_SERVER_URL || 'http://localhost:3000')
+      const serverUrlParam = searchParams.get('serverUrl');
+      const socketUrl = (isWan && !isHost) 
+        ? (serverUrlParam || import.meta.env.VITE_WAN_SERVER_URL || 'http://localhost:3000')
         : `http://${connectIp}:${serverPort}`;
 
       const newSocket = io(socketUrl, {
         reconnectionDelayMax: 10000,
-        timeout: 10000
+        timeout: 10000,
+        transports: isWan ? ['websocket'] : ['websocket', 'polling']
       });
       
       newSocket.on('connect_error', (error) => {
@@ -574,7 +608,7 @@ export default function LANLobby() {
                 <label className="block text-[10px] font-bold text-slate-400 mb-0.5 ml-2">{t('invite_link')}</label>
                 <input 
                   type="text" 
-                  value={`${window.location.origin}/lan-lobby?wan=true&room=${encodeURIComponent(inputRoom)}`}
+                  value={ngrokUrl ? `${ngrokUrl}/#/lan-lobby?wan=true&room=${encodeURIComponent(inputRoom)}&serverUrl=${encodeURIComponent(ngrokUrl)}` : (window.location.origin.includes('localhost') ? 'Detecting Ngrok...' : `${window.location.origin}/#/lan-lobby?wan=true&room=${encodeURIComponent(inputRoom)}`)}
                   readOnly
                   className="w-full bg-[#1a1a1a] border border-slate-700 rounded-xl px-2.5 py-1.5 outline-none font-mono font-bold text-[10px] opacity-70 cursor-default select-all text-blue-400 hover:opacity-100 transition-opacity"
                   onClick={(e) => {

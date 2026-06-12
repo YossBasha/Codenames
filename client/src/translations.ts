@@ -20,11 +20,12 @@ export const translations = {
     theme_settings: 'THEME SETTINGS',
     change_visual_style: 'Change the visual style',
     done: 'DONE',
+    online_public_room: 'Online (Public)',
     online_public_coming_soon: 'Online (Public) - COMING SOON..',
     host_global_internet: 'Host on the global internet server',
     local_network_lan: 'Local Network (LAN)',
     host_same_wifi: 'Host for players on the same Wi-Fi',
-
+    
     // Join
     scan_to_join: 'Scan to Join',
     waiting_for_host: 'Waiting for host...',
@@ -306,11 +307,12 @@ export const translations = {
     theme_settings: 'إعدادات المظهر',
     change_visual_style: 'تغيير النمط البصري',
     done: 'تم',
+    online_public_room: 'عبر الإنترنت (عام)',
     online_public_coming_soon: 'عبر الإنترنت (عام) - قريباً..',
     host_global_internet: 'استضافة على سيرفر الإنترنت العالمي',
     local_network_lan: 'شبكة محلية (LAN)',
     host_same_wifi: 'استضافة للاعبين على نفس شبكة Wi-Fi',
-
+    
     // Join
     scan_to_join: 'امسح للانضمام',
     waiting_for_host: 'في انتظار المضيف...',

@@ -29,7 +29,11 @@ export default function JoinGame() {
     setIsFetchingPublic(true);
     try {
       const WAN_SERVER_URL = import.meta.env.VITE_WAN_SERVER_URL || 'http://localhost:3000';
-      const res = await fetch(`${WAN_SERVER_URL}/api/public-rooms`);
+      const res = await fetch(`${WAN_SERVER_URL}/api/public-rooms`, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true'
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         setPublicRooms(data.rooms || []);
@@ -105,11 +109,15 @@ export default function JoinGame() {
             {t('local_room')}
           </button>
           <button
-            disabled
-            className="flex-1 py-3 text-sm sm:text-base font-bold rounded-xl transition-all flex items-center justify-center gap-2 opacity-50 cursor-not-allowed text-slate-400 bg-slate-800/30"
+            onClick={() => setActiveTab('online')}
+            className={`flex-1 py-3 text-sm sm:text-base font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'online' 
+                ? 'bg-blue-600 text-white shadow-lg' 
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 cursor-pointer'
+            }`}
           >
             <Wifi className="w-4 h-4" />
-            {t('online_room')} ({t('online_public_coming_soon').includes('قريباً') ? 'قريباً' : 'Soon'})
+            {t('online_room')}
           </button>
         </div>
 
@@ -216,7 +224,10 @@ export default function JoinGame() {
                   {publicRooms.map((room) => (
                     <button
                       key={room.roomID}
-                      onClick={() => navigate(`/lan-lobby?wan=true&room=${encodeURIComponent(room.roomID)}`)}
+                      onClick={() => {
+                        const urlParam = room.serverUrl ? `&serverUrl=${encodeURIComponent(room.serverUrl)}` : '';
+                        navigate(`/lan-lobby?wan=true&room=${encodeURIComponent(room.roomID)}${urlParam}`);
+                      }}
                       className="w-full text-left bg-slate-800 hover:bg-slate-700 border-2 border-slate-700 hover:border-blue-500 transition-all rounded-2xl p-4 flex items-center justify-between group"
                     >
                       <div>
@@ -256,15 +267,32 @@ function ManualJoin({ navigate, activeTab }: { navigate: (path: string) => void,
   const [ip, setIp] = useState('');
   const [port, setPort] = useState('3000');
   const [room, setRoom] = useState('');
+  const [serverUrl, setServerUrl] = useState('');
 
   const handleJoin = () => {
     if (activeTab === 'online') {
       if (!room.trim()) return;
-      navigate(`/lan-lobby?wan=true&room=${encodeURIComponent(room.trim())}`);
+      const urlParam = serverUrl.trim() ? `&serverUrl=${encodeURIComponent(serverUrl.trim())}` : '';
+      navigate(`/lan-lobby?wan=true&room=${encodeURIComponent(room.trim())}${urlParam}`);
     } else {
       if (!ip.trim() || !port.trim() || !room.trim()) return;
       navigate(`/lan-lobby?ip=${ip.trim()}&port=${port.trim()}&room=${encodeURIComponent(room.trim())}`);
     }
+  };
+
+  const handleServerUrlChange = (value: string) => {
+    setServerUrl(value);
+    // Auto-parse pasted invite links
+    try {
+      if (value.includes('?') && (value.includes('room=') || value.includes('serverUrl='))) {
+        const urlPart = value.substring(value.indexOf('?'));
+        const searchParams = new URLSearchParams(urlPart);
+        const roomParam = searchParams.get('room');
+        const serverUrlParam = searchParams.get('serverUrl');
+        if (roomParam) setRoom(roomParam);
+        if (serverUrlParam) setServerUrl(serverUrlParam);
+      }
+    } catch (e) {}
   };
 
   return (
@@ -306,7 +334,19 @@ function ManualJoin({ navigate, activeTab }: { navigate: (path: string) => void,
               </div>
             </>
           ) : (
-            <p className="text-slate-500 text-xs">{t('enter_exact_room_id')}</p>
+            <>
+              <p className="text-slate-500 text-xs">{t('enter_exact_room_id')}</p>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">Server URL / Invite Link</label>
+                <input
+                  type="text"
+                  placeholder="Paste Invite Link or e.g. https://xxxx.ngrok-free.app"
+                  value={serverUrl}
+                  onChange={e => handleServerUrlChange(e.target.value)}
+                  className="w-full bg-[#2a2a2a] border border-slate-600 rounded-xl px-3 py-2 text-white font-mono text-xs outline-none focus:border-blue-500"
+                />
+              </div>
+            </>
           )}
           
           <div>

@@ -78,3 +78,5 @@ ipcMain.handle('get-server-port', () => serverPort);
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
+
+
