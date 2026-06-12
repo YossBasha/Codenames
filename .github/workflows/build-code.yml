@@ -23,13 +23,13 @@ jobs:
       - name: Install and Build Backend
         run: |
           cd server
-          npm ci
+          npm install --no-audit --no-fund
           npm run build
 
       - name: Install and Build Frontend
         run: |
           cd client
-          npm ci
+          npm install --no-audit --no-fund
           npm run build
 
       - name: Deploy Compiled Files to dist-files branch
