@@ -145,6 +145,12 @@ async function checkAndApplyUpdates() {
 }
 
 function createWindow(customClientHtmlPath) {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+    return;
+  }
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
