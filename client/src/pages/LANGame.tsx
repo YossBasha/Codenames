@@ -26,6 +26,7 @@ export default function LANGame() {
   const { t, uiLanguage } = useI18n();
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [roomPlayers, setRoomPlayers] = useState<Player[]>([]);
+  const [isPublic, setIsPublic] = useState(false);
   const roomPlayersRef = useRef<Player[]>([]);
   const [clueTargets, setClueTargets] = useState<number[]>([]);
   const [hostDisconnected, setHostDisconnected] = useState(false);
@@ -264,6 +265,9 @@ export default function LANGame() {
         setRoomPlayers(room.players);
         roomPlayersRef.current = room.players;
       }
+      if (room.isPublic !== undefined) {
+        setIsPublic(room.isPublic);
+      }
     };
 
     const handleGachaStartAnimation = ({
@@ -365,6 +369,7 @@ export default function LANGame() {
       } catch (_) {}
 
       if (amHostCheck) lobbyParams.set("host", "true");
+      if (isPublic) lobbyParams.set("wan", "true");
       if (roomId) lobbyParams.set("room", roomId);
 
       navigate(`/lan-lobby?${lobbyParams.toString()}`);
