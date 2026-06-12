@@ -172,9 +172,24 @@ function shouldLaunchNgrok() {
     path.join(__dirname, '..', triggerFileName),
     path.join(__dirname, '..', '..', triggerFileName),
     path.join(__dirname, '..', '..', 'client', triggerFileName),
-    path.join(path.dirname(process.execPath), triggerFileName)
+    path.join(path.dirname(process.execPath), triggerFileName),
+    path.join(path.dirname(process.execPath), '..', '..', triggerFileName),
+    path.join(path.dirname(process.execPath), '..', '..', 'client', triggerFileName),
+    path.join(process.cwd(), triggerFileName),
+    path.join(process.cwd(), 'client', triggerFileName)
   ];
-  return pathsToCheck.some(p => fs.existsSync(p));
+  
+  console.log('[Ngrok] Checking paths for auto-launch trigger file:');
+  for (const p of pathsToCheck) {
+    try {
+      const exists = fs.existsSync(p);
+      console.log(`  - ${p}: ${exists ? 'FOUND' : 'NOT FOUND'}`);
+      if (exists) return true;
+    } catch (e) {
+      console.log(`  - ${p}: ERROR checking (${e})`);
+    }
+  }
+  return false;
 }
 
 function startNgrok(port: number) {

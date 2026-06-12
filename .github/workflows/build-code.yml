@@ -1,0 +1,58 @@
+name: Compile and Publish Code Updates
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install and Build Backend
+        run: |
+          cd server
+          npm ci
+          npm run build
+
+      - name: Install and Build Frontend
+        run: |
+          cd client
+          npm ci
+          npm run build
+
+      - name: Deploy Compiled Files to dist-files branch
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Create a clean release directory
+          mkdir -p release-dist/client
+          mkdir -p release-dist/server
+          
+          # Copy compiled files
+          cp -r client/dist release-dist/client/
+          cp -r server/dist release-dist/server/
+          
+          # Copy client package.json so we can compare version
+          cp client/package.json release-dist/
+          
+          # Initialize and force push to dist-files branch
+          cd release-dist
+          git init
+          git checkout -b dist-files
+          git add .
+          git commit -m "Build compiled assets from commit ${{ github.sha }}"
+          git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git push -f origin dist-files
