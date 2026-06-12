@@ -216,7 +216,7 @@ export default function LANLobby() {
             name: name.trim() || `Spectator ${newSocket.id!.substring(0,4)}` 
           };
           setPlayer(currentPlayer);
-          newSocket.emit('join_room', { roomId: inputRoom, player: currentPlayer });
+          newSocket.emit('join_room', { roomId: inputRoom, player: currentPlayer, isPublic: isWan });
         }
       });
 
@@ -325,7 +325,7 @@ export default function LANLobby() {
     };
     
     setPlayer(newPlayer);
-    socket.emit('join_room', { roomId, player: newPlayer, explicitChange: true });
+    socket.emit('join_room', { roomId, player: newPlayer, explicitChange: true, isPublic: isWan });
     playLobbyClickSfx();
   };
 
@@ -336,7 +336,7 @@ export default function LANLobby() {
     if (player && socket) {
       const updatedPlayer = { ...player, name };
       setPlayer(updatedPlayer);
-      socket.emit('join_room', { roomId: inputRoom, player: updatedPlayer });
+      socket.emit('join_room', { roomId: inputRoom, player: updatedPlayer, isPublic: isWan });
     }
   };
 

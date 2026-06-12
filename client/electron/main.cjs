@@ -5,6 +5,22 @@ const https = require('https');
 const fs = require('fs');
 const AdmZip = require('adm-zip');
 
+// Setup file logging to help debug server/ngrok issues in packaged app
+const logFile = path.join(app.getPath('userData'), 'app-debug.log');
+const logStream = fs.createWriteStream(logFile, { flags: 'w' }); // overwrite each launch
+console.log = (...args) => {
+  const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
+  logStream.write(`[LOG] ${new Date().toISOString()}: ${msg}\n`);
+  process.stdout.write(msg + '\n');
+};
+console.error = (...args) => {
+  const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
+  logStream.write(`[ERROR] ${new Date().toISOString()}: ${msg}\n`);
+  process.stderr.write(msg + '\n');
+};
+
+console.log('[Main] Logger initialized. Log file path:', logFile);
+
 let mainWindow;
 let serverProcess;
 let serverPort = null;

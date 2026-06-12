@@ -29,6 +29,8 @@ interface Room {
   timerInterval?: NodeJS.Timeout;
   rogueAssassinInterval?: NodeJS.Timeout;
   settings?: any;
+  isPublic?: boolean;
+  hostSessionId?: string;
 }
 
 const rooms: Record<string, Room> = {};
@@ -50,13 +52,15 @@ function getLoggedWord(room: Room, card: CardData): string {
 const registeredRooms = new Map<string, { rooms: any[], lastSeen: number }>();
 
 export function getLocalRoomsForRegistration() {
-  return Object.values(rooms).map((r) => ({
-    roomID: r.id,
-    players: r.players.length,
-    hostName: r.players.length > 0 ? r.players[0].name : "Unknown",
-    gameStarted: !!r.gameState,
-    gameMode: r.gameState?.gameMode || "classic",
-  }));
+  return Object.values(rooms)
+    .filter((r) => r.isPublic) // Only register public/WAN rooms
+    .map((r) => ({
+      roomID: r.id,
+      players: r.players.length,
+      hostName: r.players.length > 0 ? r.players[0].name : "Unknown",
+      gameStarted: !!r.gameState,
+      gameMode: r.gameState?.gameMode || "classic",
+    }));
 }
 
 export function registerRooms(serverUrl: string, roomsList: any[]) {
@@ -1399,10 +1403,12 @@ export function setupRoomManager(io: Server) {
         roomId,
         player,
         explicitChange,
+        isPublic,
       }: {
         roomId: string;
         player: Player;
         explicitChange?: boolean;
+        isPublic?: boolean;
       }) => {
         socket.join(roomId);
 
@@ -1411,7 +1417,11 @@ export function setupRoomManager(io: Server) {
             id: roomId,
             players: [],
             gameState: null,
+            hostSessionId: player.sessionId || player.id,
+            isPublic: !!isPublic
           };
+        } else if (isPublic !== undefined) {
+          rooms[roomId].isPublic = !!isPublic;
         }
 
         const existingPlayerIndex = rooms[roomId].players.findIndex(
@@ -2589,7 +2599,8 @@ export function setupRoomManager(io: Server) {
           
           io.to(roomId).emit("room_update", getSafeRoom(room));
 
-          if (playerIndex === 0) {
+          const isHost = (player.sessionId && player.sessionId === room.hostSessionId) || (player.id === room.hostSessionId);
+          if (isHost) {
             console.log(
               `Host ${player.name} disconnected from room ${roomId}. Deleting room immediately.`,
             );
