@@ -169,6 +169,7 @@ let ngrokProcess: any = null;
 function shouldLaunchNgrok() {
   const triggerFileName = 'launch-ngrok.txt';
   const pathsToCheck = [
+    'c:/Users/yossu/OneDrive/Desktop/Programing/Games/Codenames/client/launch-ngrok.txt',
     path.join(__dirname, '..', triggerFileName),
     path.join(__dirname, '..', '..', triggerFileName),
     path.join(__dirname, '..', '..', 'client', triggerFileName),
