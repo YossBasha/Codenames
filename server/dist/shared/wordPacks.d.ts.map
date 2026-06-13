@@ -1,0 +1,1 @@
+{"version":3,"file":"wordPacks.d.ts","sourceRoot":"","sources":["../../../shared/wordPacks.ts"],"names":[],"mappings":"AAAA,MAAM,WAAW,gBAAgB;IAC/B,CAAC,YAAY,EAAE,MAAM,GAAG;QACtB,CAAC,QAAQ,EAAE,MAAM,GAAG,MAAM,EAAE,CAAC;KAC9B,CAAC;CACH;AAED,eAAO,MAAM,gBAAgB,EAAE,gBA00E9B,CAAC"}
