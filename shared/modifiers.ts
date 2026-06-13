@@ -49,9 +49,9 @@ export const MODIFIERS: Modifier[] = [
     nameAr: "الحرمان الحسي",
     category: "board",
     description:
-      "The board colors are hidden during the guessing phase! They only briefly reveal for 3 seconds when the Spymaster submits a clue.",
+      "The board colors are hidden during the spymaster phase! They only briefly reveal for 5 seconds at the start of the Spymaster's turn until they submit a clue.",
     descriptionAr:
-      "ألوان اللوحة مخفية أثناء مرحلة التخمين! تظهر فقط لفترة وجيزة لمدة 3 ثوانٍ عندما يقدم رئيس الجواسيس دليلاً.",
+      "ألوان اللوحة مخفية أثناء مرحلة رئيس الجواسيس! تظهر فقط لفترة وجيزة لمدة 5 ثوانٍ في بداية دور رئيس الجواسيس حتى يقدم دليلاً.",
     icon: "EyeOff",
   },
   {

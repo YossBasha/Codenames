@@ -358,6 +358,7 @@ function areEqual(prevProps: CardProps, nextProps: CardProps) {
   if (prevProps.scrambleDy !== nextProps.scrambleDy) return false;
   if (prevProps.isGuesser !== nextProps.isGuesser) return false;
   if (prevProps.gachaHighlight !== nextProps.gachaHighlight) return false;
+  if (prevProps.d20FreeReveal !== nextProps.d20FreeReveal) return false;
   if (prevProps.isSwipedHover !== nextProps.isSwipedHover) return false;
   if (prevProps.isTouchMode !== nextProps.isTouchMode) return false;
 

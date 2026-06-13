@@ -183,14 +183,62 @@ export default function LANLobby() {
       if (!isWan && (!connectIp || !inputRoom)) return;
       if (isWan && !inputRoom) return;
 
-      if (socket) {
-        socket.disconnect();
-      }
-
       const serverUrlParam = searchParams.get('serverUrl');
       const socketUrl = (isWan && !isHost) 
         ? (serverUrlParam || import.meta.env.VITE_WAN_SERVER_URL || 'http://localhost:3000')
         : `http://${connectIp}:${serverPort}`;
+
+      // If we already have a connected socket, reuse it instead of
+      // disconnecting and reconnecting (which would kick players).
+      if (socket && socket.connected) {
+        setIsConnected(true);
+        setConnectionError(null);
+        setRoomId(inputRoom);
+        
+        if (player) {
+          const currentPlayer = { 
+            ...player, 
+            id: socket.id!,
+            name: name.trim() || `Spectator ${socket.id!.substring(0,4)}` 
+          };
+          setPlayer(currentPlayer);
+          socket.emit('join_room', { roomId: inputRoom, player: currentPlayer, isPublic: isWan });
+        }
+
+        socket.off('room_update');
+        socket.off('game_started');
+        socket.off('host_disconnected');
+
+        socket.on('room_update', (room) => {
+          setRoomPlayers(room.players);
+          setPlayer(prev => {
+            if (!prev) return prev;
+            const me = room.players.find((p: Player) => p.id === prev.id);
+            if (me && (me.team !== prev.team || me.role !== prev.role)) {
+              return { ...prev, team: me.team, role: me.role };
+            }
+            return prev;
+          });
+        });
+        
+        socket.on('game_started', () => {
+          const gameParams = new URLSearchParams();
+          if (isWan) gameParams.set('wan', 'true');
+          navigate(`/lan-game?${gameParams.toString()}`);
+        });
+
+        if (!isHost) {
+          socket.on('host_disconnected', () => {
+            setHostDisconnected(true);
+            setTimeout(() => navigate('/'), 4000);
+          });
+        }
+        return;
+      }
+
+      if (socket) {
+        socket.disconnect();
+      }
 
       const newSocket = io(socketUrl, {
         reconnectionDelayMax: 10000,
@@ -237,7 +285,9 @@ export default function LANLobby() {
       });
       
       newSocket.on('game_started', () => {
-        navigate('/lan-game');
+        const gameParams = new URLSearchParams();
+        if (isWan) gameParams.set('wan', 'true');
+        navigate(`/lan-game?${gameParams.toString()}`);
       });
 
       if (!isHost) {

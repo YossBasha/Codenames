@@ -226,7 +226,12 @@ export default function GiveClueBar({
       </div>
 
       {showDrawingModal && (
-        <DrawingModal onClose={() => setShowDrawingModal(false)} onSubmit={handleDrawingSubmit} />
+        <DrawingModal 
+          onClose={() => setShowDrawingModal(false)} 
+          onSubmit={handleDrawingSubmit}
+          initialImage={cueInput.startsWith('data:image') ? cueInput : undefined}
+          onClear={() => setCueInput('')}
+        />
       )}
     </>
   );

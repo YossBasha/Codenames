@@ -6,9 +6,11 @@ import { cn } from '../utils';
 interface DrawingModalProps {
   onClose: () => void;
   onSubmit: (dataUrl: string) => void;
+  initialImage?: string;
+  onClear?: () => void;
 }
 
-export default function DrawingModal({ onClose, onSubmit }: DrawingModalProps) {
+export default function DrawingModal({ onClose, onSubmit, initialImage, onClear }: DrawingModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState('#000000');
@@ -54,7 +56,18 @@ export default function DrawingModal({ onClose, onSubmit }: DrawingModalProps) {
     // Fill white background so it's not transparent
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    saveHistoryState();
+
+    // If we have an existing drawing, load it onto the canvas
+    if (initialImage) {
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        saveHistoryState();
+      };
+      img.src = initialImage;
+    } else {
+      saveHistoryState();
+    }
   }, []);
 
   const handleUndo = () => {
@@ -227,6 +240,8 @@ export default function DrawingModal({ onClose, onSubmit }: DrawingModalProps) {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     saveHistoryState();
+    // Also clear the drawing as the active clue in the parent
+    if (onClear) onClear();
   };
 
   const handleSubmit = () => {

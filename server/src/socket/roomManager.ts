@@ -31,6 +31,8 @@ interface Room {
   settings?: any;
   isPublic?: boolean;
   hostSessionId?: string;
+  deletionTimeout?: NodeJS.Timeout;
+  returningToLobby?: boolean;
 }
 
 const rooms: Record<string, Room> = {};
@@ -1420,8 +1422,19 @@ export function setupRoomManager(io: Server) {
             hostSessionId: player.sessionId || player.id,
             isPublic: !!isPublic
           };
-        } else if (isPublic !== undefined) {
-          rooms[roomId].isPublic = !!isPublic;
+        } else {
+          if (isPublic !== undefined) {
+            rooms[roomId].isPublic = !!isPublic;
+          }
+          if (rooms[roomId].deletionTimeout) {
+            clearTimeout(rooms[roomId].deletionTimeout);
+            rooms[roomId].deletionTimeout = undefined;
+            console.log(`Host re-joined room ${roomId}. Deletion cancelled.`);
+          }
+          // Clear the lobby-transition flag when players start reconnecting
+          if (rooms[roomId].returningToLobby) {
+            rooms[roomId].returningToLobby = false;
+          }
         }
 
         const existingPlayerIndex = rooms[roomId].players.findIndex(
@@ -2225,7 +2238,7 @@ export function setupRoomManager(io: Server) {
 
         if (!room.gameState.modifierState) room.gameState.modifierState = {};
 
-        const result = Math.floor(Math.random() * 20) + 1;
+        const result: number = Math.floor(Math.random() * 20) + 1;
         room.gameState.modifierState.rolled = true;
         room.gameState.modifierState.result = result;
 
@@ -2301,8 +2314,10 @@ export function setupRoomManager(io: Server) {
           const card = room.gameState.cards.find((c) => c.id === cardId);
           if (!card) return;
 
+          // In duet: when currentTurn="red", the guessing team is "blue"
+          // so we check/set revealedByB and use duetTypeA (red's key)
           const isUnrevealed = isDuet
-            ? expectedTurn === "blue"
+            ? expectedTurn === "red"
               ? !card.revealedByB
               : !card.revealedByA
             : !card.revealed;
@@ -2311,13 +2326,29 @@ export function setupRoomManager(io: Server) {
 
           const teamColor = expectedTurn;
           const validColor = isDuet
-            ? (expectedTurn === "blue" ? card.duetTypeB : card.duetTypeA) ===
+            ? (expectedTurn === "red" ? card.duetTypeA : card.duetTypeB) ===
               "green"
             : card.type === teamColor;
 
           if (!validColor) return;
 
+          // Clear the free reveal flag
           delete room.gameState.modifierState.canRevealForFree;
+
+          // Directly reveal the card (processGuess can't be used here since phase is "spymaster")
+          if (isDuet) {
+            // Match processGuess mapping: red turn → blue guesses → revealedByB
+            if (expectedTurn === "red") card.revealedByB = true;
+            else card.revealedByA = true;
+            // Use the spymaster's (clue-giver's) key for the card type
+            const keyType = expectedTurn === "red" ? card.duetTypeA : card.duetTypeB;
+            if (keyType === "green" || (card.revealedByA && card.revealedByB)) {
+              card.revealed = true;
+              card.type = keyType!;
+            }
+          } else {
+            card.revealed = true;
+          }
 
           room.gameState.gameLog.push({
             id: Math.random().toString(36).substring(7),
@@ -2328,13 +2359,32 @@ export function setupRoomManager(io: Server) {
             },
             guessingTeam: expectedTurn as "red" | "blue",
             cardWord: `Revealed ${getLoggedWord(room, card)} for free!`,
-            revealedColor: "neutral",
+            revealedColor: card.type as any,
             timestamp: Date.now(),
           });
 
-          // Use processGuess to handle the reveal logic without ending turn manually
-          processGuess(io, room, player, cardId);
-          // Turn transitions automatically handled by processGuess if needed, else they can still give a clue!
+          // Check for win condition after reveal
+          if (isDuet) {
+            const allGreenRevealedByA = room.gameState.cards
+              .filter((c) => c.duetTypeA === "green")
+              .every((c) => c.revealedByB);
+            const allGreenRevealedByB = room.gameState.cards
+              .filter((c) => c.duetTypeB === "green")
+              .every((c) => c.revealedByA);
+            if (allGreenRevealedByA && allGreenRevealedByB) {
+              room.gameState.winner = "green" as any;
+            }
+          } else {
+            const teamCards = room.gameState.cards.filter(
+              (c) => c.type === teamColor
+            );
+            if (teamCards.every((c) => c.revealed)) {
+              room.gameState.winner = teamColor;
+            }
+          }
+
+          // Stay in spymaster phase so they can give a normal clue
+          io.to(roomId).emit("game_update", room.gameState);
         }
       },
     );
@@ -2577,9 +2627,20 @@ export function setupRoomManager(io: Server) {
     socket.on("play_again", ({ roomId }: { roomId: string }) => {
       const room = rooms[roomId];
       if (room && room.players.length > 0 && room.players[0].id === socket.id) {
+        // Mark the room as transitioning back to lobby so that
+        // temporary disconnects (clients navigating from game → lobby)
+        // don't remove players or delete the room.
+        room.returningToLobby = true;
         room.gameState = null;
         io.to(roomId).emit("return_to_lobby");
         io.to(roomId).emit("room_update", getSafeRoom(room));
+
+        // Clear the flag after 15s – enough time for all clients to reconnect
+        setTimeout(() => {
+          if (rooms[roomId]) {
+            rooms[roomId].returningToLobby = false;
+          }
+        }, 15000);
       }
     });
 
@@ -2591,22 +2652,34 @@ export function setupRoomManager(io: Server) {
         if (playerIndex !== -1) {
           const player = room.players[playerIndex];
           
-          if (!room.gameState || player.team === 'spectator') {
+          if (!room.gameState && !room.returningToLobby) {
+            // Normal lobby disconnect – remove player entirely
             room.players.splice(playerIndex, 1);
           } else {
+            // During a game or lobby-return transition – keep player, mark offline
             player.connected = false;
           }
           
           io.to(roomId).emit("room_update", getSafeRoom(room));
 
           const isHost = (player.sessionId && player.sessionId === room.hostSessionId) || (player.id === room.hostSessionId);
-          if (isHost) {
+          if (isHost && !room.returningToLobby) {
             console.log(
-              `Host ${player.name} disconnected from room ${roomId}. Deleting room immediately.`,
+              `Host ${player.name} disconnected from room ${roomId}. Scheduling room deletion with 5s grace period.`,
             );
-            stopTimer(room);
-            io.to(roomId).emit("host_disconnected");
-            delete rooms[roomId];
+            if (room.deletionTimeout) {
+              clearTimeout(room.deletionTimeout);
+            }
+            room.deletionTimeout = setTimeout(() => {
+              console.log(`Host deletion grace period expired. Deleting room ${roomId}.`);
+              stopTimer(room);
+              io.to(roomId).emit("host_disconnected");
+              delete rooms[roomId];
+            }, 5000);
+          } else if (isHost && room.returningToLobby) {
+            console.log(
+              `Host ${player.name} disconnected during lobby transition for room ${roomId}. Skipping deletion – expecting reconnect.`,
+            );
           }
         }
       }

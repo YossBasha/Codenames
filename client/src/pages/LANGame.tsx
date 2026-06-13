@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Check } from "lucide-react";
 import { useGameContext } from "../context/GameContext";
 import { useI18n } from "../context/I18nContext";
@@ -22,6 +22,8 @@ import { MODIFIERS } from "../../../shared/modifiers";
 
 export default function LANGame() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isWan = searchParams.get('wan') === 'true';
   const { player, roomId, socket } = useGameContext();
   const { t, uiLanguage } = useI18n();
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -359,17 +361,21 @@ export default function LANGame() {
       // Always extract port from the live socket connection
       try {
         const socketUrl = new URL((socket.io as any).uri);
-        lobbyParams.set("port", socketUrl.port);
-        if (!amHostCheck) {
-          const connectedIp = socketUrl.hostname;
-          if (connectedIp && connectedIp !== "127.0.0.1") {
-            lobbyParams.set("ip", connectedIp);
+        if (isWan || isPublic) {
+          lobbyParams.set("serverUrl", socketUrl.origin);
+        } else {
+          lobbyParams.set("port", socketUrl.port);
+          if (!amHostCheck) {
+            const connectedIp = socketUrl.hostname;
+            if (connectedIp && connectedIp !== "127.0.0.1") {
+              lobbyParams.set("ip", connectedIp);
+            }
           }
         }
       } catch (_) {}
 
       if (amHostCheck) lobbyParams.set("host", "true");
-      if (isPublic) lobbyParams.set("wan", "true");
+      if (isWan || isPublic) lobbyParams.set("wan", "true");
       if (roomId) lobbyParams.set("room", roomId);
 
       navigate(`/lan-lobby?${lobbyParams.toString()}`);
@@ -392,7 +398,7 @@ export default function LANGame() {
         clearTimeout(disconnectTimeout);
         disconnectTimeout = null;
       }
-      socket.emit("join_room", { roomId, player });
+      socket.emit("join_room", { roomId, player, isPublic: isWan || isPublic });
     };
 
     socket.on("connect", handleConnect);
@@ -405,7 +411,7 @@ export default function LANGame() {
     });
 
     // Request fresh room state immediately upon mounting
-    socket.emit("join_room", { roomId, player });
+    socket.emit("join_room", { roomId, player, isPublic: isWan || isPublic });
 
     return () => {
       if (disconnectTimeout) {
@@ -487,6 +493,7 @@ export default function LANGame() {
     gameState &&
     !gameState.winner &&
     gameState.currentPhase === "spymaster" &&
+    !(gameState.activeModifier === "d20-roll" && gameState.modifierState?.canRevealForFree) &&
     ((gameState.gameMode === "classic" &&
       currentPlayer?.team === gameState.currentTurn &&
       currentPlayer?.role === "spymaster") ||
