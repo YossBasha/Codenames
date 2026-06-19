@@ -108,7 +108,7 @@ export default function Home() {
       setIsCheckingUpdate(false);
     });
 
-    api.onUpdaterError((err: string) => {
+    api.onUpdaterError(() => {
       setUpdateMessage("Update failed.");
       setIsCheckingUpdate(false);
       setTimeout(() => setUpdateMessage(null), 3000);
