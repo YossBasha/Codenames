@@ -40,7 +40,6 @@ export default function LANLobby() {
   const [serverPort, setServerPort] = useState(parseInt(searchParams.get('port') || '0', 10));
   const [inputRoom, setInputRoom] = useState(searchParams.get('room') || `Room-${Math.floor(Math.random() * 10000)}`);
   const savedNickname = localStorage.getItem('codenames_nickname') || '';
-  const [name, setName] = useState(player?.name || savedNickname);
   
   // Auto-fetch real LAN IP for display and broadcast (host only)
   useEffect(() => {
@@ -166,12 +165,12 @@ export default function LANLobby() {
   }, [isHost, serverPort]);
 
   useEffect(() => {
-    if (isHost && serverPort > 0 && name.trim() && !name.startsWith('Spectator')) {
-      startHostBroadcast(inputRoom, name);
+    if (isHost && serverPort > 0 && savedNickname.trim() && !savedNickname.startsWith('Spectator')) {
+      startHostBroadcast(inputRoom, savedNickname);
     }
     // We intentionally DO NOT stopHostBroadcast on unmount so the room stays discoverable
     // when navigating to the game screen. We only stop it if they explicitly go back to the menu.
-  }, [isHost, serverPort, inputRoom, name]);
+  }, [isHost, serverPort, inputRoom, savedNickname]);
 
   useEffect(() => {
     setIsConnected(false);
@@ -197,7 +196,7 @@ export default function LANLobby() {
           const currentPlayer = { 
             ...player, 
             id: socket.id!,
-            name: name.trim() || `Spectator ${socket.id!.substring(0,4)}` 
+            name: savedNickname.trim() || `Spectator ${socket.id!.substring(0,4)}` 
           };
           setPlayer(currentPlayer);
           socket.emit('join_room', { roomId: inputRoom, player: currentPlayer, isPublic: isWan });
@@ -259,7 +258,7 @@ export default function LANLobby() {
           const currentPlayer = { 
             ...player, 
             id: newSocket.id!,
-            name: name.trim() || `Spectator ${newSocket.id!.substring(0,4)}` 
+            name: savedNickname.trim() || `Spectator ${newSocket.id!.substring(0,4)}` 
           };
           setPlayer(currentPlayer);
           newSocket.emit('join_room', { roomId: inputRoom, player: currentPlayer, isPublic: isWan });
@@ -355,7 +354,7 @@ export default function LANLobby() {
       });
       return;
     }
-    if (!name.trim()) {
+    if (!savedNickname.trim()) {
       setAlertModal({
         isOpen: true,
         title: t('alert_warning'),
@@ -367,7 +366,7 @@ export default function LANLobby() {
     const newPlayer: Player = {
       ...(player || {}),
       id: socket.id!,
-      name,
+      name: savedNickname,
       team,
       role
     };
@@ -597,7 +596,7 @@ export default function LANLobby() {
             <div>
               <label className="block text-[10px] font-bold text-slate-400 mb-0.5 ml-2">{t('display_name')}</label>
               <div className="w-full bg-slate-800/40 border border-slate-700/50 rounded-xl px-3 py-1.5 font-bold text-sm text-slate-300 select-none">
-                {player?.name || name}
+                {player?.name || savedNickname}
               </div>
             </div>
             {isWan ? (
