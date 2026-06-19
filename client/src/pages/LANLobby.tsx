@@ -114,9 +114,6 @@ export default function LANLobby() {
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [hostDisconnected, setHostDisconnected] = useState(false);
   
-  // Ref to track the socket we create in the connection effect so cleanup can always disconnect it
-  const pendingSocketRef = useRef<ReturnType<typeof io> | null>(null);
-
   const connectionRef = useRef({ serverIp, inputRoom, name });
 
   useEffect(() => {
@@ -177,14 +174,6 @@ export default function LANLobby() {
 
   useEffect(() => {
     setIsConnected(false);
-
-    // Disconnect any in-flight socket from a previous run of this effect
-    // (critical for React StrictMode double-mount and when deps change)
-    if (pendingSocketRef.current) {
-      pendingSocketRef.current.disconnect();
-      pendingSocketRef.current = null;
-    }
-
     const timeout = setTimeout(() => {
       // Use connectIp (stable, never changes) not serverIp (display only, can update)
       if (isHost && serverPort === 0) return;
@@ -249,14 +238,10 @@ export default function LANLobby() {
       }
 
       const newSocket = io(socketUrl, {
-        // Disable auto-reconnect — we manage reconnection via the effect deps
-        reconnection: false,
+        reconnectionDelayMax: 10000,
         timeout: 10000,
         transports: isWan ? ['websocket'] : ['websocket', 'polling']
       });
-
-      // Track this socket so the cleanup can disconnect it if the effect re-runs
-      pendingSocketRef.current = newSocket;
       
       newSocket.on('connect_error', (error) => {
         console.error('Socket connect error:', error);
@@ -264,8 +249,6 @@ export default function LANLobby() {
       });
 
       newSocket.on('connect', () => {
-        // Clear ref — socket connected successfully, no longer 'pending'
-        pendingSocketRef.current = null;
         setIsConnected(true);
         setConnectionError(null);
         setSocket(newSocket);
@@ -311,16 +294,9 @@ export default function LANLobby() {
         });
       }
 
-    }, 1000);
+    }, 1000); 
 
-    return () => {
-      clearTimeout(timeout);
-      // Disconnect and discard any socket that was created but not yet connected
-      if (pendingSocketRef.current) {
-        pendingSocketRef.current.disconnect();
-        pendingSocketRef.current = null;
-      }
-    };
+    return () => clearTimeout(timeout);
   // connectIp is stable (never changes), so only serverPort and inputRoom can trigger reconnect
   }, [connectIp, inputRoom, serverPort]);
 

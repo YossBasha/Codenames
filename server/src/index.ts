@@ -22,6 +22,7 @@ const io = new Server(server, {
     origin: '*',
     methods: ['GET', 'POST'],
   },
+  maxHttpBufferSize: 5e6, // 5 MB — needed for large base64 avatars
 });
 
 app.get('/health', (req, res) => {
