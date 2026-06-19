@@ -168,10 +168,9 @@ export default function LANGame() {
 
   useEffect(() => {
     if (gameState?.activeModifier) {
-      // Modifiers only change when the turn changes (or when a new modifier is explicitly applied)
-      const isNewModifier =
-        gameState.activeModifier !== prevModifierRef.current ||
-        gameState.currentTurn !== prevTurnRef.current;
+      // Modifiers should only announce when they first activate (when activeModifier changes),
+      // not when the turn transitions while the modifier remains active.
+      const isNewModifier = gameState.activeModifier !== prevModifierRef.current;
 
       if (isNewModifier) {
         // If turn announcer is about to show or is currently showing, queue the modifier banner
@@ -1104,6 +1103,7 @@ export default function LANGame() {
                   showModifierBanner === "earthquake") &&
                 (isSpymaster || isGivingClue)
               );
+              const isNimnimPending = showModifierBanner === "nimnims-bite" || queuedModifierBanner === "nimnims-bite";
               let displayCards = gameState.cards;
               if (isScramblePending) {
                 if (gameState.modifierState?.originalCards) {
@@ -1114,6 +1114,13 @@ export default function LANGame() {
                     word: gameState.modifierState.originalWords![i] || c.word,
                   }));
                 }
+              } else if (isNimnimPending) {
+                // Keep the board rendering cards normally (as if NOT eaten) during the announcement banner,
+                // so the transition chomp/eat animation runs when the banner fades out.
+                displayCards = gameState.cards.map((c) => ({
+                  ...c,
+                  // Temporarily override to make sure it doesn't render as eaten on start
+                }));
               } else if (
                 gameState.activeModifier === "hall-of-mirrors" &&
                 gameState.modifierState?.illusionCardId
@@ -1166,7 +1173,7 @@ export default function LANGame() {
                         gameState.modifierState?.invertedCardIds || []
                       }
                       eatenCardIds={
-                        gameState.activeModifier === "nimnims-bite"
+                        gameState.activeModifier === "nimnims-bite" && !isNimnimPending
                           ? gameState.modifierState?.eatenCardIds
                           : undefined
                       }

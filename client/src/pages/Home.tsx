@@ -42,6 +42,7 @@ const AVATAR_TEMPLATES = [
   "https://api.dicebear.com/7.x/avataaars/svg?seed=Amy",
   "https://api.dicebear.com/7.x/avataaars/svg?seed=Bella",
   "https://api.dicebear.com/7.x/avataaars/svg?seed=Leo",
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='60' r='35' fill='%2322c55e'/><circle cx='35' cy='35' r='15' fill='%2322c55e'/><circle cx='65' cy='35' r='15' fill='%2322c55e'/><circle cx='35' cy='35' r='10' fill='white'/><circle cx='65' cy='35' r='10' fill='white'/><circle cx='35' cy='35' r='5' fill='black'/><circle cx='65' cy='35' r='5' fill='black'/><path d='M 35 65 Q 50 85 65 65' stroke='black' stroke-width='4' fill='none' stroke-linecap='round'/><circle cx='25' cy='65' r='6' fill='%23fca5a5' opacity='0.7'/><circle cx='75' cy='65' r='6' fill='%23fca5a5' opacity='0.7'/></svg>",
 ];
 
 export default function Home() {

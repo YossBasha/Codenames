@@ -141,7 +141,7 @@ export default function Grid({ cards, isSpymaster, disabled, playerTeam, gameMod
       {cards.map((c) => {
         return (
           <Card
-            key={`${c.id}-${activeModifier || 'none'}-${currentPhase}`}
+            key={c.id}
             card={c}
             isSpymaster={isSpymaster}
             disabled={disabled}

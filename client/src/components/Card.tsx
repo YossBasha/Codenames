@@ -1,7 +1,7 @@
 import { useState, useLayoutEffect, useRef, memo } from "react";
 import type { Card as CardType, Player } from "../../../shared/types";
 import { cn } from "../utils";
-import { playCardHoverSfx, playCardSelectSfx } from "../utils/sfx";
+import { playCardHoverSfx, playCardSelectSfx, playNimnimBiteSfx } from "../utils/sfx";
 import { Lock, CloudFog } from "lucide-react";
 
 interface CardProps {
@@ -33,13 +33,9 @@ interface CardProps {
 }
 
 function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, isClueTarget = false, isGivingClue = false, highlightedBy = [], currentPlayerId, onClick, onContextMenu, onGuess, activeModifier, currentPhase, scrambleDx, scrambleDy, isGuesser = false, gachaHighlight = false, d20FreeReveal = false, isScramblePending = false, isPoltergeistInverted = false, isSwipedHover = false, isTouchMode = false, isEaten = false }: CardProps) {
-  if (isEaten) {
-    return (
-      <div 
-        className="w-full aspect-[4/3] sm:aspect-[3/2] max-h-[calc((100vh_-_220px)_/_5)] sm:max-h-[calc((100vh_-_340px)_/_5)] rounded-lg sm:rounded-xl bg-slate-900/5 border border-dashed border-slate-700/20 flex items-center justify-center opacity-25 pointer-events-none"
-      />
-    );
-  }
+  const [biteAnim, setBiteAnim] = useState(false);
+  const [spitAnim, setSpitAnim] = useState(false);
+  const prevEatenRef = useRef<boolean | undefined>(undefined);
 
   let isRevealedForMe = card.revealed;
   if (gameMode === 'duet' && !card.revealed) {
@@ -55,6 +51,35 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
   const wasRevealedForMe = useRef(isRevealedForMe);
 
   useLayoutEffect(() => {
+    // If mounting, sync ref first without playing animations
+    if (prevEatenRef.current === undefined) {
+      prevEatenRef.current = isEaten;
+      return;
+    }
+
+    if (prevEatenRef.current !== isEaten) {
+      if (!prevEatenRef.current && isEaten) {
+        // Transition from NOT eaten to EATEN -> play bite animation
+        setBiteAnim(true);
+        playNimnimBiteSfx();
+        prevEatenRef.current = isEaten;
+        const timer = setTimeout(() => {
+          setBiteAnim(false);
+        }, 3000); // Extended duration for 3s cookie chomp audio
+        return () => clearTimeout(timer);
+      } else if (prevEatenRef.current && !isEaten) {
+        // Transition from EATEN to NOT eaten -> play spit animation
+        setSpitAnim(true);
+        prevEatenRef.current = isEaten;
+        const timer = setTimeout(() => {
+          setSpitAnim(false);
+        }, 1200); // Extended duration for spit rebound
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [isEaten]);
+
+  useLayoutEffect(() => {
     if (!wasRevealedForMe.current && isRevealedForMe) {
       setJustRevealed(true);
       const timer = setTimeout(() => setJustRevealed(false), 600);
@@ -62,6 +87,8 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
     }
     wasRevealedForMe.current = isRevealedForMe;
   }, [isRevealedForMe]);
+
+  const isFullyEaten = isEaten && !biteAnim;
 
   const showColor = isRevealedForMe || isSpymaster;
 
@@ -185,24 +212,30 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
       aria-disabled={isDisabled}
       className={cn(
         "group relative w-full aspect-[4/3] sm:aspect-[3/2] max-h-[calc((100vh_-_220px)_/_5)] sm:max-h-[calc((100vh_-_340px)_/_5)] rounded-lg sm:rounded-xl font-black transition-all duration-300 transform",
-        !(scrambleDx !== undefined || scrambleDy !== undefined) && "overflow-hidden",
-        isEmoji ? "text-4xl sm:text-5xl lg:text-7xl" : "text-[9px] xs:text-[11px] sm:text-sm lg:text-lg tracking-tighter sm:tracking-tight",
-        isDisabled && !isRevealedForMe && !isGivingClue && !d20FreeReveal
-          ? "cursor-default opacity-80"
-          : isGivingClue && !isValidClueTarget
+        isFullyEaten ? "bg-slate-900/5 border border-dashed border-slate-700/20 opacity-25 pointer-events-none" : [
+          !(scrambleDx !== undefined || scrambleDy !== undefined) && "overflow-hidden",
+          isEmoji ? "text-4xl sm:text-5xl lg:text-7xl" : "text-[9px] xs:text-[11px] sm:text-sm lg:text-lg tracking-tighter sm:tracking-tight",
+          isDisabled && !isRevealedForMe && !isGivingClue && !d20FreeReveal
             ? "cursor-default opacity-80"
-            : "hover:-translate-y-1.5 hover:scale-[1.02] hover:shadow-xl cursor-pointer",
-        hiddenClasses,
-        card.revealed && isSpymaster && "opacity-50",
-        showColor && shadowClasses[typeToDisplay],
-        (isClueTarget || highlightedBy.length > 0 || (d20FreeReveal && !isDisabled)) && "scale-[1.02] z-10",
-        gachaHighlight && "z-40",
-        justRevealed && !['green', 'red', 'blue'].includes(typeToDisplay) && "animate-reveal-pop",
-        justRevealed && ['green', 'red', 'blue'].includes(typeToDisplay) && "animate-card-flip",
-        !isScramblePending && (scrambleDx !== undefined || scrambleDy !== undefined) && activeModifier === 'earthquake' && "animate-scramble"
+            : isGivingClue && !isValidClueTarget
+              ? "cursor-default opacity-80"
+              : "hover:-translate-y-1.5 hover:scale-[1.02] hover:shadow-xl cursor-pointer",
+          hiddenClasses,
+          card.revealed && isSpymaster && "opacity-50",
+          showColor && shadowClasses[typeToDisplay],
+          (isClueTarget || highlightedBy.length > 0 || (d20FreeReveal && !isDisabled)) && "scale-[1.02] z-10",
+          gachaHighlight && "z-40",
+          justRevealed && !['green', 'red', 'blue'].includes(typeToDisplay) && "animate-reveal-pop",
+          justRevealed && ['green', 'red', 'blue'].includes(typeToDisplay) && "animate-card-flip",
+          !isScramblePending && (scrambleDx !== undefined || scrambleDy !== undefined) && activeModifier === 'earthquake' && "animate-scramble",
+        ],
+        biteAnim && "animate-nimnim-bite",
+        spitAnim && "animate-nimnim-spit"
       )}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
+      {isFullyEaten ? null : (
+        <>
       {/* Ring Overlay (so it sits above the color background) */}
       <div className={cn(
         "absolute inset-0 rounded-lg sm:rounded-xl pointer-events-none z-20",
@@ -347,6 +380,8 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
           </div>
           <span className="text-[8px] sm:text-[10px] font-black text-slate-300 tracking-widest uppercase">LOCKED ({card.shieldedTurns}T)</span>
         </div>
+      )}
+      </>
       )}
     </div>
   );

@@ -221,6 +221,9 @@ function revertActiveModifier(room: Room) {
       state.turnsLeft--;
       return;
     }
+    // NimNim's bite has finished its 2 turns.
+    // Set a grace period flag on the room so it can't be activated next turn
+    (room as any).nimnimGracePeriod = true;
   }
 
   gameState.activeModifier = null;
@@ -233,7 +236,14 @@ function applyRandomModifier(room: Room) {
   if (gameState.activeModifier) return;
 
   const enabled = gameState.enabledModifiers || MODIFIERS.map((m) => m.id);
-  const availableModifiers = MODIFIERS.filter((m) => enabled.includes(m.id));
+  
+  // Filter available modifiers, omitting "nimnims-bite" if the grace period flag is active
+  let availableModifiers = MODIFIERS.filter((m) => enabled.includes(m.id));
+  if ((room as any).nimnimGracePeriod) {
+    availableModifiers = availableModifiers.filter((m) => m.id !== "nimnims-bite");
+    // Consume/reset the grace period flag for the next turn
+    (room as any).nimnimGracePeriod = false;
+  }
 
   if (availableModifiers.length === 0) {
     gameState.activeModifier = null;

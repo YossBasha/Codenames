@@ -169,10 +169,8 @@ export const MODIFIERS: Modifier[] = [
     name: "Haste",
     nameAr: "سرعة",
     category: "guesser",
-    description:
-      "Turn timer is sped up to 15 seconds! Try to guess quickly!",
-    descriptionAr:
-      "يتم تسريع مؤقت الدور إلى 15 ثانية! حاول التخمين بسرعة!",
+    description: "Turn timer is sped up to 15 seconds! Try to guess quickly!",
+    descriptionAr: "يتم تسريع مؤقت الدور إلى 15 ثانية! حاول التخمين بسرعة!",
     icon: "Timer",
   },
   {
@@ -333,9 +331,9 @@ export const MODIFIERS: Modifier[] = [
     nameAr: "بحث منطقي",
     category: "spymaster",
     description:
-      "The Spymaster must construct their clue using exactly one logical operator: AND, OR, or NOT.",
+      "The Spymaster must construct their clue using exactly one logical operator: AND, OR, or NOT. (Capitalized, with spaces)",
     descriptionAr:
-      "يجب على رئيس الجواسيس بناء دليله باستخدام معامل منطقي واحد بالضبط: AND أو OR أو NOT.",
+      "يجب على رئيس الجواسيس بناء دليله باستخدام معامل منطقي واحد بالضبط: AND أو OR أو NOT. (بحروف كبيرة ومسافات)",
     icon: "Terminal",
   },
   {
@@ -350,7 +348,6 @@ export const MODIFIERS: Modifier[] = [
     icon: "Cookie",
   },
 ];
-
 
 export function checkRhyme(
   word1: string,
