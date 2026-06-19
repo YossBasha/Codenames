@@ -173,6 +173,7 @@ export default function LANLobby() {
   }, [isHost, serverPort, inputRoom, savedNickname]);
 
   useEffect(() => {
+    console.log('[SOCKET-EFFECT] fired — connectIp:', connectIp, '| inputRoom:', inputRoom, '| serverPort:', serverPort);
     setIsConnected(false);
     const timeout = setTimeout(() => {
       // Use connectIp (stable, never changes) not serverIp (display only, can update)

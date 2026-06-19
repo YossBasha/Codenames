@@ -489,16 +489,58 @@ export default function Home() {
               onClick={() => {
                 const trimmedName = profileName.trim();
                 localStorage.setItem("codenames_nickname", trimmedName);
-                localStorage.setItem("codenames_avatar", profileAvatar);
-                if (setPlayer) {
-                  setPlayer((prev: any) => ({
-                    ...prev,
-                    name: trimmedName,
-                    avatarBase64: profileAvatar,
-                  }));
+
+                const saveAvatar = (avatarUrl: string) => {
+                  localStorage.setItem("codenames_avatar", avatarUrl);
+                  if (setPlayer) {
+                    setPlayer((prev: any) => ({
+                      ...prev,
+                      name: trimmedName,
+                      avatarBase64: avatarUrl,
+                    }));
+                  }
+                  playMenuClickSfx();
+                  setShowProfileModal(false);
+                };
+
+                if (profileAvatar.startsWith("data:image")) {
+                  // Compress base64 images (like the 1.17 MB special Yoss avatar) using a canvas to maximum 128x128 pixels
+                  const img = new Image();
+                  img.onload = () => {
+                    const canvas = document.createElement("canvas");
+                    const maxDim = 128;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > maxDim || height > maxDim) {
+                      if (width > height) {
+                        height = Math.round((height * maxDim) / width);
+                        width = maxDim;
+                      } else {
+                        width = Math.round((width * maxDim) / height);
+                        height = maxDim;
+                      }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext("2d");
+                    if (ctx) {
+                      ctx.drawImage(img, 0, 0, width, height);
+                      const compressedData = canvas.toDataURL("image/png");
+                      saveAvatar(compressedData);
+                    } else {
+                      saveAvatar(profileAvatar);
+                    }
+                  };
+                  img.onerror = () => {
+                    saveAvatar(profileAvatar);
+                  };
+                  img.src = profileAvatar;
+                } else {
+                  // Direct URL templates
+                  saveAvatar(profileAvatar);
                 }
-                playMenuClickSfx();
-                setShowProfileModal(false);
               }}
               className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black rounded-xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95 uppercase tracking-widest text-sm"
             >
