@@ -40,7 +40,7 @@ jobs:
         run: |
           cd client
           npm run build
-          npx electron-builder --win
+          npx electron-builder --win --publish never
 
       - name: Publish Release
         uses: softprops/action-gh-release@v2
