@@ -255,7 +255,7 @@ export const playNimnimBiteSfx = () => {
   throttle('nimnimBite', 2000, () => {
     try {
       if (currentVolume === 0) return;
-      const audio = new Audio('/audio/nimnim-bite.ogg');
+      const audio = new Audio('./audio/nimnim-bite.ogg');
       audio.volume = currentVolume;
       audio.play().catch(() => {});
     } catch(e) {}
