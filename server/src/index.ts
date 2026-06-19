@@ -1,3 +1,16 @@
+// --- LEGACY UPDATER PATCH ---
+// The v1.14.21 client has a bug where it fails to set NODE_PATH before requiring the updated server.
+// To allow old executables to update seamlessly, we inject the node_modules path here before any other imports.
+if ((process as any).resourcesPath) {
+  const _path = require('path');
+  const nodeModulesPath = _path.join((process as any).resourcesPath, 'server', 'node_modules');
+  if (process.env.NODE_PATH !== nodeModulesPath) {
+    process.env.NODE_PATH = nodeModulesPath;
+    require('module').Module._initPaths();
+  }
+}
+// ----------------------------
+
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
