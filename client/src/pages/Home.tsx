@@ -90,6 +90,7 @@ export default function Home() {
     api.onUpdaterAvailable((version: string) => {
       setUpdateMessage(`Update ${version} available! Downloading...`);
       setIsCheckingUpdate(true);
+      api.downloadUpdate();
     });
 
     api.onUpdaterNotAvailable(() => {
