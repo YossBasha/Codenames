@@ -168,12 +168,11 @@ export default function LANGame() {
 
   useEffect(() => {
     if (gameState?.activeModifier) {
-      // Modifiers should only announce when they first activate (when activeModifier changes),
-      // not when the turn transitions while the modifier remains active.
+      console.log(`[DEBUG CLIENT] activeModifier is: ${gameState.activeModifier}, prev was: ${prevModifierRef.current}`);
       const isNewModifier = gameState.activeModifier !== prevModifierRef.current;
 
       if (isNewModifier) {
-        // If turn announcer is about to show or is currently showing, queue the modifier banner
+        console.log(`[DEBUG CLIENT] isNewModifier true! Queuing banner for ${gameState.activeModifier}`);
         const willShowTurnAnnouncer =
           isMyTurn &&
           !gameState.winner &&
@@ -181,12 +180,15 @@ export default function LANGame() {
             gameState.currentTurn !== prevTurnTeamForTurnRef.current);
 
         if (showTurnAnnouncer || willShowTurnAnnouncer) {
+          console.log(`[DEBUG CLIENT] Turn announcer showing, queuing banner.`);
           setQueuedModifierBanner(gameState.activeModifier);
         } else {
+          console.log(`[DEBUG CLIENT] Triggering banner directly!`);
           triggerModifierBanner(gameState.activeModifier);
         }
       }
     } else {
+      console.log(`[DEBUG CLIENT] activeModifier is null, clearing banners.`);
       setShowModifierBanner(null);
       setScrambleActive(false);
       setQueuedModifierBanner(null);

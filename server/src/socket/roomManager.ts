@@ -233,19 +233,27 @@ function revertActiveModifier(room: Room) {
 function applyRandomModifier(room: Room) {
   const gameState = room.gameState;
   if (!gameState) return;
-  if (gameState.activeModifier) return;
+  if (gameState.activeModifier) {
+    console.log(`[DEBUG CHAOS] activeModifier is already ${gameState.activeModifier}, skipping.`);
+    return;
+  }
 
   const enabled = gameState.enabledModifiers || MODIFIERS.map((m) => m.id);
+  console.log(`[DEBUG CHAOS] enabledModifiers array:`, enabled);
   
   // Filter available modifiers, omitting "nimnims-bite" if the grace period flag is active
   let availableModifiers = MODIFIERS.filter((m) => enabled.includes(m.id));
+  console.log(`[DEBUG CHAOS] after enabled filter, available length:`, availableModifiers.length);
+
   if ((room as any).nimnimGracePeriod) {
     availableModifiers = availableModifiers.filter((m) => m.id !== "nimnims-bite");
+    console.log(`[DEBUG CHAOS] nimnimGracePeriod active, remaining available:`, availableModifiers.length);
     // Consume/reset the grace period flag for the next turn
     (room as any).nimnimGracePeriod = false;
   }
 
   if (availableModifiers.length === 0) {
+    console.log(`[DEBUG CHAOS] NO MODIFIERS AVAILABLE! activeModifier set to null.`);
     gameState.activeModifier = null;
     gameState.modifierState = null;
     return;
@@ -253,6 +261,8 @@ function applyRandomModifier(room: Room) {
 
   const randomModifier =
     availableModifiers[Math.floor(Math.random() * availableModifiers.length)];
+  console.log(`[DEBUG CHAOS] Chose random modifier:`, randomModifier.id);
+
   gameState.activeModifier = randomModifier.id;
   gameState.modifierState = {};
 

@@ -238,6 +238,9 @@ app.whenReady().then(async () => {
     require(serverPath);
   } catch (err) {
     console.error('Failed to start server module:', err);
+    require('fs').writeFileSync('C:\\Users\\yossu\\OneDrive\\Desktop\\Programing\\Games\\Codenames\\client\\server-error.txt', `Failed to start updated server: ${err.message}\n\nStack: ${err.stack}\n\nServerPath: ${serverPath}`);
+    const { dialog } = require('electron');
+    dialog.showErrorBox('Server Start Failed', `Failed to start updated server: ${err.message}\n\nStack: ${err.stack}\n\nServerPath: ${serverPath}`);
     // Fall back to packaged version if custom one fails
     if (!isDev && serverPath !== path.join(process.resourcesPath, 'server', 'dist', 'server', 'src', 'index.js')) {
       console.log('[Updater] Falling back to packaged server...');
