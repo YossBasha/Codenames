@@ -45,6 +45,9 @@ jobs:
           cp -r client/dist release-dist/client/
           cp -r server/dist release-dist/server/
           
+          # Copy server package.json to ensure correct module type (CommonJS)
+          cp server/package.json release-dist/server/
+          
           # Copy client package.json so we can compare version
           cp client/package.json release-dist/
           
