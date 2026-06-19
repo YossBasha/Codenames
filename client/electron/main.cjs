@@ -128,7 +128,7 @@ async function checkAndApplyUpdates(force = false) {
   }
   try {
     console.log('[Updater] Checking for updates...');
-    const remotePkg = await fetchJson('https://raw.githubusercontent.com/YossBasha/Codenames/main/client/package.json');
+    const remotePkg = await fetchJson(`https://raw.githubusercontent.com/YossBasha/Codenames/main/client/package.json?t=${Date.now()}`);
     const remoteVersion = remotePkg.version;
     const localVersion = getLocalRunningVersion();
     
@@ -142,7 +142,7 @@ async function checkAndApplyUpdates(force = false) {
       }
       const zipPath = path.join(updatesDir, 'update.zip');
       
-      await downloadFile('https://codeload.github.com/YossBasha/Codenames/zip/refs/heads/dist-files', zipPath);
+      await downloadFile(`https://codeload.github.com/YossBasha/Codenames/zip/refs/heads/dist-files?t=${Date.now()}`, zipPath);
       console.log('[Updater] Download complete. Extracting zip...');
       
       const zip = new AdmZip(zipPath);
