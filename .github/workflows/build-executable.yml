@@ -43,3 +43,8 @@ jobs:
           cd client
           npm run build
           npx electron-builder --win --publish always
+
+      - name: Force Release to Public
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit ${{ github.ref_name }} --draft=false
