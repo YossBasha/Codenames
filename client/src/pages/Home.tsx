@@ -203,7 +203,13 @@ export default function Home() {
       </div>
 
       {/* Version badge */}
-      <div className="z-10 mt-6 text-slate-600 text-xs font-mono tracking-widest select-none">
+      <div 
+        onClick={() => {
+          playMenuClickSfx();
+          setShowUpdateModal(true);
+        }}
+        className="z-10 mt-6 text-slate-600 hover:text-slate-400 text-xs font-mono tracking-widest cursor-pointer select-none transition-colors"
+      >
         v{__APP_VERSION__}
       </div>
 
