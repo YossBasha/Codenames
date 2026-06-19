@@ -276,7 +276,7 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
       {highlightedBy.length > 0 && (
         <div className="absolute bottom-0.5 left-0.5 sm:bottom-1.5 sm:left-1.5 flex items-end gap-0.5 sm:gap-1 z-30 pointer-events-none">
           {highlightedBy.map((p, i) => (
-             <img key={i} src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=${p.team === 'red' ? 'ef4444' : '3b82f6'}`} alt={p.name} title={p.name} className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-white/80 drop-shadow-md" />
+             <img key={i} src={p.avatarBase64 || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=${p.team === 'red' ? 'ef4444' : '3b82f6'}`} alt={p.name} title={p.name} className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-white/80 drop-shadow-md" />
           ))}
           {highlightedBy.some(p => p.id === currentPlayerId) && onGuess && !isDisabled && (
             <div

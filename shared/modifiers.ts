@@ -170,9 +170,9 @@ export const MODIFIERS: Modifier[] = [
     nameAr: "سرعة",
     category: "guesser",
     description:
-      "Turn time limit is slashed in half for the guessing phase! Move quickly!",
+      "Turn timer is sped up to 15 seconds! Try to guess quickly!",
     descriptionAr:
-      "يتم تقليص الحد الزمني للدور إلى النصف لمرحلة التخمين! تحرك بسرعة!",
+      "يتم تسريع مؤقت الدور إلى 15 ثانية! حاول التخمين بسرعة!",
     icon: "Timer",
   },
   {
@@ -236,9 +236,9 @@ export const MODIFIERS: Modifier[] = [
     nameAr: "ضائع في الترجمة",
     category: "board",
     description:
-      "The entire board suddenly switches languages! English translates to Arabic, and vice versa.",
+      "The entire board suddenly switches languages! English translates randomly to Dutch, Arabic, French, German, or Spanish.",
     descriptionAr:
-      "تتحول اللوحة بأكملها فجأة إلى لغة مختلفة! تترجم الإنجليزية إلى العربية والعكس.",
+      "تتحول اللوحة بأكملها فجأة إلى لغة مختلفة! تترجم الإنجليزية عشوائياً إلى الهولندية، العربية، الفرنسية، الألمانية، أو الإسبانية.",
     icon: "Globe",
   },
   {

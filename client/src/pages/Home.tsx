@@ -9,13 +9,65 @@ import type { ThemeType } from '../../../shared/types';
 import { useState } from 'react';
 import { getLocalServerPort } from '../utils/discovery';
 
+const AVATAR_TEMPLATES = [
+  'https://api.dicebear.com/7.x/adventurer/svg?seed=Felix',
+  'https://api.dicebear.com/7.x/adventurer/svg?seed=Aneka',
+  'https://api.dicebear.com/7.x/adventurer/svg?seed=Jack',
+  'https://api.dicebear.com/7.x/adventurer/svg?seed=Jasmine',
+  'https://api.dicebear.com/7.x/adventurer/svg?seed=Milo',
+  'https://api.dicebear.com/7.x/adventurer/svg?seed=Zoe',
+  'https://api.dicebear.com/7.x/adventurer/svg?seed=Oliver',
+  'https://api.dicebear.com/7.x/adventurer/svg?seed=Sophia',
+  'https://api.dicebear.com/7.x/bottts/svg?seed=Buster',
+  'https://api.dicebear.com/7.x/bottts/svg?seed=Cody',
+  'https://api.dicebear.com/7.x/bottts/svg?seed=Sparky',
+  'https://api.dicebear.com/7.x/bottts/svg?seed=Robo',
+  'https://api.dicebear.com/7.x/bottts/svg?seed=Gizmo',
+  'https://api.dicebear.com/7.x/bottts/svg?seed=Rusty',
+  'https://api.dicebear.com/7.x/pixel-art/svg?seed=Avery',
+  'https://api.dicebear.com/7.x/pixel-art/svg?seed=Taylor',
+  'https://api.dicebear.com/7.x/pixel-art/svg?seed=Jordan',
+  'https://api.dicebear.com/7.x/pixel-art/svg?seed=Alex',
+  'https://api.dicebear.com/7.x/pixel-art/svg?seed=Morgan',
+  'https://api.dicebear.com/7.x/pixel-art/svg?seed=Sam',
+  'https://api.dicebear.com/7.x/lorelei/svg?seed=Sasha',
+  'https://api.dicebear.com/7.x/lorelei/svg?seed=Leo',
+  'https://api.dicebear.com/7.x/lorelei/svg?seed=Maya',
+  'https://api.dicebear.com/7.x/lorelei/svg?seed=Kai',
+  'https://api.dicebear.com/7.x/lorelei/svg?seed=Luna',
+  'https://api.dicebear.com/7.x/lorelei/svg?seed=Mimi',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Max',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Amy',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Bella',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Leo',
+];
+
 export default function Home() {
   const navigate = useNavigate();
-  const { socket, setSocket, theme, setTheme } = useGameContext();
+  const { socket, setSocket, theme, setTheme, player, setPlayer } = useGameContext();
   const { t, uiLanguage, setUiLanguage } = useI18n();
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showHostModal, setShowHostModal] = useState(false);
   const [isNgrokActive, setIsNgrokActive] = useState(false);
+
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profileName, setProfileName] = useState(player?.name || '');
+  const [profileAvatar, setProfileAvatar] = useState(player?.avatarBase64 || AVATAR_TEMPLATES[0]);
+  const isFirstTime = !localStorage.getItem('codenames_nickname')?.trim();
+
+  useEffect(() => {
+    const savedName = localStorage.getItem('codenames_nickname');
+    if (!savedName || !savedName.trim()) {
+      setShowProfileModal(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (player) {
+      if (player.name) setProfileName(player.name);
+      if (player.avatarBase64) setProfileAvatar(player.avatarBase64);
+    }
+  }, [player]);
 
   useEffect(() => {
     let active = true;
@@ -73,7 +125,7 @@ export default function Home() {
         <Palette className="w-6 h-6 text-pink-500" />
       </button>
 
-      <div className="z-10 flex flex-col items-center gap-8 w-full max-w-md glass p-8 rounded-3xl">
+      <div className="z-10 flex flex-col items-center gap-6 w-full max-w-md glass p-8 rounded-3xl">
         <div className="text-center">
           <h1 className="text-5xl font-black mb-2 tracking-tight bg-gradient-to-r from-red-500 to-blue-500 bg-clip-text text-transparent">
             {t('title')}
@@ -81,7 +133,27 @@ export default function Home() {
           <p className="text-slate-400 font-medium">{t('subtitle')}</p>
         </div>
 
-        <div className="flex flex-col w-full gap-4 mt-8">
+        {/* Profile Card */}
+        <div 
+          onClick={() => { playMenuClickSfx(); setShowProfileModal(true); }}
+          className="w-full bg-slate-800/40 border border-slate-700/60 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-slate-800/60 hover:border-slate-600/80 transition-all shadow-lg group relative overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+          <img
+            src={player?.avatarBase64 || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player?.name || 'Player')}`}
+            alt="Avatar"
+            className="w-12 h-12 rounded-full border-2 border-slate-600 bg-slate-900 flex-shrink-0"
+          />
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">{t('your_profile')}</div>
+            <div className="text-lg font-black text-white truncate">{player?.name || t('setup_profile')}</div>
+          </div>
+          <div className="text-slate-500 group-hover:text-white transition-colors text-xs font-bold uppercase tracking-widest px-3 py-1.5 bg-slate-900/60 border border-slate-700/40 rounded-xl select-none">
+            {t('edit')}
+          </div>
+        </div>
+
+        <div className="flex flex-col w-full gap-4 mt-2">
           <button
             onMouseEnter={playMenuHoverSfx}
             onClick={() => { playMenuClickSfx(); navigate('/pass-and-play'); }}
@@ -207,6 +279,93 @@ export default function Home() {
                 <span className="text-sm font-bold text-slate-400">{t('host_same_wifi')}</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showProfileModal && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[#1a1a1a] rounded-3xl w-full max-w-md p-6 border-2 border-slate-700 shadow-2xl relative flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
+            {!isFirstTime && (
+              <button 
+                onClick={() => setShowProfileModal(false)}
+                className="absolute top-4 right-4 p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition-colors"
+              >
+                <X className="w-5 h-5 text-white" />
+              </button>
+            )}
+
+            <div className="text-center mt-2">
+              <h2 className="text-2xl font-black tracking-widest text-white">
+                {isFirstTime ? t('welcome_to_codenames') : t('your_profile')}
+              </h2>
+              <p className="text-sm font-bold text-slate-400 mt-1">
+                {isFirstTime ? t('choose_nickname') : t('setup_profile')}
+              </p>
+            </div>
+
+            {/* Avatar Preview & Name Input */}
+            <div className="flex flex-col items-center gap-4 bg-slate-800/40 border border-slate-700/50 p-4 rounded-2xl">
+              <img
+                src={profileAvatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(profileName || 'Player')}`}
+                alt="Selected Avatar"
+                className="w-20 h-20 rounded-full border-4 border-emerald-500 bg-slate-900 shadow-lg"
+              />
+              <input
+                type="text"
+                placeholder={t('nickname')}
+                value={profileName}
+                onChange={(e) => setProfileName(e.target.value.replace(/[^a-zA-Z0-9\u0600-\u06FF\s-]/g, ''))}
+                maxLength={16}
+                className="w-full bg-[#111] text-white border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-emerald-500 font-black text-center text-lg placeholder:text-slate-600"
+              />
+            </div>
+
+            {/* Avatar Selection Grid */}
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">{t('choose_avatar')}</label>
+              <div className="grid grid-cols-4 gap-2 bg-[#111] p-3 rounded-2xl border border-slate-800 max-h-48 overflow-y-auto scrollbar-thin">
+                {(() => {
+                  const showSpecial = profileName.includes('Yoss') && !profileName.includes(' ');
+                  const list = showSpecial ? ['/yoss.png', ...AVATAR_TEMPLATES] : AVATAR_TEMPLATES;
+                  return list.map((url, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => { playMenuClickSfx(); setProfileAvatar(url); }}
+                      className={cn(
+                        "aspect-square rounded-xl border-2 overflow-hidden transition-all bg-slate-800 hover:scale-105 relative",
+                        profileAvatar === url 
+                          ? "border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)] bg-slate-700" 
+                          : "border-transparent"
+                      )}
+                    >
+                      <img src={url} alt={`Avatar option ${idx + 1}`} className="w-full h-full object-cover" />
+                    </button>
+                  ));
+                })()}
+              </div>
+            </div>
+
+            <button
+              disabled={!profileName.trim()}
+              onClick={() => {
+                const trimmedName = profileName.trim();
+                localStorage.setItem('codenames_nickname', trimmedName);
+                localStorage.setItem('codenames_avatar', profileAvatar);
+                if (setPlayer) {
+                  setPlayer((prev: any) => ({
+                    ...prev,
+                    name: trimmedName,
+                    avatarBase64: profileAvatar
+                  }));
+                }
+                playMenuClickSfx();
+                setShowProfileModal(false);
+              }}
+              className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black rounded-xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95 uppercase tracking-widest text-sm"
+            >
+              {t('save_profile')}
+            </button>
           </div>
         </div>
       )}

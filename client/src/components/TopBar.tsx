@@ -77,7 +77,7 @@ export default function TopBar({
   );
 
   return (
-    <div className="relative z-50 w-full shrink-0 flex flex-row items-center justify-between py-1 px-2.5 sm:py-1.5 sm:px-4 bg-slate-900/50 backdrop-blur-md shadow-md gap-2 sm:gap-4">
+    <div className="relative z-50 w-full shrink-0 flex flex-row items-center justify-between py-2 px-2.5 sm:py-3 sm:px-4 bg-slate-900/50 backdrop-blur-md shadow-md gap-2 sm:gap-4">
       <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
         <button 
           onClick={() => {
@@ -87,7 +87,7 @@ export default function TopBar({
               navigate('/');
             }
           }}
-          className="absolute left-2.5 sm:left-4 p-1 sm:p-1.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer z-10"
+          className="absolute left-2.5 sm:left-4 top-1/2 -translate-y-1/2 p-1 sm:p-1.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer z-10"
         >
           <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
         </button>
@@ -111,14 +111,40 @@ export default function TopBar({
         )}
       </div>
 
-      <div className="flex-1 min-w-0 flex flex-col items-center gap-0.5 text-center px-1">
-        <div className="flex items-center gap-1 sm:gap-2">
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none z-10">
+        <div className="relative pointer-events-auto flex flex-col items-center justify-center leading-none">
+          {/* Centered Turn and Role Info */}
+          <div className="text-xs xs:text-sm sm:text-base lg:text-lg font-black tracking-tight truncate max-w-full">
+            {gameMode === 'classic' ? (
+              <span className={cn(
+                "transition-colors duration-300",
+                currentTurn === 'red' ? 'text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-rose-600' : 'text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-600'
+              )}>
+                {currentTurn === 'red' ? t('red_team_turn') : t('blue_team_turn')}
+              </span>
+            ) : (
+              <>
+                <span className={currentTurn === 'red' ? 'text-lime-400' : 'text-green-400'}>
+                  {currentTurn === 'red' ? t('side_a') : t('side_b')}
+                </span>
+                <span className="hidden sm:inline"> {t('gives_clue')}</span>
+              </>
+            )}
+          </div>
+          {gameMode !== 'duet' && (
+            <div className="text-[7px] sm:text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest whitespace-nowrap">
+              {currentPhase === 'spymaster' ? t('spymaster_role_label') : t('operative_role_label')}
+            </div>
+          )}
+
+          {/* Absolutely Positioned Timer (floats to the left, prevents wiggling) */}
           {isTimerEnabled && (
-            <div className="text-sm sm:text-xl lg:text-2xl font-black text-orange-500 drop-shadow-[0_0_8px_rgba(249,115,22,0.5)]">
+            <div className="absolute right-full mr-3 sm:mr-4 top-1/2 -translate-y-1/2 text-sm sm:text-lg lg:text-xl font-black text-orange-500 drop-shadow-[0_0_8px_rgba(249,115,22,0.5)] tabular-nums whitespace-nowrap">
               {timeRemaining}s
             </div>
           )}
 
+          {/* Absolutely Positioned Active Modifier (floats to the right, prevents wiggling) */}
           {activeModifier && (() => {
             const mod = MODIFIERS.find(m => m.id === activeModifier);
             if (!mod) return null;
@@ -126,7 +152,7 @@ export default function TopBar({
             return (
               <div 
                 ref={tooltipRef}
-                className="relative group cursor-pointer z-50"
+                className="absolute left-full ml-3 sm:ml-4 top-1/2 -translate-y-1/2 group cursor-pointer z-50 shrink-0"
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowTooltip(!showTooltip);
@@ -134,7 +160,7 @@ export default function TopBar({
               >
                 <div className="flex items-center gap-1 bg-red-500/20 border border-red-500/40 hover:bg-red-500/30 transition-all rounded-full px-2 py-0.5 shadow-[0_0_10px_rgba(239,68,68,0.2)]">
                   <IconComponent className="w-3 h-3 sm:w-4 sm:h-4 text-red-400" />
-                  <span className="text-[7px] sm:text-[9px] font-black tracking-widest text-red-400 uppercase">{mod.name}</span>
+                  <span className="hidden xs:inline text-[7px] sm:text-[9px] font-black tracking-widest text-red-400 uppercase">{mod.name}</span>
                 </div>
                 
                 <div className={cn(
@@ -156,30 +182,6 @@ export default function TopBar({
             );
           })()}
         </div>
-        <div className="text-xs xs:text-sm sm:text-base lg:text-lg font-black tracking-tight truncate max-w-full">
-          {gameMode === 'classic' ? (
-            <>
-              <span className={cn(
-                "transition-colors duration-300",
-                currentTurn === 'red' ? 'text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-rose-600' : 'text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-600'
-              )}>
-                {currentTurn === 'red' ? t('red_team_turn') : t('blue_team_turn')}
-              </span>
-            </>
-          ) : (
-            <>
-              <span className={currentTurn === 'red' ? 'text-lime-400' : 'text-green-400'}>
-                {currentTurn === 'red' ? t('side_a') : t('side_b')}
-              </span>
-              <span className="hidden sm:inline"> {t('gives_clue')}</span>
-            </>
-          )}
-        </div>
-        {gameMode !== 'duet' && (
-          <div className="text-[8px] sm:text-[10px] font-bold text-slate-400 mt-0 uppercase tracking-widest whitespace-nowrap">
-            {currentPhase === 'spymaster' ? t('spymaster_role_label') : t('operative_role_label')}
-          </div>
-        )}
       </div>
 
       <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-3 shrink-0 rtl:pl-8 sm:rtl:pl-12">

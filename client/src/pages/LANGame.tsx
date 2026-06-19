@@ -886,7 +886,7 @@ export default function LANGame() {
                       )}
                     >
                       <img
-                        src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=84cc16`}
+                        src={p.avatarBase64 || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=84cc16`}
                         alt={p.name}
                         className="w-4 h-4 xs:w-5 xs:h-5 rounded-full flex-shrink-0"
                       />
@@ -917,7 +917,7 @@ export default function LANGame() {
                       )}
                     >
                       <img
-                        src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=22c55e`}
+                        src={p.avatarBase64 || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=22c55e`}
                         alt={p.name}
                         className="w-4 h-4 xs:w-5 xs:h-5 rounded-full flex-shrink-0"
                       />
@@ -1461,7 +1461,7 @@ export default function LANGame() {
                       className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-700 transition-colors flex items-center gap-2"
                     >
                       <img
-                        src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=${p.team === "red" ? "ef4444" : "3b82f6"}`}
+                        src={p.avatarBase64 || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=${p.team === "red" ? "ef4444" : "3b82f6"}`}
                         className="w-6 h-6 rounded-full"
                         alt=""
                       />

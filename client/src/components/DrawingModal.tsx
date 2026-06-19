@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import type { MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from 'react';
-import { X, Trash2, Check, PenTool, Eraser, Undo2, Redo2, ZoomIn, ZoomOut } from 'lucide-react';
+import { X, Trash2, Check, PenTool, Eraser, Undo2, Redo2, ZoomIn, ZoomOut, PaintBucket } from 'lucide-react';
 import { cn } from '../utils';
 
 interface DrawingModalProps {
@@ -16,6 +16,7 @@ export default function DrawingModal({ onClose, onSubmit, initialImage, onClear 
   const [color, setColor] = useState('#000000');
   const [lineWidth, setLineWidth] = useState(6);
   const [isEraser, setIsEraser] = useState(false);
+  const [isFillActive, setIsFillActive] = useState(false);
   const [zoom, setZoom] = useState(1);
 
   const historyRef = useRef<ImageData[]>([]);
@@ -97,6 +98,73 @@ export default function DrawingModal({ onClose, onSubmit, initialImage, onClear 
   const handleZoomIn = () => setZoom(z => Math.min(z + 0.5, 3));
   const handleZoomOut = () => setZoom(z => Math.max(z - 0.5, 1));
 
+  const handleFloodFill = (startX: number, startY: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+
+    const x = Math.floor(startX);
+    const y = Math.floor(startY);
+
+    if (x < 0 || x >= width || y < 0 || y >= height) return;
+
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+
+    const fillColor = isEraser ? '#ffffff' : color;
+    const hex = fillColor.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    const a = 255;
+
+    const targetIdx = (y * width + x) * 4;
+    const startR = data[targetIdx];
+    const startG = data[targetIdx + 1];
+    const startB = data[targetIdx + 2];
+    const startA = data[targetIdx + 3];
+
+    if (startR === r && startG === g && startB === b && startA === a) return;
+
+    const stack: [number, number][] = [[x, y]];
+    const visited = new Uint8Array(width * height);
+
+    while (stack.length > 0) {
+      const [cx, cy] = stack.pop()!;
+
+      if (cx < 0 || cx >= width || cy < 0 || cy >= height) continue;
+
+      const vIdx = cy * width + cx;
+      if (visited[vIdx]) continue;
+      visited[vIdx] = 1;
+
+      const idx = vIdx * 4;
+      if (
+        data[idx] === startR &&
+        data[idx + 1] === startG &&
+        data[idx + 2] === startB &&
+        data[idx + 3] === startA
+      ) {
+        data[idx] = r;
+        data[idx + 1] = g;
+        data[idx + 2] = b;
+        data[idx + 3] = a;
+
+        stack.push([cx + 1, cy]);
+        stack.push([cx - 1, cy]);
+        stack.push([cx, cy + 1]);
+        stack.push([cx, cy - 1]);
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    saveHistoryState();
+  };
+
   const startDrawing = (x: number, y: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -134,10 +202,13 @@ export default function DrawingModal({ onClose, onSubmit, initialImage, onClear 
   const handleMouseDown = (e: ReactMouseEvent<HTMLCanvasElement>) => {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
-    startDrawing(
-      (e.clientX - rect.left) * (canvasRef.current!.width / rect.width),
-      (e.clientY - rect.top) * (canvasRef.current!.height / rect.height)
-    );
+    const startX = (e.clientX - rect.left) * (canvasRef.current!.width / rect.width);
+    const startY = (e.clientY - rect.top) * (canvasRef.current!.height / rect.height);
+    if (isFillActive) {
+      handleFloodFill(startX, startY);
+      return;
+    }
+    startDrawing(startX, startY);
   };
 
   const handleMouseMove = (e: ReactMouseEvent<HTMLCanvasElement>) => {
@@ -177,10 +248,13 @@ export default function DrawingModal({ onClose, onSubmit, initialImage, onClear 
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) return;
       const touch = e.touches[0];
-      startDrawing(
-        (touch.clientX - rect.left) * (canvasRef.current!.width / rect.width),
-        (touch.clientY - rect.top) * (canvasRef.current!.height / rect.height)
-      );
+      const startX = (touch.clientX - rect.left) * (canvasRef.current!.width / rect.width);
+      const startY = (touch.clientY - rect.top) * (canvasRef.current!.height / rect.height);
+      if (isFillActive) {
+        handleFloodFill(startX, startY);
+        return;
+      }
+      startDrawing(startX, startY);
     }
   };
 
@@ -303,7 +377,10 @@ export default function DrawingModal({ onClose, onSubmit, initialImage, onClear 
             ].map((col) => (
               <button
                 key={col.c}
-                onClick={() => { setColor(col.c); setIsEraser(false); }}
+                onClick={() => {
+                  setColor(col.c);
+                  if (isEraser) setIsEraser(false);
+                }}
                 className={cn(
                   "w-8 h-8 rounded-full shadow-inner border-2 transition-transform",
                   color === col.c && !isEraser ? "border-white scale-110" : "border-transparent hover:scale-105"
@@ -314,9 +391,20 @@ export default function DrawingModal({ onClose, onSubmit, initialImage, onClear 
             ))}
             
             <div className="w-px h-8 bg-[#444] mx-2" />
+
+            <button
+              onClick={() => { setIsEraser(false); setIsFillActive(false); }}
+              className={cn(
+                "p-2 rounded-lg text-white transition-colors",
+                !isEraser && !isFillActive ? "bg-slate-600 shadow-inner" : "hover:bg-slate-700"
+              )}
+              title="Pen"
+            >
+              <PenTool className="w-5 h-5" />
+            </button>
             
             <button
-              onClick={() => setIsEraser(!isEraser)}
+              onClick={() => { setIsEraser(true); setIsFillActive(false); }}
               className={cn(
                 "p-2 rounded-lg text-white transition-colors",
                 isEraser ? "bg-slate-600 shadow-inner" : "hover:bg-slate-700"
@@ -324,6 +412,17 @@ export default function DrawingModal({ onClose, onSubmit, initialImage, onClear 
               title="Eraser"
             >
               <Eraser className="w-5 h-5" />
+            </button>
+
+            <button
+              onClick={() => { setIsEraser(false); setIsFillActive(true); }}
+              className={cn(
+                "p-2 rounded-lg text-white transition-colors",
+                isFillActive ? "bg-slate-600 shadow-inner" : "hover:bg-slate-700"
+              )}
+              title="Fill"
+            >
+              <PaintBucket className="w-5 h-5" />
             </button>
           </div>
 

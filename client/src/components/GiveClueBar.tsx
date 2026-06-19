@@ -155,7 +155,7 @@ export default function GiveClueBar({
                     }
                     setCueInput(cleanVal);
                   } else {
-                    setCueInput(val.replace(/[^a-zA-Z0-9\u0600-\u06FF\s]/g, ''));
+                    setCueInput(val.replace(/[^a-zA-Z0-9\u0600-\u06FF\s-]/g, ''));
                   }
                 }}
                 className="w-full bg-slate-900/80 border border-slate-700/50 focus:border-slate-500/80 text-white pl-3.5 pr-14 py-2.5 sm:py-3.5 rounded-xl sm:rounded-full outline-none text-sm sm:text-base placeholder:text-slate-500 font-bold"

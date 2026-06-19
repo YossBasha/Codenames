@@ -37,6 +37,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       id: '',
       sessionId: getSessionId(),
       name: localStorage.getItem('codenames_nickname') || '',
+      avatarBase64: localStorage.getItem('codenames_avatar') || '',
       team: 'spectator',
       role: 'spectator'
     };

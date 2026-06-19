@@ -134,10 +134,72 @@ export default function GameSettingsPanel({
   };
 
   useEffect(() => {
-    if (language === 'all' && enabledModifiers?.includes('lost-in-translation') && setEnabledModifiers) {
-      setEnabledModifiers(enabledModifiers.filter(id => id !== 'lost-in-translation'));
+    if (!setEnabledModifiers || !enabledModifiers) return;
+    
+    let updated = [...enabledModifiers];
+    let changed = false;
+
+    // Language 'all' forbids lost-in-translation
+    if (language === 'all' && updated.includes('lost-in-translation')) {
+      updated = updated.filter(id => id !== 'lost-in-translation');
+      changed = true;
     }
-  }, [language, enabledModifiers, setEnabledModifiers]);
+
+    // Doodle only forbids text-based clue modifiers
+    if (clueType === 'doodle') {
+      const forbidden = ['vowel-void', 'five-letter-curse', 'boolean-search', 'oracle-riddle'];
+      const filtered = updated.filter(id => !forbidden.includes(id));
+      if (filtered.length !== updated.length) {
+        updated = filtered;
+        changed = true;
+      }
+    }
+
+    // Emoji pack forbids translation/censorship on emoji symbols
+    if (selectedPacks.includes('emojis')) {
+      const forbidden = ['lost-in-translation', 'censored-documents'];
+      const filtered = updated.filter(id => !forbidden.includes(id));
+      if (filtered.length !== updated.length) {
+        updated = filtered;
+        changed = true;
+      }
+    }
+
+    // Duet mode forbids colorblind and the-intercept
+    if (gameMode === 'duet') {
+      const forbidden = ['colorblind', 'the-intercept'];
+      const filtered = updated.filter(id => !forbidden.includes(id));
+      if (filtered.length !== updated.length) {
+        updated = filtered;
+        changed = true;
+      }
+    }
+
+    // Timer off forbids critical-hit
+    if (timerSettings.preset === 'off' && updated.includes('critical-hit')) {
+      updated = updated.filter(id => id !== 'critical-hit');
+      changed = true;
+    }
+
+    // Custom words forbid lost-in-translation
+    if (customWordsArray && customWordsArray.length > 0 && updated.includes('lost-in-translation')) {
+      updated = updated.filter(id => id !== 'lost-in-translation');
+      changed = true;
+    }
+
+    if (changed) {
+      setEnabledModifiers(updated);
+    }
+  }, [
+    clueType,
+    selectedPacks,
+    language,
+    gameMode,
+    timerSettings.preset,
+    enabledModifiers,
+    setEnabledModifiers,
+    customWordsArray
+  ]);
 
   return (
     <>
@@ -312,26 +374,32 @@ export default function GameSettingsPanel({
                     <div className="font-black tracking-widest text-sm text-white">{t('language_label')}</div>
                   </div>
                   
-                  <div className="flex bg-[#222] p-1 rounded-lg border border-[#444]">
-                    {(['all', 'en', 'ar'] as Language[]).map(lang => {
+                  <select
+                    value={language}
+                    onChange={(e) => isHost && setLanguage(e.target.value as Language)}
+                    disabled={!isHost}
+                    className="bg-[#222] text-white px-3 py-2 rounded-xl border-2 border-slate-700 outline-none text-xs font-black tracking-wider cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:border-indigo-500 transition-colors"
+                  >
+                    {(['all', 'en', 'ar', 'du', 'ge', 'fr', 'es'] as Language[]).map(lang => {
                       const isDisabledLang = lang === 'all' && enabledModifiers?.includes('lost-in-translation');
+                      let displayName = lang.toUpperCase();
+                      if (lang === 'all') displayName = 'ALL';
+                      else if (lang === 'du') displayName = 'DUTCH';
+                      else if (lang === 'ge') displayName = 'GERMAN';
+                      else if (lang === 'fr') displayName = 'FRENCH';
+                      else if (lang === 'es') displayName = 'SPANISH';
                       return (
-                        <button
-                          key={lang}
-                          onClick={() => isHost && setLanguage(lang)}
-                          disabled={!isHost || isDisabledLang}
-                          className={cn(
-                            "px-4 py-1.5 rounded-md text-xs font-black tracking-wider transition-colors",
-                            language === lang ? "bg-indigo-500 text-white shadow-md" : "text-slate-400 hover:text-white",
-                            (!isHost || isDisabledLang) && "opacity-50 cursor-not-allowed",
-                            isDisabledLang && "line-through text-slate-600 hover:text-slate-600"
-                          )}
+                        <option 
+                          key={lang} 
+                          value={lang} 
+                          disabled={isDisabledLang}
+                          className="bg-[#1a1a1a] text-white font-bold"
                         >
-                          {lang === 'all' ? 'ALL' : lang.toUpperCase()}
-                        </button>
+                          {displayName}
+                        </option>
                       );
                     })}
-                  </div>
+                  </select>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -684,8 +752,17 @@ export default function GameSettingsPanel({
                         const isDuetForbidden = mod.id === 'colorblind' || mod.id === 'the-intercept';
                         const isDuet = gameMode === 'duet';
                         const isLanguageForbidden = mod.id === 'lost-in-translation' && language === 'all';
+                        
+                        const isDoodleForbidden = clueType === 'doodle' && ['vowel-void', 'five-letter-curse', 'boolean-search', 'oracle-riddle'].includes(mod.id);
+                        const isEmojiForbidden = selectedPacks.includes('emojis') && ['lost-in-translation', 'censored-documents'].includes(mod.id);
+                        const isCustomWordsForbidden = customWordsArray && customWordsArray.length > 0 && mod.id === 'lost-in-translation';
 
-                        const isModDisabled = (isTimerRequired && isTimerOff) || (isDuetForbidden && isDuet) || isLanguageForbidden;
+                        const isModDisabled = (isTimerRequired && isTimerOff) || 
+                          (isDuetForbidden && isDuet) || 
+                          isLanguageForbidden || 
+                          isDoodleForbidden || 
+                          isEmojiForbidden ||
+                          isCustomWordsForbidden;
                         const isEnabled = enabledModifiers.includes(mod.id) && !isModDisabled;
                         const IconComponent = MODIFIER_ICONS[mod.icon] || HelpCircle;
 

@@ -37,6 +37,12 @@ interface Room {
 
 const rooms: Record<string, Room> = {};
 
+function getPlayerAvatarUrl(player: Player, defaultBg?: string): string {
+  if (player.avatarBase64) return player.avatarBase64;
+  const bg = defaultBg || (player.team === "red" ? "ef4444" : "3b82f6");
+  return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=${bg}`;
+}
+
 function getLoggedWord(room: Room, card: CardData): string {
   if (
     room.gameState &&
@@ -323,35 +329,41 @@ function applyRandomModifier(room: Room) {
       result: null,
     };
   } else if (randomModifier.id === "lost-in-translation") {
-    if (gameState.language === "en" || gameState.language === "ar") {
-      const targetLang = gameState.language === "en" ? "ar" : "en";
-      gameState.modifierState = {
-        originalWords: gameState.cards.map((c) => c.word),
-      };
-
-      gameState.cards.forEach((card) => {
-        if (card.revealed) return;
-        const sourcePacks = wordPackRegistry[gameState.language];
-        const targetPacks = wordPackRegistry[targetLang];
-
-        let found = false;
-        for (const packName in sourcePacks) {
-          const packWords = sourcePacks[packName];
-          const idx = packWords.indexOf(card.word);
-          if (
-            idx !== -1 &&
-            targetPacks[packName] &&
-            targetPacks[packName].length > 0
-          ) {
-            // If the target pack is missing words (shorter than source pack), wrap around to ensure a translation
-            const targetIdx = idx % targetPacks[packName].length;
-            card.word = targetPacks[packName][targetIdx];
-            found = true;
-            break;
-          }
-        }
-      });
+    let targetLang = "en";
+    if (gameState.language === "en") {
+      const options = ["ar", "du", "ge", "fr", "es"];
+      targetLang = options[Math.floor(Math.random() * options.length)];
+    } else {
+      targetLang = "en";
     }
+
+    gameState.modifierState = {
+      originalWords: gameState.cards.map((c) => c.word),
+      targetLanguage: targetLang,
+    };
+
+    gameState.cards.forEach((card) => {
+      if (card.revealed) return;
+      const sourcePacks = wordPackRegistry[gameState.language];
+      const targetPacks = wordPackRegistry[targetLang];
+
+      let found = false;
+      for (const packName in sourcePacks) {
+        const packWords = sourcePacks[packName];
+        const idx = packWords.indexOf(card.word);
+        if (
+          idx !== -1 &&
+          targetPacks[packName] &&
+          targetPacks[packName].length > 0
+        ) {
+          // If the target pack is missing words (shorter than source pack), wrap around to ensure a translation
+          const targetIdx = idx % targetPacks[packName].length;
+          card.word = targetPacks[packName][targetIdx];
+          found = true;
+          break;
+        }
+      }
+    });
   } else if (randomModifier.id === "censored-documents") {
     gameState.modifierState = {
       originalWords: gameState.cards.map((c) => c.word),
@@ -1204,7 +1216,7 @@ function processGuess(io: Server, room: Room, player: Player, cardId: number) {
       type: "guess",
       player: {
         name: player.name,
-        avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=${player.team === "red" ? "ef4444" : "3b82f6"}`,
+        avatarUrl: getPlayerAvatarUrl(player),
       },
       guessingTeam: expectedGuessTeam as "red" | "blue",
       cardWord: getLoggedWord(room, card),
@@ -1276,7 +1288,7 @@ function processGuess(io: Server, room: Room, player: Player, cardId: number) {
         type: "guess",
         player: {
           name: player.name,
-          avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=${player.team === "red" ? "ef4444" : "3b82f6"}`,
+          avatarUrl: getPlayerAvatarUrl(player),
         },
         guessingTeam: expectedGuessTeam as "red" | "blue",
         cardWord: getLoggedWord(room, card),
@@ -1757,7 +1769,7 @@ export function setupRoomManager(io: Server) {
               type: "cue",
               player: {
                 name: player.name,
-                avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=${player.team === "red" ? "ef4444" : "3b82f6"}`,
+                avatarUrl: getPlayerAvatarUrl(player),
               },
               team: player.team as "red" | "blue",
               cueWord: finalCue,

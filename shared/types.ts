@@ -1,7 +1,7 @@
 export type Team = 'red' | 'blue' | 'spectator';
 export type CardType = 'red' | 'blue' | 'neutral' | 'assassin' | 'green';
 export type Role = 'spymaster' | 'operative' | 'spectator';
-export type Language = 'en' | 'ar' | 'all';
+export type Language = 'en' | 'ar' | 'all' | 'du' | 'ge' | 'fr' | 'es';
 export type GameMode = 'classic' | 'duet';
 
 export interface Card {

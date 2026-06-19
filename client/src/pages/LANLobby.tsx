@@ -49,9 +49,7 @@ export default function LANLobby() {
     }
   }, [isHost]);
 
-  const [showWelcomeModal, setShowWelcomeModal] = useState(() => {
-    return !player?.name && !savedNickname;
-  });
+
   
   const [alertModal, setAlertModal] = useState<{
     isOpen: boolean;
@@ -379,16 +377,7 @@ export default function LANLobby() {
     playLobbyClickSfx();
   };
 
-  const handleWelcomeSubmit = () => {
-    if (!name.trim()) return;
-    localStorage.setItem('codenames_nickname', name.trim());
-    setShowWelcomeModal(false);
-    if (player && socket) {
-      const updatedPlayer = { ...player, name };
-      setPlayer(updatedPlayer);
-      socket.emit('join_room', { roomId: inputRoom, player: updatedPlayer, isPublic: isWan });
-    }
-  };
+
 
   const handleStartGame = () => {
     if (!player || player.team === 'spectator') {
@@ -498,36 +487,7 @@ export default function LANLobby() {
           </div>
         </div>
       )}
-      {/* Welcome Modal */}
-      {showWelcomeModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#333] border border-white/10 rounded-3xl p-6 lg:p-8 max-w-sm w-full shadow-2xl flex flex-col gap-4 text-center">
-            <h2 className="text-xl font-bold text-white mb-2">{t('welcome_to_codenames')}</h2>
-            <p className="text-slate-300 text-sm mb-4">{t('choose_nickname')}</p>
-            <input 
-              type="text" 
-              placeholder={t('nickname')}
-              value={name.startsWith('Spectator') ? '' : name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full bg-white text-black rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#e67e22] font-bold"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && name.trim() && !name.startsWith('Spectator')) {
-                  handleWelcomeSubmit();
-                }
-              }}
-              autoFocus
-            />
-            <button 
-              onMouseEnter={playMenuHoverSfx}
-              onClick={() => { playMenuClickSfx(); handleWelcomeSubmit(); }}
-              disabled={!name.trim() || name.startsWith('Spectator')}
-              className="w-full py-3 bg-gradient-to-b from-[#f39c12] to-[#d35400] hover:from-[#e67e22] hover:to-[#c0392b] border-2 border-white/20 rounded-2xl font-black text-white shadow-lg transition-transform hover:scale-105 tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {t('enter_game')}
-            </button>
-          </div>
-        </div>
-      )}
+
 
       {/* Top Bar */}
       {connectionError && (
@@ -636,22 +596,9 @@ export default function LANLobby() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
             <div>
               <label className="block text-[10px] font-bold text-slate-400 mb-0.5 ml-2">{t('display_name')}</label>
-              <input 
-                type="text" 
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onBlur={() => {
-                  if (name.trim()) {
-                    localStorage.setItem('codenames_nickname', name.trim());
-                  }
-                  if (player && socket) {
-                    const updatedPlayer = { ...player, name };
-                    setPlayer(updatedPlayer);
-                    socket.emit('join_room', { roomId: inputRoom, player: updatedPlayer });
-                  }
-                }}
-                className="w-full bg-[#1a1a1a] border border-slate-700 rounded-xl px-2.5 py-1.5 outline-none focus:border-slate-500 font-bold text-sm"
-              />
+              <div className="w-full bg-slate-800/40 border border-slate-700/50 rounded-xl px-3 py-1.5 font-bold text-sm text-slate-300 select-none">
+                {player?.name || name}
+              </div>
             </div>
             {isWan ? (
               <div>
