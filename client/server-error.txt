@@ -1,0 +1,17 @@
+Failed to start updated server: exports is not defined in ES module scope
+This file is being treated as an ES module because it has a '.js' file extension and 'C:\Users\yossu\AppData\Roaming\client\updates\Codenames-dist-files\package.json' contains "type": "module". To treat it as a CommonJS script, rename it to use the '.cjs' file extension.
+
+Stack: ReferenceError: exports is not defined in ES module scope
+This file is being treated as an ES module because it has a '.js' file extension and 'C:\Users\yossu\AppData\Roaming\client\updates\Codenames-dist-files\package.json' contains "type": "module". To treat it as a CommonJS script, rename it to use the '.cjs' file extension.
+    at file:///C:/Users/yossu/AppData/Roaming/client/updates/Codenames-dist-files/server/dist/server/src/index.js:5:23
+    at ModuleJobSync.runSync (node:internal/modules/esm/module_job:541:37)
+    at ModuleLoader.importSyncForRequire (node:internal/modules/esm/loader:366:47)
+    at loadESMFromCJS (node:internal/modules/cjs/loader:1656:24)
+    at Module._compile (node:internal/modules/cjs/loader:1819:5)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1971:10)
+    at Module.load (node:internal/modules/cjs/loader:1560:32)
+    at Module._load (node:internal/modules/cjs/loader:1362:12)
+    at c._load (node:electron/js2c/node_init:2:18095)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:262:19)
+
+ServerPath: C:\Users\yossu\AppData\Roaming\client\updates\Codenames-dist-files\server\dist\server\src\index.js
