@@ -218,6 +218,12 @@ app.whenReady().then(async () => {
 
   console.log('Starting server inside main process at:', serverPath);
   
+  if (!isDev) {
+    const nodeModulesPath = path.join(process.resourcesPath, 'server', 'node_modules');
+    process.env.NODE_PATH = nodeModulesPath;
+    require('module').Module._initPaths();
+  }
+
   process.env.PORT = String(SERVER_PORT);
 
   process.send = (msg) => {
