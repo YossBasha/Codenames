@@ -81,28 +81,65 @@ export default function Home() {
 
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
+  const [isUpdateDownloaded, setIsUpdateDownloaded] = useState(false);
+
+  useEffect(() => {
+    const api = (window as any).electronAPI;
+    if (!api) return;
+
+    api.onUpdaterAvailable((version: string) => {
+      setUpdateMessage(`Update ${version} available! Downloading...`);
+      setIsCheckingUpdate(true);
+    });
+
+    api.onUpdaterNotAvailable(() => {
+      setUpdateMessage(t("up_to_date"));
+      setIsCheckingUpdate(false);
+      setTimeout(() => setUpdateMessage(null), 3000);
+    });
+
+    api.onUpdaterProgress((progress: number) => {
+      setUpdateMessage(`Downloading... ${Math.round(progress)}%`);
+    });
+
+    api.onUpdaterDownloaded(() => {
+      setUpdateMessage("Update ready to install.");
+      setIsUpdateDownloaded(true);
+      setIsCheckingUpdate(false);
+    });
+
+    api.onUpdaterError((err: string) => {
+      setUpdateMessage("Update failed.");
+      setIsCheckingUpdate(false);
+      setTimeout(() => setUpdateMessage(null), 3000);
+    });
+
+    return () => {
+      api.removeAllUpdaterListeners?.();
+    };
+  }, [t]);
 
   const handleCheckUpdates = async () => {
     if (isCheckingUpdate) return;
     playMenuClickSfx();
+    if (isUpdateDownloaded) {
+      (window as any).electronAPI.installUpdate();
+      return;
+    }
+    
     setIsCheckingUpdate(true);
-    setUpdateMessage(null);
+    setUpdateMessage(t("checking"));
     try {
-      const updated = await (window as any).electronAPI.checkForUpdates(true);
-      if (updated) {
-        setUpdateMessage(t("update_installed_relaunching"));
-        setTimeout(() => {
-          (window as any).electronAPI.relaunchApp();
-        }, 3000);
-      } else {
-        setUpdateMessage(t("up_to_date"));
+      const started = await (window as any).electronAPI.checkForUpdates();
+      if (!started) {
+        setUpdateMessage(t("update_check_failed"));
+        setIsCheckingUpdate(false);
         setTimeout(() => setUpdateMessage(null), 3000);
       }
     } catch (e) {
       setUpdateMessage(t("update_check_failed"));
-      setTimeout(() => setUpdateMessage(null), 3000);
-    } finally {
       setIsCheckingUpdate(false);
+      setTimeout(() => setUpdateMessage(null), 3000);
     }
   };
 
@@ -271,7 +308,7 @@ export default function Home() {
             onClick={handleCheckUpdates}
             className="px-3 py-1 bg-slate-800/80 hover:bg-slate-700/80 disabled:opacity-50 text-[10px] font-black text-slate-400 hover:text-white rounded-full border border-slate-700/60 shadow transition-all cursor-pointer uppercase tracking-wider"
           >
-            {isCheckingUpdate ? t("checking") : t("check_for_updates")}
+            {isUpdateDownloaded ? "Install & Relaunch" : (isCheckingUpdate ? t("checking") : t("check_for_updates"))}
           </button>
         )}
 
