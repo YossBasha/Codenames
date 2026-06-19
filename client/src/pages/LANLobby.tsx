@@ -74,7 +74,22 @@ export default function LANLobby() {
       const saved = localStorage.getItem('host_enabledModifiers');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Merge any new modifiers that aren't in the saved list yet
+          const allIds = MODIFIERS.map(m => m.id);
+          let merged = [...parsed];
+          let changed = false;
+          for (const id of allIds) {
+            if (!merged.includes(id)) {
+              merged.push(id);
+              changed = true;
+            }
+          }
+          if (changed) {
+            localStorage.setItem('host_enabledModifiers', JSON.stringify(merged));
+          }
+          return merged;
+        }
       }
     } catch (e) {}
     return MODIFIERS.map(m => m.id);
