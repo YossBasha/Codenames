@@ -78,6 +78,34 @@ export default function Home() {
     }
   }, []);
 
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [updateMessage, setUpdateMessage] = useState<string | null>(null);
+
+  const handleCheckUpdates = async () => {
+    if (isCheckingUpdate) return;
+    playMenuClickSfx();
+    setIsCheckingUpdate(true);
+    setUpdateMessage(null);
+    try {
+      const updated = await (window as any).electronAPI.checkForUpdates(true);
+      if (updated) {
+        setUpdateMessage(t("update_installed_relaunching"));
+        setTimeout(() => {
+          (window as any).electronAPI.relaunchApp();
+        }, 3000);
+      } else {
+        setUpdateMessage(t("up_to_date"));
+        setTimeout(() => setUpdateMessage(null), 3000);
+      }
+    } catch (e) {
+      setUpdateMessage(t("update_check_failed"));
+      setTimeout(() => setUpdateMessage(null), 3000);
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  };
+
+
   useEffect(() => {
     if (player) {
       if (player.name) setProfileName(player.name);
@@ -225,14 +253,32 @@ export default function Home() {
       </div>
 
       {/* Version badge */}
-      <div
-        onClick={() => {
-          playMenuClickSfx();
-          setShowUpdateModal(true);
-        }}
-        className="z-10 mt-6 text-slate-600 hover:text-slate-400 text-xs font-mono tracking-widest cursor-pointer select-none transition-colors"
-      >
-        v{__APP_VERSION__}
+      <div className="z-10 mt-6 flex flex-col items-center gap-2">
+        <div
+          onClick={() => {
+            playMenuClickSfx();
+            setShowUpdateModal(true);
+          }}
+          className="text-slate-600 hover:text-slate-400 text-xs font-mono tracking-widest cursor-pointer select-none transition-colors"
+        >
+          v{__APP_VERSION__}
+        </div>
+
+        {typeof window !== "undefined" && (window as any).electronAPI?.checkForUpdates && (
+          <button
+            disabled={isCheckingUpdate}
+            onClick={handleCheckUpdates}
+            className="px-3 py-1 bg-slate-800/80 hover:bg-slate-700/80 disabled:opacity-50 text-[10px] font-black text-slate-400 hover:text-white rounded-full border border-slate-700/60 shadow transition-all cursor-pointer uppercase tracking-wider"
+          >
+            {isCheckingUpdate ? t("checking") : t("check_for_updates")}
+          </button>
+        )}
+
+        {updateMessage && (
+          <div className="text-[10px] font-black text-amber-500 animate-pulse transition-all">
+            {updateMessage}
+          </div>
+        )}
       </div>
 
       {showThemeModal && setTheme && (

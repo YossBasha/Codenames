@@ -121,8 +121,8 @@ function compareVersions(v1, v2) {
   return 0;
 }
 
-async function checkAndApplyUpdates() {
-  if (!app.isPackaged) {
+async function checkAndApplyUpdates(force = false) {
+  if (!app.isPackaged && !force) {
     console.log('[Updater] Dev mode: Skipping update check.');
     return false;
   }
@@ -246,6 +246,13 @@ app.whenReady().then(async () => {
 });
 
 ipcMain.handle('get-server-port', () => serverPort);
+ipcMain.handle('check-for-updates', async (event, force) => {
+  return await checkAndApplyUpdates(force);
+});
+ipcMain.handle('relaunch-app', () => {
+  app.relaunch();
+  app.exit(0);
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
