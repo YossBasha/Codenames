@@ -662,7 +662,14 @@ export default function PassAndPlay() {
               currentPlayerId="local_players"
               onCardContextMenu={handleCardContextMenu}
               onGuess={handleGuessCard}
+              activeModifier={gameState.activeModifier}
+              eatenCardIds={
+                gameState.activeModifier === 'nimnims-bite'
+                  ? gameState.modifierState?.eatenCardIds
+                  : undefined
+              }
             />
+
             {localPhase === 'Operative_Guessing' && !gameState.winner && (
               <ActiveClueBar 
                 activeCue={gameState.activeCue}

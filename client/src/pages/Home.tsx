@@ -3,11 +3,14 @@ import { useEffect } from 'react';
 import { useGameContext } from '../context/GameContext';
 import { useI18n } from '../context/I18nContext';
 import { playMenuHoverSfx, playMenuClickSfx } from '../utils/sfx';
-import { Palette, X, Check, Globe } from 'lucide-react';
+import { Palette, X, Check, Globe, Sparkles } from 'lucide-react';
 import { cn } from '../utils';
 import type { ThemeType } from '../../../shared/types';
 import { useState } from 'react';
 import { getLocalServerPort } from '../utils/discovery';
+import { SPECIAL_AVATAR } from '../assets/specialAvatar';
+import packageJson from '../../package.json';
+
 
 const AVATAR_TEMPLATES = [
   'https://api.dicebear.com/7.x/adventurer/svg?seed=Felix',
@@ -51,11 +54,23 @@ export default function Home() {
   const [isNgrokActive, setIsNgrokActive] = useState(false);
 
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [profileName, setProfileName] = useState(player?.name || '');
   const [profileAvatar, setProfileAvatar] = useState(player?.avatarBase64 || AVATAR_TEMPLATES[0]);
   const isFirstTime = !localStorage.getItem('codenames_nickname')?.trim();
 
   useEffect(() => {
+    const lastSeenVersion = localStorage.getItem('codenames_last_seen_version');
+    const currentVersion = packageJson.version;
+    if (lastSeenVersion && lastSeenVersion !== currentVersion) {
+      setShowUpdateModal(true);
+    } else if (!lastSeenVersion) {
+      localStorage.setItem('codenames_last_seen_version', currentVersion);
+    }
+  }, []);
+
+  useEffect(() => {
+
     const savedName = localStorage.getItem('codenames_nickname');
     if (!savedName || !savedName.trim()) {
       setShowProfileModal(true);
@@ -327,7 +342,7 @@ export default function Home() {
               <div className="grid grid-cols-4 gap-2 bg-[#111] p-3 rounded-2xl border border-slate-800 max-h-48 overflow-y-auto scrollbar-thin">
                 {(() => {
                   const showSpecial = profileName.includes('Yoss') && !profileName.includes(' ');
-                  const list = showSpecial ? ['/yoss.png', ...AVATAR_TEMPLATES] : AVATAR_TEMPLATES;
+                  const list = showSpecial ? [SPECIAL_AVATAR, ...AVATAR_TEMPLATES] : AVATAR_TEMPLATES;
                   return list.map((url, idx) => (
                     <button
                       key={idx}
@@ -369,6 +384,81 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {showUpdateModal && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-gradient-to-b from-[#1a1a1a] to-[#121212] rounded-3xl w-full max-w-md p-6 border border-slate-700/60 shadow-[0_0_50px_rgba(0,0,0,0.8)] relative flex flex-col gap-5 max-h-[90vh] overflow-y-auto animate-in scale-in duration-300">
+            <button 
+              onClick={() => {
+                playMenuClickSfx();
+                localStorage.setItem('codenames_last_seen_version', packageJson.version);
+                setShowUpdateModal(false);
+              }}
+              className="absolute top-4 right-4 p-2 bg-slate-800/80 rounded-full hover:bg-slate-700 transition-colors"
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
+
+            <div className="text-center mt-2 flex flex-col items-center gap-2">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/20 animate-pulse animate-duration-1000">
+                <Sparkles className="w-6 h-6 text-white" />
+              </div>
+              <h2 className="text-2xl font-black tracking-widest text-white mt-2">
+                V{packageJson.version} IS LIVE!
+              </h2>
+              <p className="text-xs font-black tracking-widest text-amber-500 uppercase">
+                {t('whats_new').toUpperCase()}
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3.5 my-2">
+              <div className="flex gap-3 bg-slate-800/30 border border-slate-800 p-3.5 rounded-2xl hover:bg-slate-800/50 transition-colors">
+                <div className="text-2xl select-none">🍪</div>
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-black text-sm text-slate-100 tracking-wide">NimNim's Bite (عضة نمنم)</span>
+                  <span className="text-xs font-semibold text-slate-400 leading-relaxed">Three random cards disappear from the board for 2 turns in Chaos mode!</span>
+                </div>
+              </div>
+
+              <div className="flex gap-3 bg-slate-800/30 border border-slate-800 p-3.5 rounded-2xl hover:bg-slate-800/50 transition-colors">
+                <div className="text-2xl select-none">🌐</div>
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-black text-sm text-slate-100 tracking-wide">Multi-Language Support</span>
+                  <span className="text-xs font-semibold text-slate-400 leading-relaxed">Translate card grids into Dutch, German, French, and Spanish mid-game!</span>
+                </div>
+              </div>
+
+              <div className="flex gap-3 bg-[#111] border border-slate-800/80 p-3.5 rounded-2xl">
+                <div className="text-2xl select-none">👥</div>
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-black text-sm text-slate-100 tracking-wide">LAN Lobby Enhancements</span>
+                  <span className="text-xs font-semibold text-slate-400 leading-relaxed">Sleek scrollable players container and more profile avatars to choose from.</span>
+                </div>
+              </div>
+
+              <div className="flex gap-3 bg-[#111] border border-slate-800/80 p-3.5 rounded-2xl">
+                <div className="text-2xl select-none">✨</div>
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-black text-sm text-slate-100 tracking-wide">Secret Avatar Unlocked</span>
+                  <span className="text-xs font-semibold text-slate-400 leading-relaxed">Name yourself containing "Yoss" without spaces to reveal a secret avatar!</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                playMenuClickSfx();
+                localStorage.setItem('codenames_last_seen_version', packageJson.version);
+                setShowUpdateModal(false);
+              }}
+              className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-black rounded-xl transition-all shadow-lg shadow-orange-500/20 active:scale-95 uppercase tracking-widest text-sm"
+            >
+              {t('awesome')}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

@@ -216,6 +216,11 @@ function revertActiveModifier(room: Room) {
         }
       });
     }
+  } else if (modifier === "nimnims-bite") {
+    if (state && state.turnsLeft > 1) {
+      state.turnsLeft--;
+      return;
+    }
   }
 
   gameState.activeModifier = null;
@@ -225,6 +230,7 @@ function revertActiveModifier(room: Room) {
 function applyRandomModifier(room: Room) {
   const gameState = room.gameState;
   if (!gameState) return;
+  if (gameState.activeModifier) return;
 
   const enabled = gameState.enabledModifiers || MODIFIERS.map((m) => m.id);
   const availableModifiers = MODIFIERS.filter((m) => enabled.includes(m.id));
@@ -459,6 +465,20 @@ function applyRandomModifier(room: Room) {
     const numbers = [4, 5, 6];
     const forcedNumber = numbers[Math.floor(Math.random() * numbers.length)];
     gameState.modifierState = { forcedNumber };
+  } else if (randomModifier.id === "nimnims-bite") {
+    const unrevealedIndices: number[] = [];
+    gameState.cards.forEach((c, idx) => {
+      if (!c.revealed) {
+        unrevealedIndices.push(idx);
+      }
+    });
+    const count = Math.min(3, unrevealedIndices.length);
+    const shuffled = shuffleArray([...unrevealedIndices]);
+    const eatenCardIds = shuffled.slice(0, count).map((idx) => gameState.cards[idx].id);
+    gameState.modifierState = {
+      eatenCardIds,
+      turnsLeft: 2,
+    };
   }
 }
 
@@ -1108,6 +1128,13 @@ function processGuess(io: Server, room: Room, player: Player, cardId: number) {
     (!isDuet && player.role !== "operative")
   )
     return;
+
+  if (
+    room.gameState.activeModifier === "nimnims-bite" &&
+    room.gameState.modifierState?.eatenCardIds?.includes(cardId)
+  ) {
+    return;
+  }
 
   const baseAllowed = (room.gameState.activeCueNumber || 0) + 1;
   const maxGuesses =

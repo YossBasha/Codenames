@@ -29,9 +29,11 @@ interface GridProps {
   gachaHighlightId?: number | null;
   d20FreeReveal?: boolean;
   invertedCardIds?: number[];
+  eatenCardIds?: number[];
 }
 
-export default function Grid({ cards, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, clueTargets = [], isGivingClue = false, highlightedCards = {}, players = [], currentPlayerId, onCardClick, onCardContextMenu, onGuess, activeModifier, currentPhase, scrambleActive, isScramblePending, originalWords, isGuesser, gachaHighlightId, d20FreeReveal, invertedCardIds = [] }: GridProps) {
+export default function Grid({ cards, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, clueTargets = [], isGivingClue = false, highlightedCards = {}, players = [], currentPlayerId, onCardClick, onCardContextMenu, onGuess, activeModifier, currentPhase, scrambleActive, isScramblePending, originalWords, isGuesser, gachaHighlightId, d20FreeReveal, invertedCardIds = [], eatenCardIds = [] }: GridProps) {
+
   if (!cards || cards.length === 0) return null;
 
   // Pre-calculate highlighting players per card to avoid O(N * M) lookup inside the loop
@@ -164,7 +166,9 @@ export default function Grid({ cards, isSpymaster, disabled, playerTeam, gameMod
             isPoltergeistInverted={invertedCardIds.includes(c.id)}
             isSwipedHover={swipedCardId === c.id}
             isTouchMode={isTouchMode}
+            isEaten={eatenCardIds.includes(c.id)}
           />
+
         );
       })}
     </div>

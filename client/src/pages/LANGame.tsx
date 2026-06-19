@@ -1165,6 +1165,12 @@ export default function LANGame() {
                       invertedCardIds={
                         gameState.modifierState?.invertedCardIds || []
                       }
+                      eatenCardIds={
+                        gameState.activeModifier === "nimnims-bite"
+                          ? gameState.modifierState?.eatenCardIds
+                          : undefined
+                      }
+
                     />
 
                     {/* Critical Hit 5-Second Timer Overlay */}

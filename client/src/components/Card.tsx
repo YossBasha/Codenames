@@ -29,9 +29,18 @@ interface CardProps {
   isPoltergeistInverted?: boolean;
   isSwipedHover?: boolean;
   isTouchMode?: boolean;
+  isEaten?: boolean;
 }
 
-function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, isClueTarget = false, isGivingClue = false, highlightedBy = [], currentPlayerId, onClick, onContextMenu, onGuess, activeModifier, currentPhase, scrambleDx, scrambleDy, isGuesser = false, gachaHighlight = false, d20FreeReveal = false, isScramblePending = false, isPoltergeistInverted = false, isSwipedHover = false, isTouchMode = false }: CardProps) {
+function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, isClueTarget = false, isGivingClue = false, highlightedBy = [], currentPlayerId, onClick, onContextMenu, onGuess, activeModifier, currentPhase, scrambleDx, scrambleDy, isGuesser = false, gachaHighlight = false, d20FreeReveal = false, isScramblePending = false, isPoltergeistInverted = false, isSwipedHover = false, isTouchMode = false, isEaten = false }: CardProps) {
+  if (isEaten) {
+    return (
+      <div 
+        className="w-full aspect-[4/3] sm:aspect-[3/2] max-h-[calc((100vh_-_220px)_/_5)] sm:max-h-[calc((100vh_-_340px)_/_5)] rounded-lg sm:rounded-xl bg-slate-900/5 border border-dashed border-slate-700/20 flex items-center justify-center opacity-25 pointer-events-none"
+      />
+    );
+  }
+
   let isRevealedForMe = card.revealed;
   if (gameMode === 'duet' && !card.revealed) {
     if (playerTeam === 'red' && card.revealedByA) {
@@ -361,6 +370,8 @@ function areEqual(prevProps: CardProps, nextProps: CardProps) {
   if (prevProps.d20FreeReveal !== nextProps.d20FreeReveal) return false;
   if (prevProps.isSwipedHover !== nextProps.isSwipedHover) return false;
   if (prevProps.isTouchMode !== nextProps.isTouchMode) return false;
+  if (prevProps.isEaten !== nextProps.isEaten) return false;
+
 
   // Check card fields
   const c1 = prevProps.card;

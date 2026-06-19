@@ -4,7 +4,7 @@ import {
   BookOpen, Clock, X, Globe, Check, Keyboard, Upload, Volume2, VolumeX, PenTool,
   Binary, FileText, HelpCircle, EyeOff, Shuffle, Ghost, Wind, Zap, HeartHandshake, Dices, Shield, WifiOff, Flame, Type, Eye,
   Skull, Gift, Swords, FastForward, Activity, Scissors, Copy, Crosshair, Terminal, SpellCheck, CaseUpper, Lock, MousePointer2, Timer, Palette, CloudFog,
-  UserMinus
+  UserMinus, Cookie
 } from 'lucide-react';
 import { cn } from '../utils';
 import type { Language, CustomWordWeight, TimerSettings, ClueType } from '../../../shared/types';
@@ -45,7 +45,8 @@ export const MODIFIER_ICONS: Record<string, React.ComponentType<any>> = {
   'Palette': Palette,
   'CloudFog': CloudFog,
   'Globe': Globe,
-  'UserMinus': UserMinus
+  'UserMinus': UserMinus,
+  'Cookie': Cookie
 };
 
 interface GameSettingsPanelProps {

@@ -173,11 +173,15 @@ export function getBotSpymasterClue(
 ): { word: string; count: number; reasoning?: string } | null {
   // === PHASE 1: CATEGORIZE BOARD ===
   const unrevealedCards = cards.filter((c) => {
+    if (activeModifier === "nimnims-bite" && modifierState?.eatenCardIds?.includes(c.id)) {
+      return false;
+    }
     if (isDuet) {
       return team === "red" ? !c.revealedByB : !c.revealedByA;
     }
     return !c.revealed;
   });
+
 
   const friendlyCards: typeof cards = [];
   const neutralCards: typeof cards = [];
@@ -504,13 +508,19 @@ export function rankCardsForOperative(
   team: import("../../../shared/types").Team,
   language: string,
   isDuet: boolean,
+  activeModifier: string | null = null,
+  modifierState: any = null,
 ): import("../../../shared/types").Card[] {
   const clueVec = getWordVector(clue, language);
 
   const unrevealed = cards.filter((c) => {
+    if (activeModifier === "nimnims-bite" && modifierState?.eatenCardIds?.includes(c.id)) {
+      return false;
+    }
     if (isDuet) return team === "red" ? !c.revealedByB : !c.revealedByA;
     return !c.revealed;
   });
+
 
   if (!clueVec) {
     return unrevealed.slice().sort((a, b) => a.word.localeCompare(b.word));
@@ -634,11 +644,15 @@ export async function getLLMSpymasterClue(
   }
 
   const unrevealedCards = cards.filter((c) => {
+    if (activeModifier === "nimnims-bite" && modifierState?.eatenCardIds?.includes(c.id)) {
+      return false;
+    }
     if (isDuet) {
       return team === "red" ? !c.revealedByB : !c.revealedByA;
     }
     return !c.revealed;
   });
+
 
   const friendlyCards: import("../../../shared/types").Card[] = [];
   const enemyWords: string[] = [];
@@ -780,15 +794,19 @@ export async function getLLMOperativeRankings(
   if (!groq) {
     console.warn(`[AI-OP] No Groq client — falling back to local AI.`);
     return {
-      cards: await rankCardsForOperative(clue, cards, team, language, isDuet),
+      cards: rankCardsForOperative(clue, cards, team, language, isDuet, activeModifier, modifierState),
       reasoning: "Local AI fallback (No Groq key)",
     };
   }
 
   const unrevealed = cards.filter((c) => {
+    if (activeModifier === "nimnims-bite" && modifierState?.eatenCardIds?.includes(c.id)) {
+      return false;
+    }
     if (isDuet) return team === "red" ? !c.revealedByB : !c.revealedByA;
     return !c.revealed;
   });
+
 
   const availableWords = unrevealed.map((c) => c.word);
 
@@ -870,7 +888,8 @@ Rank the available words by how well they match the clue's semantic meaning. Inc
     `[AI-OP] Falling back to local operative ranking after Groq failure.`,
   );
   return {
-    cards: await rankCardsForOperative(clue, cards, team, language, isDuet),
+    cards: rankCardsForOperative(clue, cards, team, language, isDuet, activeModifier, modifierState),
     reasoning: "Local AI fallback (Groq error)",
   };
+
 }

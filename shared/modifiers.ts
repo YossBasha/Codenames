@@ -338,7 +338,19 @@ export const MODIFIERS: Modifier[] = [
       "يجب على رئيس الجواسيس بناء دليله باستخدام معامل منطقي واحد بالضبط: AND أو OR أو NOT.",
     icon: "Terminal",
   },
+  {
+    id: "nimnims-bite",
+    name: "NimNim's Bite",
+    nameAr: "عضة نمنم",
+    category: "board",
+    description:
+      "Three random cards have been eaten by NimNim! It will take NimNim two turns to realize those cards were not food.",
+    descriptionAr:
+      "تم أكل ثلاث بطاقات عشوائية بواسطة نمنم! سيستغرق الأمر دورتين ليدرك نمنم أن تلك البطاقات لم تكن طعامًا.",
+    icon: "Cookie",
+  },
 ];
+
 
 export function checkRhyme(
   word1: string,
