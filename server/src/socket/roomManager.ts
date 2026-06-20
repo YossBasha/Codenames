@@ -233,7 +233,11 @@ function applyRandomModifier(room: Room) {
   if (gameState.activeModifier) return;
 
   const enabled = gameState.enabledModifiers || MODIFIERS.map((m) => m.id);
-  const availableModifiers = MODIFIERS.filter((m) => enabled.includes(m.id));
+  const availableModifiers = MODIFIERS.filter((m) => {
+    if (!enabled.includes(m.id)) return false;
+    if (m.id === "nimnims-bite" && gameState.nimnimsCooldown && gameState.nimnimsCooldown > 0) return false;
+    return true;
+  });
 
   if (availableModifiers.length === 0) {
     gameState.activeModifier = null;
@@ -479,6 +483,7 @@ function applyRandomModifier(room: Room) {
       eatenCardIds,
       turnsLeft: 2,
     };
+    gameState.nimnimsCooldown = 3;
   }
 }
 
@@ -599,6 +604,10 @@ function transitionToNewTurn(io: Server, room: Room) {
       card.shieldedTurns--;
     }
   });
+
+  if (gameState.nimnimsCooldown && gameState.nimnimsCooldown > 0) {
+    gameState.nimnimsCooldown--;
+  }
 
   if (gameState.gameMode === "duet") {
     gameState.timerTokens--;
@@ -1955,7 +1964,7 @@ export function setupRoomManager(io: Server) {
             type: "guess",
             player: {
               name: player.name,
-              avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=${player.team === "red" ? "ef4444" : "3b82f6"}`,
+              avatarUrl: getPlayerAvatarUrl(player),
             },
             guessingTeam: player.team as "red" | "blue",
             cardWord: "Ended Turn",
@@ -2004,7 +2013,7 @@ export function setupRoomManager(io: Server) {
           type: "guess",
           player: {
             name: player.name,
-            avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=${player.team === "red" ? "ef4444" : "3b82f6"}`,
+            avatarUrl: getPlayerAvatarUrl(player),
           },
           guessingTeam: player.team as "red" | "blue",
           cardWord: "Rejected the Clue! (Mutiny)",
@@ -2062,7 +2071,7 @@ export function setupRoomManager(io: Server) {
               type: "guess",
               player: {
                 name: `${player.name} (Intercept)`,
-                avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=${player.team === "red" ? "ef4444" : "3b82f6"}`,
+                avatarUrl: getPlayerAvatarUrl(player),
               },
               guessingTeam: enemyTeam,
               cardWord: getLoggedWord(room, card),
@@ -2101,7 +2110,7 @@ export function setupRoomManager(io: Server) {
               type: "guess",
               player: {
                 name: `${player.name} (Intercept)`,
-                avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=${player.team === "red" ? "ef4444" : "3b82f6"}`,
+                avatarUrl: getPlayerAvatarUrl(player),
               },
               guessingTeam: enemyTeam,
               cardWord: `${enemyTeam === "red" ? "🔴 Red" : "🔵 Blue"} team missed! ${activeTeam === "red" ? "🔴 Red" : "🔵 Blue"} team continues...`,
@@ -2194,7 +2203,7 @@ export function setupRoomManager(io: Server) {
               type: "guess",
               player: {
                 name: `${player.name} (Blood Pact)`,
-                avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=882222`,
+                avatarUrl: getPlayerAvatarUrl(player, "882222"),
               },
               guessingTeam: expectedGuessTeam as "red" | "blue",
               cardWord: getLoggedWord(room, card),
@@ -2210,7 +2219,7 @@ export function setupRoomManager(io: Server) {
               type: "guess",
               player: {
                 name: `${player.name} (Blood Pact)`,
-                avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=882222`,
+                avatarUrl: getPlayerAvatarUrl(player, "882222"),
               },
               guessingTeam: expectedGuessTeam as "red" | "blue",
               cardWord: getLoggedWord(room, card),
@@ -2286,7 +2295,7 @@ export function setupRoomManager(io: Server) {
           type: "guess",
           player: {
             name: `${player.name} (D20)`,
-            avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=e67e22`,
+            avatarUrl: getPlayerAvatarUrl(player, "e67e22"),
           },
           guessingTeam: expectedTurn as "red" | "blue",
           cardWord: `Rolled a ${result}!`,
@@ -2394,7 +2403,7 @@ export function setupRoomManager(io: Server) {
             type: "guess",
             player: {
               name: `${player.name} (Critical Success)`,
-              avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=10b981`,
+              avatarUrl: getPlayerAvatarUrl(player, "10b981"),
             },
             guessingTeam: expectedTurn as "red" | "blue",
             cardWord: `Revealed ${getLoggedWord(room, card)} for free!`,
@@ -2566,7 +2575,7 @@ export function setupRoomManager(io: Server) {
                     type: "guess",
                     player: {
                       name: `${player.name} (Lever Pull)`,
-                      avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=e67e22`,
+                      avatarUrl: getPlayerAvatarUrl(player, "e67e22"),
                     },
                     guessingTeam: expectedGuessTeam as "red" | "blue",
                     cardWord: "Pulled the Gacha Lever!",
@@ -2627,7 +2636,7 @@ export function setupRoomManager(io: Server) {
               type: "guess",
               player: {
                 name: player.name,
-                avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=64748b`,
+                avatarUrl: getPlayerAvatarUrl(player, "64748b"),
               },
               guessingTeam: expectedGuessTeam as "red" | "blue",
               cardWord: `Locked card: ${getLoggedWord(room, card)}`,

@@ -250,3 +250,16 @@ export const playTimerFreezeSfx = () => {
     osc2.stop(now + 0.4);
   } catch (e) {}
 };
+
+export const playNimnimChompSfx = () => {
+  try {
+    if (currentVolume === 0) return;
+    const audio = new window.Audio('/audio/chomp.ogg');
+    audio.volume = currentVolume;
+    audio.play().catch((e) => {
+      console.warn("[Nimnim's Bite] Failed to play chomp sound. User might need to interact with the page first.", e);
+    });
+  } catch (e) {
+    console.warn("[Nimnim's Bite] Error initializing chomp audio.", e);
+  }
+};

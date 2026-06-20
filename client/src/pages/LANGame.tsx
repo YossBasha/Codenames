@@ -170,8 +170,7 @@ export default function LANGame() {
     if (gameState?.activeModifier) {
       // Modifiers only change when the turn changes (or when a new modifier is explicitly applied)
       const isNewModifier =
-        gameState.activeModifier !== prevModifierRef.current ||
-        gameState.currentTurn !== prevTurnRef.current;
+        gameState.activeModifier !== prevModifierRef.current;
 
       if (isNewModifier) {
         // If turn announcer is about to show or is currently showing, queue the modifier banner

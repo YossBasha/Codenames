@@ -12,6 +12,8 @@ import { getLocalServerPort, startHostBroadcast, stopHostBroadcast, getLocalIp }
 import { playLobbyHoverSfx, playLobbyClickSfx, playMenuClickSfx, playMenuHoverSfx } from '../utils/sfx';
 import { MODIFIERS } from '../../../shared/modifiers';
 
+import { getPlayerAvatarUrl } from '../utils';
+
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -433,7 +435,8 @@ export default function LANLobby() {
   };
 
   const renderPlayerEntry = (p: Player, colorClass: string) => (
-    <div key={p.id} className={cn(colorClass, "px-2 py-1 lg:px-4 lg:py-2 rounded-xl text-center font-bold text-sm lg:text-base flex items-center justify-center gap-1.5 relative group/entry", p.isBot && isHost && "pr-8 lg:pr-10")}>
+    <div key={p.id} className={cn(colorClass, "ml-4 lg:ml-5 pr-2 py-1.5 lg:pr-4 lg:py-2.5 pl-6 lg:pl-8 rounded-xl text-center font-bold text-sm lg:text-base flex items-center justify-center gap-1.5 relative group/entry", p.isBot && isHost && "pr-8 lg:pr-10")}>
+      <img src={getPlayerAvatarUrl(p)} alt={p.name} className="absolute -left-4 lg:-left-5 w-9 h-9 lg:w-11 lg:h-11 rounded-full border-2 border-black/40 shadow-md bg-slate-900" />
       {p.isBot && <Bot className="w-3.5 h-3.5 lg:w-4 lg:h-4 shrink-0 opacity-70" />}
       <span className="truncate">{p.name}</span>
       {p.id === player?.id && <span className="shrink-0">(You)</span>}
@@ -515,7 +518,7 @@ export default function LANLobby() {
               {t('blue_team')}
             </div>
             
-            <div className="flex-none lg:flex-1 bg-blue-500/20 border-2 border-blue-400 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(59,130,246,0.3)]">
+            <div className="flex-none lg:flex-1 lg:min-h-0 bg-blue-500/20 border-2 border-blue-400 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(59,130,246,0.3)]">
               <div className="w-full text-center flex-1 flex flex-col lg:min-h-0 mb-3">
                 <h3 className="font-bold mb-1.5 tracking-widest text-xs lg:text-sm">{t('operatives_role')}</h3>
                 <div className="flex flex-col gap-1.5 overflow-y-auto lg:min-h-0 pr-1 scrollbar-thin">
@@ -540,7 +543,7 @@ export default function LANLobby() {
               )}
             </div>
 
-            <div className="flex-none lg:flex-1 bg-blue-400/20 border-2 border-blue-300 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(96,165,250,0.3)]">
+            <div className="flex-none lg:flex-1 lg:min-h-0 bg-blue-400/20 border-2 border-blue-300 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(96,165,250,0.3)]">
               <div className="w-full text-center flex-1 flex flex-col lg:min-h-0 mb-3">
                 <h3 className="font-bold mb-1.5 tracking-widest text-xs lg:text-sm">{t('spymasters_role')}</h3>
                 <div className="flex flex-col gap-1.5 overflow-y-auto lg:min-h-0 pr-1 scrollbar-thin">
@@ -575,13 +578,14 @@ export default function LANLobby() {
             <div className="text-center font-bold text-xs tracking-widest text-slate-400 border-b border-white/10 pb-1 uppercase">
               {t('spectators')}
             </div>
-            <div className="flex flex-wrap justify-center gap-1.5 min-h-[32px] max-h-[80px] overflow-y-auto py-1 scrollbar-thin">
+            <div className="flex flex-nowrap overflow-x-auto items-center gap-3 py-2 px-1 scrollbar-thin max-w-full mx-auto min-h-[44px]">
               {spectators.length === 0 ? (
                 <span className="text-slate-500 text-xs italic my-auto">{t('no_spectators')}</span>
               ) : (
                 spectators.map(p => (
-                  <div key={p.id} className="bg-slate-700/50 text-slate-300 px-2.5 py-0.5 rounded-full text-xs font-bold border border-slate-600">
-                    {p.name} {p.id === player?.id && '(You)'}
+                  <div key={p.id} className="bg-slate-700/50 text-slate-300 ml-3.5 pl-5 pr-2.5 py-0.5 rounded-full text-xs font-bold border border-slate-600 relative flex items-center h-[28px] shrink-0">
+                    <img src={getPlayerAvatarUrl(p, "64748b")} alt={p.name} className="absolute -left-3.5 w-8 h-8 rounded-full border-2 border-black/40 shadow-md bg-slate-800" />
+                    <span className="truncate max-w-[120px]">{p.name} {p.id === player?.id && '(You)'}</span>
                   </div>
                 ))
               )}
@@ -690,7 +694,7 @@ export default function LANLobby() {
               {t('red_team')}
             </div>
             
-            <div className="flex-none lg:flex-1 bg-red-500/20 border-2 border-red-400 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(239,68,68,0.3)]">
+            <div className="flex-none lg:flex-1 lg:min-h-0 bg-red-500/20 border-2 border-red-400 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(239,68,68,0.3)]">
               <div className="w-full text-center flex-1 flex flex-col lg:min-h-0 mb-3">
                 <h3 className="font-bold mb-1.5 tracking-widest text-xs lg:text-sm">{t('operatives_role')}</h3>
                 <div className="flex flex-col gap-1.5 overflow-y-auto lg:min-h-0 pr-1 scrollbar-thin">
@@ -715,7 +719,7 @@ export default function LANLobby() {
               )}
             </div>
 
-            <div className="flex-none lg:flex-1 bg-red-400/20 border-2 border-red-300 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(248,113,113,0.3)]">
+            <div className="flex-none lg:flex-1 lg:min-h-0 bg-red-400/20 border-2 border-red-300 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(248,113,113,0.3)]">
               <div className="w-full text-center flex-1 flex flex-col lg:min-h-0 mb-3">
                 <h3 className="font-bold mb-1.5 tracking-widest text-xs lg:text-sm">{t('spymasters_role')}</h3>
                 <div className="flex flex-col gap-1.5 overflow-y-auto lg:min-h-0 pr-1 scrollbar-thin">
@@ -743,7 +747,7 @@ export default function LANLobby() {
         ) : (
           <div className="flex flex-col gap-2 lg:gap-3 lg:min-h-0 lg:h-full">
             {/* DUET SIDE A */}
-            <div className="flex-none lg:flex-1 bg-green-500/20 border-2 border-green-400 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(34,197,94,0.3)] relative overflow-hidden group">
+            <div className="flex-none lg:flex-1 lg:min-h-0 bg-green-500/20 border-2 border-green-400 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(34,197,94,0.3)] relative overflow-hidden group">
               <div className="absolute top-0 w-full h-8 bg-green-600/30 font-black text-center pt-1.5 text-white/80 tracking-widest text-sm z-0">
                 {t('side_a')}
               </div>
@@ -770,7 +774,7 @@ export default function LANLobby() {
             </div>
 
             {/* DUET SIDE B */}
-            <div className="flex-none lg:flex-1 bg-teal-500/20 border-2 border-teal-400 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(20,184,166,0.3)] relative overflow-hidden group">
+            <div className="flex-none lg:flex-1 lg:min-h-0 bg-teal-500/20 border-2 border-teal-400 rounded-3xl p-3 lg:p-4 flex flex-col items-center justify-between shadow-[0_0_20px_rgba(20,184,166,0.3)] relative overflow-hidden group">
               <div className="absolute top-0 w-full h-8 bg-teal-600/30 font-black text-center pt-1.5 text-white/80 tracking-widest text-sm z-0">
                 {t('side_b')}
               </div>

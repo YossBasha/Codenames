@@ -88,4 +88,5 @@ export interface GameState {
   activeModifier?: string | null;
   modifierState?: any;
   enabledModifiers?: string[];
+  nimnimsCooldown?: number;
 }

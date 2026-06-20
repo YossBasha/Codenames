@@ -1,7 +1,7 @@
 import { useState, useLayoutEffect, useRef, memo } from "react";
 import type { Card as CardType, Player } from "../../../shared/types";
 import { cn } from "../utils";
-import { playCardHoverSfx, playCardSelectSfx } from "../utils/sfx";
+import { playCardHoverSfx, playCardSelectSfx, playNimnimChompSfx } from "../utils/sfx";
 import { Lock, CloudFog } from "lucide-react";
 
 interface CardProps {
@@ -33,13 +33,56 @@ interface CardProps {
 }
 
 function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', isRTL = false, isClueTarget = false, isGivingClue = false, highlightedBy = [], currentPlayerId, onClick, onContextMenu, onGuess, activeModifier, currentPhase, scrambleDx, scrambleDy, isGuesser = false, gachaHighlight = false, d20FreeReveal = false, isScramblePending = false, isPoltergeistInverted = false, isSwipedHover = false, isTouchMode = false, isEaten = false }: CardProps) {
-  if (isEaten) {
-    return (
-      <div 
-        className="w-full aspect-[4/3] sm:aspect-[3/2] max-h-[calc((100vh_-_220px)_/_5)] sm:max-h-[calc((100vh_-_340px)_/_5)] rounded-lg sm:rounded-xl bg-slate-900/5 border border-dashed border-slate-700/20 flex items-center justify-center opacity-25 pointer-events-none"
-      />
-    );
-  }
+  const [eatenAnimState, setEatenAnimState] = useState<'none' | 'waiting' | 'chomping' | 'eaten' | 'spitting'>('none');
+  const eatenTimersRef = useRef<number[]>([]);
+
+  useLayoutEffect(() => {
+    console.log(`[Nimnim's Bite] Card ${card.id} - isEaten: ${isEaten}, eatenAnimState: ${eatenAnimState}`);
+    
+    if (isEaten && eatenAnimState === 'none') {
+      console.log(`[Nimnim's Bite] Card ${card.id} - Starting waiting phase`);
+      setEatenAnimState('waiting');
+      const timer1 = setTimeout(() => {
+        console.log(`[Nimnim's Bite] Card ${card.id} - Starting chomping phase`);
+        setEatenAnimState('chomping');
+        playNimnimChompSfx();
+      }, 3500) as unknown as number;
+      
+      const timer2 = setTimeout(() => {
+        console.log(`[Nimnim's Bite] Card ${card.id} - Finished chomping, now eaten`);
+        setEatenAnimState('eaten');
+      }, 6500) as unknown as number;
+      
+      eatenTimersRef.current.push(timer1, timer2);
+    } else if (!isEaten && eatenAnimState === 'eaten') {
+      console.log(`[Nimnim's Bite] Card ${card.id} - Starting spitting phase`);
+      setEatenAnimState('spitting');
+      const timer = setTimeout(() => {
+        console.log(`[Nimnim's Bite] Card ${card.id} - Finished spitting`);
+        setEatenAnimState('none');
+      }, 600) as unknown as number;
+      
+      eatenTimersRef.current.push(timer);
+    } else if (isEaten && eatenAnimState !== 'waiting' && eatenAnimState !== 'chomping' && eatenAnimState !== 'eaten') {
+      setEatenAnimState('eaten');
+    } else if (!isEaten && eatenAnimState !== 'spitting' && eatenAnimState !== 'none') {
+      setEatenAnimState('none');
+    }
+    
+    // We intentionally don't clear timeouts in the cleanup if they are for the current sequence, 
+    // but we can clear them on unmount.
+    return () => {
+      // Only clean up on unmount or if we need to interrupt (which we don't usually do)
+    };
+  }, [isEaten, eatenAnimState, card.id]);
+
+  useLayoutEffect(() => {
+    return () => {
+      // Clear all timers on unmount
+      eatenTimersRef.current.forEach(t => clearTimeout(t));
+    };
+  }, []);
+
 
   let isRevealedForMe = card.revealed;
   if (gameMode === 'duet' && !card.revealed) {
@@ -146,6 +189,14 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
 
   const isEmoji = /\p{Extended_Pictographic}/u.test(card.word);
 
+  if (eatenAnimState === 'eaten') {
+    return (
+      <div 
+        className="w-full aspect-[4/3] sm:aspect-[3/2] max-h-[calc((100vh_-_220px)_/_5)] sm:max-h-[calc((100vh_-_340px)_/_5)] rounded-lg sm:rounded-xl bg-slate-900/5 border border-dashed border-slate-700/20 flex items-center justify-center opacity-25 pointer-events-none"
+      />
+    );
+  }
+
   return (
     <div
       data-card-id={card.id}
@@ -199,7 +250,9 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
         gachaHighlight && "z-40",
         justRevealed && !['green', 'red', 'blue'].includes(typeToDisplay) && "animate-reveal-pop",
         justRevealed && ['green', 'red', 'blue'].includes(typeToDisplay) && "animate-card-flip",
-        !isScramblePending && (scrambleDx !== undefined || scrambleDy !== undefined) && activeModifier === 'earthquake' && "animate-scramble"
+        !isScramblePending && (scrambleDx !== undefined || scrambleDy !== undefined) && activeModifier === 'earthquake' && "animate-scramble",
+        eatenAnimState === 'chomping' && "animate-chomp z-50 pointer-events-none",
+        eatenAnimState === 'spitting' && "animate-spit z-50 pointer-events-none"
       )}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
