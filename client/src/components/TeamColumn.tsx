@@ -1,6 +1,7 @@
 import type { Player, Team } from '../../../shared/types';
 import { cn } from '../utils';
 import { useI18n } from '../context/I18nContext';
+import { useGameContext } from '../context/GameContext';
 import { Bot } from 'lucide-react';
 
 interface TeamColumnProps {
@@ -15,6 +16,7 @@ interface TeamColumnProps {
 export default function TeamColumn({ team, score, operatives, spymasters, gameMode = 'classic', className }: TeamColumnProps) {
   const isRed = team === 'red';
   const { t } = useI18n();
+  const { player } = useGameContext();
   
   if (gameMode === 'duet') {
     const allPlayers = [...operatives, ...spymasters];
@@ -38,7 +40,7 @@ export default function TeamColumn({ team, score, operatives, spymasters, gameMo
                   p.connected === false && "opacity-50 grayscale"
                 )}>
                   {p.isBot && <Bot className="w-3.5 h-3.5 shrink-0 opacity-70" />}
-                  {p.name} {p.connected === false && t('offline')}
+                  {p.name} {p.id === player?.id && <span className="shrink-0 text-[10px] opacity-70">(You)</span>} {p.connected === false && t('offline')}
                 </div>
               ))
             )}
@@ -68,7 +70,7 @@ export default function TeamColumn({ team, score, operatives, spymasters, gameMo
                 p.connected === false && "opacity-50 grayscale"
               )}>
                 {p.isBot && <Bot className="w-3 h-3 shrink-0 opacity-70" />}
-                {p.name} {p.connected === false && t('offline')}
+                {p.name} {p.id === player?.id && <span className="shrink-0 text-[10px] opacity-70">(You)</span>} {p.connected === false && t('offline')}
               </div>
             ))
           )}
@@ -103,7 +105,7 @@ export default function TeamColumn({ team, score, operatives, spymasters, gameMo
                 p.connected === false && "opacity-50 grayscale"
               )}>
                 {p.isBot && <Bot className="w-3 h-3 shrink-0 opacity-70" />}
-                {p.name} {p.connected === false && t('offline')}
+                {p.name} {p.id === player?.id && <span className="shrink-0 text-[10px] opacity-70">(You)</span>} {p.connected === false && t('offline')}
               </div>
             ))
           )}

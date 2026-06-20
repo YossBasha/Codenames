@@ -11,6 +11,7 @@ import { twMerge } from 'tailwind-merge';
 import { getLocalServerPort, startHostBroadcast, stopHostBroadcast, getLocalIp } from '../utils/discovery';
 import { playLobbyHoverSfx, playLobbyClickSfx, playMenuClickSfx, playMenuHoverSfx } from '../utils/sfx';
 import { MODIFIERS } from '../../../shared/modifiers';
+import pkg from '../../package.json';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -202,12 +203,23 @@ export default function LANLobby() {
             name: savedNickname.trim() || `Spectator ${socket.id!.substring(0,4)}` 
           };
           setPlayer(currentPlayer);
-          socket.emit('join_room', { roomId: inputRoom, player: currentPlayer, isPublic: isWan });
+          socket.emit('join_room', { roomId: inputRoom, player: currentPlayer, isPublic: isWan, clientVersion: pkg.version });
         }
 
         socket.off('room_update');
         socket.off('game_started');
         socket.off('host_disconnected');
+        socket.off('version_mismatch');
+
+        socket.on('version_mismatch', (data: { serverVersion: string, clientVersion: string }) => {
+          setAlertModal({
+            isOpen: true,
+            title: "Error",
+            description: `Version mismatch! The host is on v${data.serverVersion} but you are on v${data.clientVersion}. Please update to the latest version to join this room.`
+          });
+          setIsConnected(false);
+          setConnectionError(`Version mismatch! Host is v${data.serverVersion}. You are v${data.clientVersion}.`);
+        });
 
         socket.on('room_update', (room) => {
           setRoomPlayers(room.players);
@@ -264,12 +276,22 @@ export default function LANLobby() {
             name: savedNickname.trim() || `Spectator ${newSocket.id!.substring(0,4)}` 
           };
           setPlayer(currentPlayer);
-          newSocket.emit('join_room', { roomId: inputRoom, player: currentPlayer, isPublic: isWan });
+          newSocket.emit('join_room', { roomId: inputRoom, player: currentPlayer, isPublic: isWan, clientVersion: pkg.version });
         }
       });
 
       newSocket.on('disconnect', () => {
         setIsConnected(false);
+      });
+
+      newSocket.on('version_mismatch', (data: { serverVersion: string, clientVersion: string }) => {
+        setAlertModal({
+          isOpen: true,
+          title: "Error",
+          description: `Version mismatch! The host is on v${data.serverVersion} but you are on v${data.clientVersion}. Please update to the latest version to join this room.`
+        });
+        setIsConnected(false);
+        setConnectionError(`Version mismatch! Host is v${data.serverVersion}. You are v${data.clientVersion}.`);
       });
 
       newSocket.on('room_update', (room) => {
@@ -375,7 +397,7 @@ export default function LANLobby() {
     };
     
     setPlayer(newPlayer);
-    socket.emit('join_room', { roomId, player: newPlayer, explicitChange: true, isPublic: isWan });
+    socket.emit('join_room', { roomId, player: newPlayer, explicitChange: true, isPublic: isWan, clientVersion: pkg.version });
     playLobbyClickSfx();
   };
 

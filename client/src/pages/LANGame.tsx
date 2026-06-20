@@ -19,6 +19,7 @@ import {
   playCardSelectSfx,
 } from "../utils/sfx";
 import { MODIFIERS } from "../../../shared/modifiers";
+import pkg from '../../package.json';
 
 export default function LANGame() {
   const navigate = useNavigate();
@@ -399,7 +400,7 @@ export default function LANGame() {
         clearTimeout(disconnectTimeout);
         disconnectTimeout = null;
       }
-      socket.emit("join_room", { roomId, player, isPublic: isWan || isPublic });
+      socket.emit("join_room", { roomId, player, isPublic: isWan || isPublic, clientVersion: pkg.version });
     };
 
     socket.on("connect", handleConnect);
@@ -411,8 +412,12 @@ export default function LANGame() {
       setTimeout(() => navigate("/"), 4000);
     });
 
+    socket.on("version_mismatch", () => {
+      navigate("/");
+    });
+
     // Request fresh room state immediately upon mounting
-    socket.emit("join_room", { roomId, player, isPublic: isWan || isPublic });
+    socket.emit("join_room", { roomId, player, isPublic: isWan || isPublic, clientVersion: pkg.version });
 
     return () => {
       if (disconnectTimeout) {
@@ -429,6 +434,7 @@ export default function LANGame() {
       socket.off("trigger_prank");
       socket.off("return_to_lobby");
       socket.off("host_disconnected");
+      socket.off("version_mismatch");
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
       socket.off("connect_error", handleDisconnect);

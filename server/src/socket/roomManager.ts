@@ -15,6 +15,7 @@ import {
 } from "../../../shared/gameLogic";
 import { MODIFIERS, checkRhyme } from "../../../shared/modifiers";
 import { wordPackRegistry } from "../../../shared/wordPacks";
+import pkg from "../../../package.json";
 import {
   getBotSpymasterClue,
   rankCardsForOperative,
@@ -1470,7 +1471,13 @@ export function setupRoomManager(io: Server) {
         player: Player;
         explicitChange?: boolean;
         isPublic?: boolean;
+        clientVersion?: string;
       }) => {
+        if (clientVersion && clientVersion !== pkg.version) {
+          socket.emit("version_mismatch", { serverVersion: pkg.version, clientVersion });
+          return;
+        }
+
         socket.join(roomId);
 
         if (!rooms[roomId]) {
