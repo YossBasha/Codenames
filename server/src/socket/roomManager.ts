@@ -1466,6 +1466,7 @@ export function setupRoomManager(io: Server) {
         player,
         explicitChange,
         isPublic,
+        clientVersion,
       }: {
         roomId: string;
         player: Player;
