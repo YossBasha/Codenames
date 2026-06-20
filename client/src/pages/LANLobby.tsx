@@ -505,26 +505,26 @@ export default function LANLobby() {
             <div className="w-20 h-20 rounded-full bg-yellow-500/20 border-2 border-yellow-500/40 flex items-center justify-center text-4xl">
               ⚠️
             </div>
-            <h2 className="text-2xl font-black text-white tracking-wide">{t('version_mismatch_title') || 'Version Mismatch'}</h2>
+            <h2 className="text-2xl font-black text-white tracking-wide">{t('version_mismatch_title')}</h2>
             <p className="text-slate-400 text-sm leading-relaxed">
-              {t('version_mismatch_desc') || "You can't join — your app version doesn't match the room's version."}
+              {t('version_mismatch_desc')}
             </p>
             <div className="w-full bg-slate-800/80 rounded-2xl p-4 flex flex-col gap-2 text-sm font-mono">
               <div className="flex justify-between">
-                <span className="text-slate-400">{t('your_version') || 'Your version'}:</span>
+                <span className="text-slate-400">{t('your_version')}:</span>
                 <span className={versionMismatch.yourVersion === versionMismatch.roomVersion ? 'text-green-400' : 'text-red-400'}>v{versionMismatch.yourVersion}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{t('room_version') || 'Room version'}:</span>
+                <span className="text-slate-400">{t('room_version')}:</span>
                 <span className="text-yellow-400">v{versionMismatch.roomVersion}</span>
               </div>
             </div>
-            <p className="text-slate-500 text-xs">{t('version_mismatch_hint') || 'Ask the host to update, or update your app to match.'}</p>
+            <p className="text-slate-500 text-xs">{t('version_mismatch_hint')}</p>
             <button
               onClick={() => navigate('/')}
               className="mt-1 px-8 py-3 bg-yellow-500 hover:bg-yellow-400 rounded-2xl font-bold text-black transition-colors text-sm tracking-widest"
             >
-              {t('return_now') || 'Go Back'}
+              {t('return_now')}
             </button>
           </div>
         </div>
