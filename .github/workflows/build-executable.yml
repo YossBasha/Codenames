@@ -36,18 +36,10 @@ jobs:
           cd client
           npm install --no-audit --no-fund
 
-      - name: Build Electron
+      - name: Build and Publish Electron
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd client
           npm run build
-          npx electron-builder --win --publish never
-
-      - name: Publish Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            client/dist-electron/*.exe
-            client/dist-electron/*.exe.blockmap
-            client/dist-electron/latest.yml
-          draft: false
-          prerelease: false
+          npx electron-builder --win --publish always
