@@ -90,7 +90,7 @@ export default function Home() {
     api.onUpdaterAvailable((version: string) => {
       setUpdateMessage(`Update ${version} available! Downloading...`);
       setIsCheckingUpdate(true);
-      api.downloadUpdate();
+      // Patch auto-downloads in main process — no need to call downloadUpdate()
     });
 
     api.onUpdaterNotAvailable(() => {
@@ -304,13 +304,40 @@ export default function Home() {
         </div>
 
         {typeof window !== "undefined" && (window as any).electronAPI?.checkForUpdates && (
-          <button
-            disabled={isCheckingUpdate}
-            onClick={handleCheckUpdates}
-            className="px-3 py-1 bg-slate-800/80 hover:bg-slate-700/80 disabled:opacity-50 text-[10px] font-black text-slate-400 hover:text-white rounded-full border border-slate-700/60 shadow transition-all cursor-pointer uppercase tracking-wider"
-          >
-            {isUpdateDownloaded ? "Install & Relaunch" : (isCheckingUpdate ? t("checking") : t("check_for_updates"))}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              disabled={isCheckingUpdate}
+              onClick={handleCheckUpdates}
+              className="px-3 py-1 bg-slate-800/80 hover:bg-slate-700/80 disabled:opacity-50 text-[10px] font-black text-slate-400 hover:text-white rounded-full border border-slate-700/60 shadow transition-all cursor-pointer uppercase tracking-wider"
+            >
+              {isUpdateDownloaded ? "Install & Relaunch" : (isCheckingUpdate ? t("checking") : t("check_for_updates"))}
+            </button>
+            {!isCheckingUpdate && !isUpdateDownloaded && (window as any).electronAPI?.forceFullUpdate && (
+              <button
+                onClick={async () => {
+                  playMenuClickSfx();
+                  setIsCheckingUpdate(true);
+                  setUpdateMessage("Downloading full installer...");
+                  try {
+                    const started = await (window as any).electronAPI.forceFullUpdate();
+                    if (!started) {
+                      setUpdateMessage(t("up_to_date"));
+                      setIsCheckingUpdate(false);
+                      setTimeout(() => setUpdateMessage(null), 3000);
+                    }
+                  } catch (e) {
+                    setUpdateMessage(t("update_check_failed"));
+                    setIsCheckingUpdate(false);
+                    setTimeout(() => setUpdateMessage(null), 3000);
+                  }
+                }}
+                className="px-2 py-1 bg-slate-900/80 hover:bg-slate-800/80 text-[9px] font-bold text-slate-500 hover:text-slate-300 rounded-full border border-slate-800/60 shadow transition-all cursor-pointer uppercase tracking-wider"
+                title="Force download the full installer (~182 MB) instead of a lightweight patch"
+              >
+                Full Update
+              </button>
+            )}
+          </div>
         )}
 
         {updateMessage && (

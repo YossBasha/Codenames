@@ -43,3 +43,28 @@ jobs:
           cd client
           npm run build
           npx electron-builder --win --publish always
+
+      - name: Create and Upload Lightweight Patch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $version = (Get-Content client/package.json | ConvertFrom-Json).version
+          $tag = "v$version"
+
+          # Create staging directory for the patch
+          New-Item -ItemType Directory -Force -Path patch-staging | Out-Null
+
+          # Copy app.asar (the client bundle — this is the main thing that changes)
+          Copy-Item "client/dist-electron/win-unpacked/resources/app.asar" "patch-staging/app.asar"
+
+          # Copy server/dist (compiled server code)
+          Copy-Item -Recurse "server/dist" "patch-staging/server-dist"
+
+          # Create the zip
+          Compress-Archive -Path "patch-staging/*" -DestinationPath "app-patch.zip" -Force
+
+          $sizeMB = [math]::Round((Get-Item "app-patch.zip").Length / 1MB, 2)
+          Write-Host "Created app-patch.zip ($sizeMB MB)"
+
+          # Upload to the release created by electron-builder
+          gh release upload $tag "app-patch.zip" --clobber

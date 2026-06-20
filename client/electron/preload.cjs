@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   downloadUpdate: () => ipcRenderer.invoke('download-update'),
   installUpdate: () => ipcRenderer.invoke('install-update'),
+  forceFullUpdate: () => ipcRenderer.invoke('force-full-update'),
   relaunchApp: () => ipcRenderer.invoke('relaunch-app'),
   
   onUpdaterAvailable: (callback) => ipcRenderer.on('updater:available', (_event, version) => callback(version)),
