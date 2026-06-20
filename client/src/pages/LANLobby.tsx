@@ -13,6 +13,8 @@ import { playLobbyHoverSfx, playLobbyClickSfx, playMenuClickSfx, playMenuHoverSf
 import { MODIFIERS } from '../../../shared/modifiers';
 
 import { getPlayerAvatarUrl } from '../utils';
+import packageJson from '../../package.json';
+
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -115,6 +117,7 @@ export default function LANLobby() {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [hostDisconnected, setHostDisconnected] = useState(false);
+  const [versionMismatch, setVersionMismatch] = useState<{ yourVersion: string; roomVersion: string } | null>(null);
   
   const connectionRef = useRef({ serverIp, inputRoom, name });
 
@@ -201,7 +204,7 @@ export default function LANLobby() {
             name: savedNickname.trim() || `Spectator ${socket.id!.substring(0,4)}` 
           };
           setPlayer(currentPlayer);
-          socket.emit('join_room', { roomId: inputRoom, player: currentPlayer, isPublic: isWan });
+          socket.emit('join_room', { roomId: inputRoom, player: currentPlayer, isPublic: isWan, appVersion: packageJson.version });
         }
 
         socket.off('room_update');
@@ -263,12 +266,17 @@ export default function LANLobby() {
             name: savedNickname.trim() || `Spectator ${newSocket.id!.substring(0,4)}` 
           };
           setPlayer(currentPlayer);
-          newSocket.emit('join_room', { roomId: inputRoom, player: currentPlayer, isPublic: isWan });
+          newSocket.emit('join_room', { roomId: inputRoom, player: currentPlayer, isPublic: isWan, appVersion: packageJson.version });
         }
       });
 
       newSocket.on('disconnect', () => {
         setIsConnected(false);
+      });
+
+      newSocket.on('version_mismatch', (data: { yourVersion: string; roomVersion: string }) => {
+        setVersionMismatch(data);
+        newSocket.disconnect();
       });
 
       newSocket.on('room_update', (room) => {
@@ -490,6 +498,37 @@ export default function LANLobby() {
         </div>
       )}
 
+      {/* Version Mismatch Overlay */}
+      {versionMismatch && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-[#1e1e1e] border-2 border-yellow-500/40 rounded-3xl p-8 max-w-md w-full shadow-[0_0_60px_rgba(234,179,8,0.2)] text-center flex flex-col items-center gap-5">
+            <div className="w-20 h-20 rounded-full bg-yellow-500/20 border-2 border-yellow-500/40 flex items-center justify-center text-4xl">
+              ⚠️
+            </div>
+            <h2 className="text-2xl font-black text-white tracking-wide">{t('version_mismatch_title') || 'Version Mismatch'}</h2>
+            <p className="text-slate-400 text-sm leading-relaxed">
+              {t('version_mismatch_desc') || "You can't join — your app version doesn't match the room's version."}
+            </p>
+            <div className="w-full bg-slate-800/80 rounded-2xl p-4 flex flex-col gap-2 text-sm font-mono">
+              <div className="flex justify-between">
+                <span className="text-slate-400">{t('your_version') || 'Your version'}:</span>
+                <span className={versionMismatch.yourVersion === versionMismatch.roomVersion ? 'text-green-400' : 'text-red-400'}>v{versionMismatch.yourVersion}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">{t('room_version') || 'Room version'}:</span>
+                <span className="text-yellow-400">v{versionMismatch.roomVersion}</span>
+              </div>
+            </div>
+            <p className="text-slate-500 text-xs">{t('version_mismatch_hint') || 'Ask the host to update, or update your app to match.'}</p>
+            <button
+              onClick={() => navigate('/')}
+              className="mt-1 px-8 py-3 bg-yellow-500 hover:bg-yellow-400 rounded-2xl font-bold text-black transition-colors text-sm tracking-widest"
+            >
+              {t('return_now') || 'Go Back'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Top Bar */}
       {connectionError && (

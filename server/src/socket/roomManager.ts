@@ -31,6 +31,7 @@ interface Room {
   settings?: any;
   isPublic?: boolean;
   hostSessionId?: string;
+  hostVersion?: string;
   deletionTimeout?: NodeJS.Timeout;
   returningToLobby?: boolean;
 }
@@ -1454,11 +1455,13 @@ export function setupRoomManager(io: Server) {
         player,
         explicitChange,
         isPublic,
+        appVersion,
       }: {
         roomId: string;
         player: Player;
         explicitChange?: boolean;
         isPublic?: boolean;
+        appVersion?: string;
       }) => {
         socket.join(roomId);
 
@@ -1468,9 +1471,30 @@ export function setupRoomManager(io: Server) {
             players: [],
             gameState: null,
             hostSessionId: player.sessionId || player.id,
+            hostVersion: appVersion,
             isPublic: !!isPublic
           };
         } else {
+          // Version mismatch check: reject joiner if versions differ
+          if (
+            appVersion &&
+            rooms[roomId].hostVersion &&
+            appVersion !== rooms[roomId].hostVersion
+          ) {
+            const isNewPlayer = !rooms[roomId].players.some(
+              (p) =>
+                (player.sessionId && p.sessionId === player.sessionId) ||
+                p.id === player.id
+            );
+            if (isNewPlayer) {
+              socket.emit("version_mismatch", {
+                yourVersion: appVersion,
+                roomVersion: rooms[roomId].hostVersion,
+              });
+              socket.leave(roomId);
+              return;
+            }
+          }
           if (isPublic !== undefined) {
             rooms[roomId].isPublic = !!isPublic;
           }
