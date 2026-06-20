@@ -159,8 +159,7 @@ export default function Home() {
   }, [socket, setSocket]);
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute top-[-20%] left-[-10%] w-96 h-96 bg-red-500/20 rounded-full blur-[100px]" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-96 h-96 bg-blue-500/20 rounded-full blur-[100px]" />
+
 
       {/* Language Toggle Button */}
       <button

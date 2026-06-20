@@ -22,6 +22,7 @@ const io = new Server(server, {
     origin: '*',
     methods: ['GET', 'POST'],
   },
+  maxHttpBufferSize: 1e7,
 });
 
 app.get('/health', (req, res) => {
