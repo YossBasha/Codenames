@@ -42,6 +42,19 @@ const AVATAR_TEMPLATES = [
   "https://api.dicebear.com/7.x/avataaars/svg?seed=Amy",
   "https://api.dicebear.com/7.x/avataaars/svg?seed=Bella",
   "https://api.dicebear.com/7.x/avataaars/svg?seed=Leo",
+  "https://api.dicebear.com/7.x/fun-emoji/svg?seed=Happy",
+  "https://api.dicebear.com/7.x/fun-emoji/svg?seed=Cool",
+  "https://api.dicebear.com/7.x/fun-emoji/svg?seed=Wink",
+  "https://api.dicebear.com/7.x/fun-emoji/svg?seed=Star",
+  "https://api.dicebear.com/7.x/adventurer/svg?seed=Destiny",
+  "https://api.dicebear.com/7.x/adventurer/svg?seed=Casper",
+  "https://api.dicebear.com/7.x/bottts/svg?seed=Tinker",
+  "https://api.dicebear.com/7.x/pixel-art/svg?seed=Charlie",
+  "https://api.dicebear.com/7.x/pixel-art/svg?seed=Nala",
+  "https://api.dicebear.com/7.x/lorelei/svg?seed=Eden",
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%2322c55e'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-size='60'%3E🐸%3C/text%3E%3C/svg%3E",
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23ec4899'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-size='60'%3E🐷%3C/text%3E%3C/svg%3E",
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f59e0b'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-size='60'%3E🐱%3C/text%3E%3C/svg%3E",
 ];
 
 export default function Home() {

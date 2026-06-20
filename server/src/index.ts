@@ -167,6 +167,11 @@ function notifyPort(port: number) {
 let ngrokProcess: any = null;
 
 function shouldLaunchNgrok() {
+  if (process.env.npm_lifecycle_event === 'dev' && process.cwd().replace(/\\/g, '/').endsWith('/server')) {
+    console.log('[Ngrok] Auto-launching because of npm run dev in /server folder.');
+    return true;
+  }
+
   const triggerFileName = 'launch-ngrok.txt';
   const pathsToCheck = [
     'c:/Users/yossu/OneDrive/Desktop/Programing/Games/Codenames/client/launch-ngrok.txt',

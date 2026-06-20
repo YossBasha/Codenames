@@ -1100,7 +1100,7 @@ function startTimer(io: Server, room: Room) {
 }
 
 function getSafeRoom(room: Room) {
-  const { timerInterval, rogueAssassinInterval, ...safeRoom } = room;
+  const { timerInterval, rogueAssassinInterval, deletionTimeout, ...safeRoom } = room;
   return safeRoom;
 }
 
