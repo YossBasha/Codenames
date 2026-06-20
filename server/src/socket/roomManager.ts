@@ -15,7 +15,7 @@ import {
 } from "../../../shared/gameLogic";
 import { MODIFIERS, checkRhyme } from "../../../shared/modifiers";
 import { wordPackRegistry } from "../../../shared/wordPacks";
-import pkg from "../../../package.json";
+import pkg from "../../package.json";
 import {
   getBotSpymasterClue,
   rankCardsForOperative,
