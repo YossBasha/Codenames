@@ -170,6 +170,12 @@ ipcMain.handle('download-update', async () => {
 ipcMain.handle('install-update', () => {
   if (app.isPackaged) {
     autoUpdater.quitAndInstall();
+    // Fallback: If electron fails to quit because of the embedded server,
+    // forcefully kill the process after 3 seconds so the NSIS installer can proceed.
+    setTimeout(() => {
+      console.log('[Main] Forcing exit 3s after quitAndInstall to prevent zombie lock.');
+      app.exit(0);
+    }, 3000);
   }
 });
 ipcMain.handle('relaunch-app', () => {
