@@ -180,3 +180,10 @@ ipcMain.handle('relaunch-app', () => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
+
+app.on('quit', () => {
+  // The embedded express server keeps the event loop alive.
+  // We must forcefully exit so the updater can overwrite the files.
+  console.log('App quitting, forcing exit(0) to terminate embedded server');
+  app.exit(0);
+});
