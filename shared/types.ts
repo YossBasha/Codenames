@@ -60,7 +60,7 @@ export interface TimerSettings {
 
 export type CustomWordWeight = 'none' | 'few' | 'some' | 'many';
 
-export type ThemeType = 'default' | 'cyberpunk' | 'noir';
+export type ThemeType = 'default' | 'cyberpunk' | 'noir' | 'pastel' | 'neon';
 
 export type ClueType = 'text' | 'doodle' | 'both';
 

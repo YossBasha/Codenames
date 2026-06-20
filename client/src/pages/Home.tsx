@@ -345,7 +345,7 @@ export default function Home() {
             </div>
 
             <div className="flex flex-col gap-3">
-              {(["default", "cyberpunk", "noir"] as ThemeType[]).map((t) => (
+              {(["default", "cyberpunk", "noir", "pastel", "neon"] as ThemeType[]).map((t) => (
                 <button
                   key={t}
                   onClick={() => setTheme(t)}
