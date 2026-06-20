@@ -101,15 +101,8 @@ export default function GiveClueBar({
   };
 
   const handleDrawingSubmit = (dataUrl: string) => {
-    if (numInput !== '' && onSubmitCue) {
-      onSubmitCue(dataUrl, Number(numInput));
-      setCueInput('');
-      setNumInput('');
-      setShowDrawingModal(false);
-    } else {
-      setCueInput(dataUrl);
-      setShowDrawingModal(false);
-    }
+    setCueInput(dataUrl);
+    setShowDrawingModal(false);
   };
 
   return (
