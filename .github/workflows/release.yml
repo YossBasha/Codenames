@@ -28,6 +28,43 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
+      # Cache npm dependencies (server + client)
+      - name: Cache npm (server)
+        uses: actions/cache@v4
+        with:
+          path: server/node_modules
+          key: npm-server-${{ hashFiles('server/package-lock.json') }}
+
+      - name: Cache npm (client)
+        uses: actions/cache@v4
+        with:
+          path: client/node_modules
+          key: npm-client-${{ hashFiles('client/package-lock.json') }}
+
+      # Cache Gradle wrapper + caches (avoids re-downloading Gradle zip every run)
+      - name: Cache Gradle wrapper
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/wrapper
+          key: gradle-wrapper-${{ hashFiles('client/android/gradle/wrapper/gradle-wrapper.properties') }}
+
+      - name: Cache Gradle caches (deps, build)
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches
+          key: gradle-caches-${{ hashFiles('client/android/**/*.gradle*', 'client/android/**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-caches-
+
+      # Cache Android SDK components installed by Gradle (NDK, CMake, etc.)
+      - name: Cache Android SDK extras
+        uses: actions/cache@v4
+        with:
+          path: C:\Program Files (x86)\Android\android-sdk
+          key: android-sdk-${{ hashFiles('client/android/**/*.gradle*') }}
+          restore-keys: |
+            android-sdk-
+
       - name: Install Server Dependencies
         run: |
           cd server
