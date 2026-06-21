@@ -37,28 +37,22 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
   const eatenTimersRef = useRef<number[]>([]);
 
   useLayoutEffect(() => {
-    console.log(`[Nimnim's Bite] Card ${card.id} - isEaten: ${isEaten}, eatenAnimState: ${eatenAnimState}`);
     
     if (isEaten && eatenAnimState === 'none') {
-      console.log(`[Nimnim's Bite] Card ${card.id} - Starting waiting phase`);
       setEatenAnimState('waiting');
       const timer1 = setTimeout(() => {
-        console.log(`[Nimnim's Bite] Card ${card.id} - Starting chomping phase`);
         setEatenAnimState('chomping');
         playNimnimChompSfx();
       }, 3500) as unknown as number;
       
       const timer2 = setTimeout(() => {
-        console.log(`[Nimnim's Bite] Card ${card.id} - Finished chomping, now eaten`);
         setEatenAnimState('eaten');
       }, 6500) as unknown as number;
       
       eatenTimersRef.current.push(timer1, timer2);
     } else if (!isEaten && eatenAnimState === 'eaten') {
-      console.log(`[Nimnim's Bite] Card ${card.id} - Starting spitting phase`);
       setEatenAnimState('spitting');
       const timer = setTimeout(() => {
-        console.log(`[Nimnim's Bite] Card ${card.id} - Finished spitting`);
         setEatenAnimState('none');
       }, 600) as unknown as number;
       
