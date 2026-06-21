@@ -24,6 +24,8 @@ export default function CheatVoteModal({
   const noVotes = Object.values(votes).filter(v => v === 'no').length;
   const totalVotes = yesVotes + noVotes;
 
+  console.log("CheatVoteModal rendered with active state");
+
   return (
     <div className="fixed inset-0 z-[500] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
       <div className="bg-slate-900 border-2 border-slate-700 shadow-2xl rounded-3xl w-full max-w-lg p-6 flex flex-col items-center animate-in fade-in zoom-in-95 duration-200">

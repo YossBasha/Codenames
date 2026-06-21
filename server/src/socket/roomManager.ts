@@ -2054,12 +2054,22 @@ export function setupRoomManager(io: Server) {
     });
 
     socket.on("report_cheat", ({ roomId, clueId }: { roomId: string; clueId: string }) => {
+      console.log(`[report_cheat] Received for roomId: ${roomId}, clueId: ${clueId}`);
       const room = rooms[roomId];
       const player = room?.players.find((p) => p.id === socket.id);
+      
+      if (!room) console.log(`[report_cheat] Room not found.`);
+      if (!room?.gameState) console.log(`[report_cheat] GameState not found.`);
+      if (!player) console.log(`[report_cheat] Player not found for socket id: ${socket.id}`);
+
       if (room && room.gameState && player) {
         const clueEntry = room.gameState.gameLog.find(l => l.type === 'cue' && l.id === clueId) as any;
-        if (!clueEntry) return;
+        if (!clueEntry) {
+          console.log(`[report_cheat] Clue entry not found for id: ${clueId}`);
+          return;
+        }
 
+        console.log(`[report_cheat] Emitting vote modal for clue:`, clueEntry.cueWord);
         room.gameState.cheatVoteState = {
           active: true,
           clueId: clueEntry.id,
