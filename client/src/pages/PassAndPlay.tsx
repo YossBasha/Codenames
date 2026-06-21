@@ -10,6 +10,8 @@ import TopBar from "../components/TopBar";
 import ActiveClueBar from "../components/ActiveClueBar";
 import GiveClueBar from "../components/GiveClueBar";
 import GameLog from '../components/GameLog';
+import PostGameDebrief from '../components/PostGameDebrief';
+import BestClueShowcase from '../components/BestClueShowcase';
 import { cn } from "../utils";
 import GameSettingsPanel from "../components/GameSettingsPanel";
 import { playCardRevealSfx, playMenuClickSfx, playMenuHoverSfx } from "../utils/sfx";
@@ -35,6 +37,14 @@ export default function PassAndPlay() {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [localPhase, setLocalPhase] = useState<LocalPhase>('Setup');
   const [clueTargets, setClueTargets] = useState<number[]>([]);
+  const [showDebrief, setShowDebrief] = useState(false);
+  const [showBestClue, setShowBestClue] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   // Setup State
   const [gameMode, setGameMode] = useState<'classic'|'duet'>(() => (localStorage.getItem('host_gameMode') as 'classic'|'duet') || 'classic');
@@ -174,6 +184,7 @@ export default function PassAndPlay() {
       import("../utils/haptics").then(({ triggerPrankVibration }) => {
         triggerPrankVibration();
       });
+      setTimeout(() => setShowBestClue(true), 600);
     }
     previousWinner.current = gameState?.winner || null;
   }, [gameState?.winner]);
@@ -436,11 +447,74 @@ export default function PassAndPlay() {
         team: prev.currentTurn as 'red' | 'blue',
         cueWord: cue,
         cueNumber: number,
+        modifier: prev.activeModifier || null,
         timestamp: Date.now()
       }]
     }) : null);
     setLocalPhase('Operative_Handoff');
     setClueTargets([]);
+  };
+
+  const handleResolveCheat = (isCheat: boolean, clueId: string) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const newState = { ...prev };
+      if (isCheat) {
+        const clueEntry = newState.gameLog.find(l => l.id === clueId) as any;
+        if (clueEntry) clueEntry.invalidated = true;
+        
+        newState.activeCue = null;
+        newState.activeCueNumber = null;
+        newState.currentPhase = "operative"; 
+        
+        newState.gameLog = [...newState.gameLog, {
+          id: Math.random().toString(36).substring(7),
+          type: "guess",
+          player: {
+            name: "Host",
+            avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=Host&backgroundColor=333333`,
+          },
+          guessingTeam: newState.currentTurn as "red" | "blue",
+          cardWord: "Clue Invalidated (Cheat)",
+          revealedColor: "neutral",
+          timestamp: Date.now(),
+        } as any];
+
+        if (newState.gameMode === 'classic') {
+          newState.currentTurn = newState.currentTurn === 'red' ? 'blue' : 'red';
+        } else {
+          newState.currentTurn = newState.currentTurn === 'red' ? 'blue' : 'red';
+          newState.timerTokens--;
+          if (newState.timerTokens <= 0) {
+            newState.winner = 'spectator';
+          }
+        }
+      }
+      return newState;
+    });
+    if (isCheat) {
+      setLocalPhase('Spymaster_Setup');
+    }
+  };
+
+  const handleReportClue = (clueId: string, clueWord: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Report Cheat",
+      description: `Host: Are you sure you want to invalidate the clue "${clueWord}"? This will skip the current team's turn.`,
+      onConfirm: () => {
+        handleResolveCheat(true, clueId);
+        setConfirmModal(null);
+      }
+    });
+  };
+
+  const handleReportActiveClue = () => {
+    const lastCue = [...(gameState?.gameLog || [])].reverse().find(l => l.type === 'cue');
+    if (lastCue) {
+      handleReportClue(lastCue.id, lastCue.cueWord);
+    }
   };
 
   const handleEndTurn = () => {
@@ -587,8 +661,15 @@ export default function PassAndPlay() {
               </h2>
             )}
             <button
+              onClick={() => setShowDebrief(true)}
+              className="mt-3 px-5 py-2 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 font-black rounded-xl transition-colors text-sm tracking-widest uppercase flex items-center gap-2 mx-auto"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>
+              View Debrief
+            </button>
+            <button
               onClick={() => { setGameState(null); setLocalPhase('Setup'); }}
-              className="px-8 py-3 bg-white text-slate-900 font-bold rounded-xl hover:bg-slate-200 transition-colors"
+              className="mt-2 px-8 py-3 bg-white text-slate-900 font-bold rounded-xl hover:bg-slate-200 transition-colors"
             >
               {t('play_again')}
             </button>
@@ -677,6 +758,7 @@ export default function PassAndPlay() {
                 successfulGuessesThisTurn={gameState.successfulGuessesThisTurn}
                 onEndTurn={handleEndTurn}
                 canEndTurn={true}
+                onReportClue={handleReportActiveClue}
               />
             )}
 
@@ -688,21 +770,77 @@ export default function PassAndPlay() {
                 clueTargetCount={clueTargets.length}
                 isRTL={gameState.language === 'ar'}
                 modifierState={gameState.modifierState}
+                unrevealedWords={gameState.cards.filter(c => !c.revealed).map(c => c.word)}
               />
             )}
             
             {/* MOBILE GAME LOG */}
             <div className="flex lg:hidden flex-col w-full max-w-lg mx-auto mt-6 h-36 shrink-0">
-              <GameLog logs={gameState.gameLog || []} gameMode={gameState.gameMode} />
+              <GameLog 
+                logs={gameState.gameLog || []} 
+                gameMode={gameState.gameMode}
+                onReportClue={(id, word) => handleReportClue(id, word)}
+              />
             </div>
           </div>
           
           {/* DESKTOP GAME LOG */}
-          <div className="hidden lg:flex flex-col w-64 xl:w-80 flex-shrink-0 lg:min-h-0 lg:max-h-full lg:overflow-y-auto scrollbar-none">
-             <GameLog logs={gameState.gameLog || []} gameMode={gameState.gameMode} />
+          <div className="hidden lg:flex flex-col w-[280px] shrink-0 border-l border-white/10 pl-6 h-[calc(100vh-140px)] animate-fade-in-right">
+            <GameLog 
+              logs={gameState.gameLog || []} 
+              gameMode={gameState.gameMode}
+              onReportClue={(id, word) => handleReportClue(id, word)}
+            />
           </div>
         </div>
       </div>
+
+      {showDebrief && gameState && (
+        <PostGameDebrief
+          logs={gameState.gameLog || []}
+          gameMode={gameState.gameMode}
+          onClose={() => setShowDebrief(false)}
+        />
+      )}
+
+      {showBestClue && gameState && (
+        <BestClueShowcase
+          logs={gameState.gameLog || []}
+          gameMode={gameState.gameMode}
+          onDone={() => setShowBestClue(false)}
+        />
+      )}
+
+      {/* Reusable Custom Confirm Modal */}
+      {confirmModal && confirmModal.isOpen && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-[200] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-[#1e1e1e] border-2 border-slate-700/60 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center flex flex-col items-center gap-5 animate-scale-up z-[200]">
+            <div className="w-16 h-16 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-white text-2xl font-bold select-none">
+              ❓
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-white tracking-wide uppercase leading-tight">
+              {confirmModal.title}
+            </h2>
+            <p className="text-slate-400 text-sm leading-relaxed font-bold">
+              {confirmModal.description}
+            </p>
+            <div className="flex gap-4 w-full mt-2">
+              <button
+                onClick={() => setConfirmModal(null)}
+                className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-2xl font-bold text-white transition-colors text-sm uppercase tracking-wider cursor-pointer"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                onClick={() => confirmModal.onConfirm()}
+                className="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-black rounded-2xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95 text-sm uppercase tracking-wider cursor-pointer"
+              >
+                {t("confirm")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

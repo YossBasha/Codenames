@@ -9,6 +9,9 @@ import TopBar from "../components/TopBar";
 import TeamColumn from "../components/TeamColumn";
 import GameLog from "../components/GameLog";
 import ActiveClueBar from "../components/ActiveClueBar";
+import PostGameDebrief from "../components/PostGameDebrief";
+import CheatVoteModal from "../components/CheatVoteModal";
+import BestClueShowcase from "../components/BestClueShowcase";
 import GiveClueBar from "../components/GiveClueBar";
 import { cn } from "../utils";
 import { MODIFIER_ICONS } from "../components/GameSettingsPanel";
@@ -23,13 +26,15 @@ import { MODIFIERS } from "../../../shared/modifiers";
 export default function LANGame() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const isWan = searchParams.get('wan') === 'true';
+  const isWan = searchParams.get("wan") === "true";
   const { player, roomId, socket } = useGameContext();
   const { t, uiLanguage } = useI18n();
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [roomPlayers, setRoomPlayers] = useState<Player[]>([]);
   const [isPublic, setIsPublic] = useState(false);
   const roomPlayersRef = useRef<Player[]>([]);
+  const [showDebrief, setShowDebrief] = useState(false);
+  const [showBestClue, setShowBestClue] = useState(false);
   const [clueTargets, setClueTargets] = useState<number[]>([]);
   const [hostDisconnected, setHostDisconnected] = useState(false);
   const [showPrankMenu, setShowPrankMenu] = useState(false);
@@ -50,7 +55,7 @@ export default function LANGame() {
       onConfirm: () => {
         setConfirmModal(null);
         navigate("/");
-      }
+      },
     });
   };
 
@@ -99,6 +104,33 @@ export default function LANGame() {
     setIsBloodPactToggleActive(false);
     setSensoryTimeLeft(null);
     setLagSpikeSecondsLeft(null);
+  };
+
+  const handleReportClue = (clueId: string) => {
+    socket?.emit("report_cheat", { roomId, clueId });
+  };
+
+  const handleReportActiveClue = () => {
+    const lastCue = [...(gameState?.gameLog || [])].reverse().find(l => l.type === 'cue');
+    if (lastCue) {
+      setConfirmModal({
+        isOpen: true,
+        title: "Report Cheat",
+        description: "You are about to report a clue. Do you really think it's a cheat?",
+        onConfirm: () => {
+          handleReportClue(lastCue.id);
+          setConfirmModal(null);
+        }
+      });
+    }
+  };
+
+  const handleVoteCheat = (vote: 'yes' | 'no') => {
+    socket?.emit("vote_cheat", { roomId, vote });
+  };
+
+  const handleResolveCheat = (isCheat: boolean) => {
+    socket?.emit("resolve_cheat", { roomId, isCheat });
   };
 
   useEffect(() => {
@@ -461,6 +493,8 @@ export default function LANGame() {
       import("../utils/haptics").then(({ triggerPrankVibration }) => {
         triggerPrankVibration(); // Heavy impact for game over
       });
+      // Delay showcase slightly so win banner renders first
+      setTimeout(() => setShowBestClue(true), 600);
     }
     previousWinner.current = gameState?.winner || null;
   }, [gameState?.winner]);
@@ -492,7 +526,10 @@ export default function LANGame() {
     gameState &&
     !gameState.winner &&
     gameState.currentPhase === "spymaster" &&
-    !(gameState.activeModifier === "d20-roll" && gameState.modifierState?.canRevealForFree) &&
+    !(
+      gameState.activeModifier === "d20-roll" &&
+      gameState.modifierState?.canRevealForFree
+    ) &&
     ((gameState.gameMode === "classic" &&
       currentPlayer?.team === gameState.currentTurn &&
       currentPlayer?.role === "spymaster") ||
@@ -502,23 +539,23 @@ export default function LANGame() {
   const handleCardClick = (id: number) => {
     if (!gameState || gameState.winner || !socket || !roomId) return;
 
-      if (
-        gameState.currentPhase === "spymaster" &&
-        currentPlayer?.role === "spymaster" &&
-        gameState.activeModifier === "d20-roll" &&
-        gameState.modifierState?.canRevealForFree
-      ) {
-        setConfirmModal({
-          isOpen: true,
-          title: t("confirm_free_reveal"),
-          description: t("confirm_free_reveal"),
-          onConfirm: () => {
-            socket.emit("d20_free_reveal", { roomId, cardId: id });
-            setConfirmModal(null);
-          }
-        });
-        return;
-      }
+    if (
+      gameState.currentPhase === "spymaster" &&
+      currentPlayer?.role === "spymaster" &&
+      gameState.activeModifier === "d20-roll" &&
+      gameState.modifierState?.canRevealForFree
+    ) {
+      setConfirmModal({
+        isOpen: true,
+        title: t("confirm_free_reveal"),
+        description: t("confirm_free_reveal"),
+        onConfirm: () => {
+          socket.emit("d20_free_reveal", { roomId, cardId: id });
+          setConfirmModal(null);
+        },
+      });
+      return;
+    }
 
     if (isLockToggleActive) {
       socket.emit("lock_card", { roomId, cardId: id });
@@ -623,19 +660,21 @@ export default function LANGame() {
   const isSpymaster =
     player.role === "spymaster" || gameState?.gameMode === "duet";
 
-  const showCriticalHitTimer = 
-    !!(gameState &&
+  const showCriticalHitTimer = !!(
+    gameState &&
     gameState.activeModifier === "critical-hit" &&
     gameState.currentPhase === "operative" &&
     gameState.successfulGuessesThisTurn === 0 &&
     gameState.timerSettings &&
-    gameState.timerSettings.preset !== "off");
+    gameState.timerSettings.preset !== "off"
+  );
 
-  const criticalHitTimeLeft = showCriticalHitTimer 
-    ? gameState.timeRemaining - (gameState.timerSettings.operativeTime - 5) 
+  const criticalHitTimeLeft = showCriticalHitTimer
+    ? gameState.timeRemaining - (gameState.timerSettings.operativeTime - 5)
     : 0;
 
-  const isCriticalHitTimerActive = showCriticalHitTimer && criticalHitTimeLeft > 0 && criticalHitTimeLeft <= 5;
+  const isCriticalHitTimerActive =
+    showCriticalHitTimer && criticalHitTimeLeft > 0 && criticalHitTimeLeft <= 5;
   const isSensoryDepActive =
     gameState?.activeModifier === "sensory-deprivation" &&
     gameState?.currentPhase === "spymaster";
@@ -697,7 +736,7 @@ export default function LANGame() {
       onConfirm: () => {
         socket?.emit("play_again", { roomId });
         setConfirmModal(null);
-      }
+      },
     });
   };
 
@@ -708,6 +747,8 @@ export default function LANGame() {
         bgClass,
       )}
     >
+
+
       {/* Host Disconnected Overlay */}
       {hostDisconnected && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-fade-in">
@@ -845,7 +886,21 @@ export default function LANGame() {
               className="w-[85px] xs:w-[95px] sm:w-[130px] flex-shrink-0"
             />
             <div className="flex-1 min-w-0 flex flex-col bg-[#1a1a1a]/50 rounded-xl overflow-hidden">
-              <GameLog logs={gameState.gameLog || []} gameMode="classic" />
+                    <GameLog 
+                      logs={gameState.gameLog || []} 
+                      gameMode={gameState.gameMode}
+                      onReportClue={(id, word, name) => {
+                        setConfirmModal({
+                          isOpen: true,
+                          title: "Report Cheat",
+                          description: `You are about to report ${name}'s clue "${word}". Do you really think it's a cheat?`,
+                          onConfirm: () => {
+                            handleReportClue(id);
+                            setConfirmModal(null);
+                          }
+                        });
+                      }}
+                    />
             </div>
             <TeamColumn
               team="red"
@@ -885,7 +940,10 @@ export default function LANGame() {
                       )}
                     >
                       <img
-                        src={p.avatarBase64 || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=84cc16`}
+                        src={
+                          p.avatarBase64 ||
+                          `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=84cc16`
+                        }
                         alt={p.name}
                         className="w-4 h-4 xs:w-5 xs:h-5 rounded-full flex-shrink-0"
                       />
@@ -916,7 +974,10 @@ export default function LANGame() {
                       )}
                     >
                       <img
-                        src={p.avatarBase64 || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=22c55e`}
+                        src={
+                          p.avatarBase64 ||
+                          `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=22c55e`
+                        }
                         alt={p.name}
                         className="w-4 h-4 xs:w-5 xs:h-5 rounded-full flex-shrink-0"
                       />
@@ -1006,15 +1067,37 @@ export default function LANGame() {
                   )}
                 </h2>
               )}
+              <button
+                onClick={() => setShowDebrief(true)}
+                className="px-5 py-2 lg:px-7 lg:py-2.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 font-black rounded-xl transition-colors mt-4 text-sm tracking-widest uppercase flex items-center gap-2 mx-auto"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-4 h-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14,2 14,8 20,8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <polyline points="10,9 9,9 8,9" />
+                </svg>
+                View Debrief
+              </button>
               {roomPlayers.length > 0 && roomPlayers[0].id === player.id ? (
                 <button
                   onClick={handleRestart}
-                  className="px-6 py-2 lg:px-8 lg:py-3 bg-white text-slate-900 font-bold rounded-xl hover:bg-slate-200 transition-colors mt-4"
+                  className="px-6 py-2 lg:px-8 lg:py-3 bg-white text-slate-900 font-bold rounded-xl hover:bg-slate-200 transition-colors mt-2"
                 >
                   {t("play_again")}
                 </button>
               ) : (
-                <div className="text-slate-400 font-bold mt-6">
+                <div className="text-slate-400 font-bold mt-4">
                   {t("waiting_for_host_restart")}
                 </div>
               )}
@@ -1150,7 +1233,12 @@ export default function LANGame() {
                       activeModifier={gameState.activeModifier}
                       currentPhase={gameState.currentPhase}
                       scrambleActive={
-                        scrambleActive && !!(isSpymaster || isGivingClue)
+                        scrambleActive &&
+                        !!(
+                          isSpymaster ||
+                          isGivingClue ||
+                          gameState.activeModifier === "earthquake"
+                        )
                       }
                       isScramblePending={isScramblePending}
                       originalWords={gameState.modifierState?.originalWords}
@@ -1169,15 +1257,18 @@ export default function LANGame() {
                           ? gameState.modifierState?.eatenCardIds
                           : undefined
                       }
-
                     />
 
                     {/* Critical Hit 5-Second Timer Overlay */}
                     {isCriticalHitTimerActive && (
                       <div className="absolute inset-0 z-40 bg-black/10 backdrop-blur-[0.5px] flex flex-col items-center justify-center pointer-events-none animate-fade-in">
                         <div className="bg-slate-950/90 border-2 border-red-500 rounded-full w-24 h-24 flex flex-col items-center justify-center shadow-[0_0_30px_rgba(239,68,68,0.6)] animate-pulse">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-red-500 leading-none mb-1">CRITICAL</span>
-                          <span className="text-4xl font-black text-white leading-none">{criticalHitTimeLeft}s</span>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-red-500 leading-none mb-1">
+                            CRITICAL
+                          </span>
+                          <span className="text-4xl font-black text-white leading-none">
+                            {criticalHitTimeLeft}s
+                          </span>
                         </div>
                       </div>
                     )}
@@ -1257,7 +1348,7 @@ export default function LANGame() {
                                   onConfirm: () => {
                                     socket?.emit("reject_clue", { roomId });
                                     setConfirmModal(null);
-                                  }
+                                  },
                                 });
                               }}
                               className={cn(
@@ -1280,7 +1371,7 @@ export default function LANGame() {
                                   onConfirm: () => {
                                     socket?.emit("gacha_pull", { roomId });
                                     setConfirmModal(null);
-                                  }
+                                  },
                                 });
                               }}
                               className={cn(
@@ -1397,6 +1488,7 @@ export default function LANGame() {
                         }
                         onEndTurn={handleEndTurn}
                         canEndTurn={!isDisabled}
+                        onReportClue={handleReportActiveClue}
                       />
                     )}
 
@@ -1408,6 +1500,7 @@ export default function LANGame() {
                       clueTargetCount={clueTargets.length}
                       isRTL={gameState.isRTL}
                       modifierState={gameState.modifierState}
+                      unrevealedWords={gameState.cards.filter(c => !c.revealed).map(c => c.word)}
                     />
                   )}
 
@@ -1444,6 +1537,17 @@ export default function LANGame() {
           <GameLog
             logs={gameState.gameLog || []}
             gameMode={gameState.gameMode}
+            onReportClue={(id, word, name) => {
+              setConfirmModal({
+                isOpen: true,
+                title: "Report Cheat",
+                description: `You are about to report ${name}'s clue "${word}". Do you really think it's a cheat?`,
+                onConfirm: () => {
+                  handleReportClue(id);
+                  setConfirmModal(null);
+                }
+              });
+            }}
           />
         </div>
       </div>
@@ -1466,7 +1570,10 @@ export default function LANGame() {
                       className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-700 transition-colors flex items-center gap-2"
                     >
                       <img
-                        src={p.avatarBase64 || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=${p.team === "red" ? "ef4444" : "3b82f6"}`}
+                        src={
+                          p.avatarBase64 ||
+                          `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=${p.team === "red" ? "ef4444" : "3b82f6"}`
+                        }
                         className="w-6 h-6 rounded-full"
                         alt=""
                       />
@@ -1568,6 +1675,34 @@ export default function LANGame() {
             </div>
           </div>
         </div>
+      )}
+      {showDebrief && gameState && (
+        <PostGameDebrief
+          logs={gameState.gameLog || []}
+          gameMode={gameState.gameMode}
+          onClose={() => setShowDebrief(false)}
+        />
+      )}
+
+      {showBestClue && gameState && (
+        <BestClueShowcase
+          logs={gameState.gameLog || []}
+          gameMode={gameState.gameMode}
+          onDone={() => setShowBestClue(false)}
+        />
+      )}
+
+      {gameState?.cheatVoteState?.active && (
+        <CheatVoteModal
+          clueWord={gameState.cheatVoteState.clueWord}
+          submitterName={gameState.cheatVoteState.submitterName}
+          votes={gameState.cheatVoteState.votes}
+          isHost={isHost}
+          hasVoted={!!gameState.cheatVoteState.votes[currentPlayer?.id || '']}
+          onVote={handleVoteCheat}
+          onResolve={handleResolveCheat}
+          totalEligibleVoters={roomPlayers.length - 1} // Host doesn't vote
+        />
       )}
     </div>
   );

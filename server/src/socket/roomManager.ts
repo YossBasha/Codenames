@@ -706,6 +706,7 @@ async function triggerBotSpymaster(io: Server, room: Room, bot: Player) {
         cueWord: clue.word,
         cueNumber: clue.count,
         reasoning: clue.reasoning,
+        modifier: room.gameState.activeModifier || null,
         timestamp: Date.now(),
       });
 
@@ -1047,8 +1048,9 @@ function startTimer(io: Server, room: Room) {
     }
 
     const isTimerFrozen =
-      room.gameState.activeModifier === "critical-hit" &&
-      room.gameState.modifierState?.timerFrozen;
+      (room.gameState.activeModifier === "critical-hit" &&
+        room.gameState.modifierState?.timerFrozen) ||
+      room.gameState.cheatVoteState?.active;
 
     if (!isTimerFrozen) {
       room.gameState.timeRemaining--;
@@ -1835,6 +1837,7 @@ export function setupRoomManager(io: Server) {
               cueWord: finalCue,
               cueNumber: finalNumber,
               targets: targets,
+              modifier: room.gameState.activeModifier || null,
               timestamp: Date.now(),
             });
 
@@ -2046,6 +2049,67 @@ export function setupRoomManager(io: Server) {
         });
 
         startTimer(io, room);
+        io.to(roomId).emit("game_update", room.gameState);
+      }
+    });
+
+    socket.on("report_cheat", ({ roomId, clueId }: { roomId: string; clueId: string }) => {
+      const room = rooms[roomId];
+      const player = room?.players.find((p) => p.id === socket.id);
+      if (room && room.gameState && player) {
+        const clueEntry = room.gameState.gameLog.find(l => l.type === 'cue' && l.id === clueId) as any;
+        if (!clueEntry) return;
+
+        room.gameState.cheatVoteState = {
+          active: true,
+          clueId: clueEntry.id,
+          clueWord: clueEntry.cueWord,
+          submitterId: player.id, 
+          submitterName: clueEntry.player.name,
+          votes: {}
+        };
+        io.to(roomId).emit("game_update", room.gameState);
+      }
+    });
+
+    socket.on("vote_cheat", ({ roomId, vote }: { roomId: string; vote: 'yes' | 'no' }) => {
+      const room = rooms[roomId];
+      const player = room?.players.find((p) => p.id === socket.id);
+      if (room && room.gameState && room.gameState.cheatVoteState && player) {
+        room.gameState.cheatVoteState.votes[player.id] = vote;
+        io.to(roomId).emit("game_update", room.gameState);
+      }
+    });
+
+    socket.on("resolve_cheat", ({ roomId, isCheat }: { roomId: string; isCheat: boolean }) => {
+      const room = rooms[roomId];
+      if (room && room.gameState && room.gameState.cheatVoteState) {
+        if (isCheat) {
+          const clueEntry = room.gameState.gameLog.find(l => l.id === room.gameState!.cheatVoteState!.clueId) as any;
+          if (clueEntry) {
+            clueEntry.invalidated = true;
+          }
+          
+          room.gameState.activeCue = null;
+          room.gameState.activeCueNumber = null;
+          room.gameState.currentPhase = "operative"; 
+          room.gameState.gameLog.push({
+            id: Math.random().toString(36).substring(7),
+            type: "guess",
+            player: {
+              name: "Host",
+              avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=Host&backgroundColor=333333`,
+            },
+            guessingTeam: room.gameState.currentTurn as "red" | "blue",
+            cardWord: "Clue Invalidated (Cheat)",
+            revealedColor: "neutral",
+            timestamp: Date.now(),
+          } as any);
+
+          transitionToNewTurn(io as any, room);
+        }
+        
+        room.gameState.cheatVoteState = undefined;
         io.to(roomId).emit("game_update", room.gameState);
       }
     });

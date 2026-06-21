@@ -36,6 +36,8 @@ export interface CueEntry {
   cueNumber: number;
   targets?: number[];
   reasoning?: string;
+  modifier?: string | null; // active chaos modifier when this clue was given
+  invalidated?: boolean; // True if host confirmed it as a cheat
   timestamp: number;
 }
 
@@ -89,4 +91,12 @@ export interface GameState {
   modifierState?: any;
   enabledModifiers?: string[];
   nimnimsCooldown?: number;
+  cheatVoteState?: {
+    active: boolean;
+    clueId: string;
+    clueWord: string;
+    submitterId: string;
+    submitterName: string;
+    votes: Record<string, 'yes' | 'no'>;
+  };
 }

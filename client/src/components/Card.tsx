@@ -205,6 +205,13 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
           ? {
               "--scramble-dx": `${(scrambleDx ?? 0) * 105}%`,
               "--scramble-dy": `${(scrambleDy ?? 0) * 105}%`,
+              // Per-card variety: use card.id to seed pseudo-random rotation/lift values
+              "--eq-lift":  `${48 + (card.id * 17 % 40)}px`,
+              "--eq-rot0":  `${((card.id * 7)  % 11) - 5}deg`,
+              "--eq-rot1":  `${((card.id * 13) % 22) - 11}deg`,
+              "--eq-rot2":  `${((card.id * 11) % 14) - 7}deg`,
+              "--eq-rot3":  `${((card.id * 5)  % 8)  - 4}deg`,
+              animationDelay: `${(card.id * 47) % 280}ms`,
               ...(isScramblePending ? { transform: `translate(var(--scramble-dx, 0), var(--scramble-dy, 0))` } : {})
             } as React.CSSProperties
           : undefined
@@ -250,7 +257,7 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
         gachaHighlight && "z-40",
         justRevealed && !['green', 'red', 'blue'].includes(typeToDisplay) && "animate-reveal-pop",
         justRevealed && ['green', 'red', 'blue'].includes(typeToDisplay) && "animate-card-flip",
-        !isScramblePending && (scrambleDx !== undefined || scrambleDy !== undefined) && activeModifier === 'earthquake' && "animate-scramble",
+        !isScramblePending && (scrambleDx !== undefined || scrambleDy !== undefined) && activeModifier === 'earthquake' && "animate-earthquake",
         eatenAnimState === 'chomping' && "animate-chomp z-50 pointer-events-none",
         eatenAnimState === 'spitting' && "animate-spit z-50 pointer-events-none"
       )}

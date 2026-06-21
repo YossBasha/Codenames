@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, X } from 'lucide-react';
+import { Check, X, Flag } from 'lucide-react';
 import { cn } from '../utils';
 import { useI18n } from '../context/I18nContext';
 
@@ -9,6 +9,7 @@ interface ActiveClueBarProps {
   successfulGuessesThisTurn: number;
   onEndTurn: () => void;
   canEndTurn: boolean;
+  onReportClue?: () => void;
 }
 
 export default function ActiveClueBar({
@@ -16,7 +17,8 @@ export default function ActiveClueBar({
   activeCueNumber,
   successfulGuessesThisTurn,
   onEndTurn,
-  canEndTurn
+  canEndTurn,
+  onReportClue
 }: ActiveClueBarProps) {
   const [isZoomed, setIsZoomed] = useState(false);
   const { t } = useI18n();
@@ -72,6 +74,16 @@ export default function ActiveClueBar({
         >
           <Check className="w-6 h-6 sm:w-8 sm:h-8 text-white font-bold" strokeWidth={4} />
         </button>
+
+        {onReportClue && (
+          <button
+            onClick={onReportClue}
+            className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-600 flex items-center justify-center transition-all group shadow-md shrink-0 cursor-pointer hover:border-red-400/50"
+            title="Report Cheat"
+          >
+            <Flag className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 group-hover:text-red-400 transition-colors" />
+          </button>
+        )}
       </div>
 
       {isZoomed && activeCue.startsWith('data:image') && (

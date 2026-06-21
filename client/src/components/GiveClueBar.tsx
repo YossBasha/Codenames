@@ -12,6 +12,21 @@ interface GiveClueBarProps {
   clueTargetCount?: number;
   isRTL?: boolean;
   modifierState?: any;
+  unrevealedWords?: string[];
+}
+
+function isCheatClue(clue: string, unrevealedWords: string[]): string | null {
+  if (!clue || clue.startsWith('data:image')) return null;
+  const c = clue.toLowerCase().trim();
+  if (c.length < 2) return null; // Too short to judge
+
+  for (const w of unrevealedWords) {
+    const boardWord = w.toLowerCase();
+    if (boardWord.includes(c) || c.includes(boardWord)) {
+      return w; // Return the exact word it conflicts with
+    }
+  }
+  return null;
 }
 
 export default function GiveClueBar({
@@ -20,7 +35,8 @@ export default function GiveClueBar({
   activeModifier,
   clueTargetCount = 0,
   isRTL = false,
-  modifierState
+  modifierState,
+  unrevealedWords = []
 }: GiveClueBarProps) {
   const [cueInput, setCueInput] = useState('');
   const [numInput, setNumInput] = useState<number | ''>('');
@@ -91,6 +107,8 @@ export default function GiveClueBar({
     return true;
   };
 
+  const cheatConflict = unrevealedWords.length > 0 ? isCheatClue(cueInput, unrevealedWords) : null;
+
   const handleSubmitCue = (e: React.FormEvent) => {
     e.preventDefault();
     if (cueInput.trim().length > 0 && numInput !== '' && onSubmitCue) {
@@ -101,15 +119,9 @@ export default function GiveClueBar({
   };
 
   const handleDrawingSubmit = (dataUrl: string) => {
-    if (numInput !== '' && onSubmitCue) {
-      onSubmitCue(dataUrl, Number(numInput));
-      setCueInput('');
-      setNumInput('');
-      setShowDrawingModal(false);
-    } else {
-      setCueInput(dataUrl);
-      setShowDrawingModal(false);
-    }
+    // Only stage the drawing — the clue is sent when the spymaster clicks "Give clue"
+    setCueInput(dataUrl);
+    setShowDrawingModal(false);
   };
 
   return (
@@ -184,12 +196,13 @@ export default function GiveClueBar({
             <button 
               type="submit"
               disabled={
-                cueInput.trim().length === 0 || 
+                (cueInput.trim().length === 0 && !cueInput.startsWith('data:image')) || 
                 !isNumberValid() ||
                 (activeModifier === 'oracle-riddle' && !isOracleRiddleValid()) ||
                 (activeModifier === 'five-letter-curse' && !isFiveLetterCurseValid()) ||
                 (activeModifier === 'boolean-search' && !isBooleanSearchValid()) ||
-                (activeModifier === 'forced-acronym' && !isForcedAcronymValid())
+                (activeModifier === 'forced-acronym' && !isForcedAcronymValid()) ||
+                cheatConflict !== null
               }
               className="h-10 sm:h-12 px-4 sm:px-6 bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black rounded-xl sm:rounded-full transition-all shadow-lg shadow-emerald-500/20 active:scale-95 text-xs sm:text-sm flex items-center gap-1.5 uppercase tracking-wider whitespace-nowrap cursor-pointer"
             >
@@ -221,6 +234,11 @@ export default function GiveClueBar({
         {activeModifier === 'the-dictator' && (
           <div className="mt-2 text-[10px] sm:text-xs text-red-400 font-black tracking-widest uppercase bg-slate-900/90 rounded-lg py-1 px-3 border border-red-500/50 shadow-lg text-center">
             {t('dictator_warning')}
+          </div>
+        )}
+        {cheatConflict && (
+          <div className="mt-2 text-[10px] sm:text-xs text-red-400 font-bold tracking-wide animate-pulse bg-slate-900/90 rounded-lg py-1 px-3 border border-red-500/50 shadow-lg text-center">
+            ⚠️ {t('clue_conflict_warning')} ({cheatConflict})
           </div>
         )}
       </div>

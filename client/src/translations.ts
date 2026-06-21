@@ -278,6 +278,7 @@ export const translations = {
     boolean_error: "Must contain exactly one AND, OR, or NOT.",
     acronym_requirement: "Required starting letters",
     dictator_warning: "THE DICTATOR HAS SPOKEN. YOU MUST CLUE THIS NUMBER.",
+    clue_conflict_warning: "Clue cannot contain or be part of an unrevealed card",
 
     // Active Clue Bar
     doodle_clue: "Doodle Clue",
@@ -594,6 +595,7 @@ export const translations = {
     boolean_error: "يجب أن يحتوي على AND أو OR أو NOT واحدة فقط.",
     acronym_requirement: "الأحرف الأولى المطلوبة",
     dictator_warning: "لقد تحدث الدكتاتور. يجب عليك تقديم الدليل بهذا الرقم.",
+    clue_conflict_warning: "لا يمكن أن يكون الدليل جزءاً من بطاقة غير مكشوفة",
 
     // Active Clue Bar
     doodle_clue: "دليل الرسم",
