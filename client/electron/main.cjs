@@ -4,6 +4,25 @@ const { fork, exec } = require('child_process');
 const https = require('https');
 const fs = require('fs');
 const AdmZip = require('adm-zip');
+const DiscordRPC = require('discord-rpc');
+
+const discordClientId = '1518219109299519538';
+let rpcClient;
+
+function initDiscord() {
+  try {
+    DiscordRPC.register(discordClientId);
+    rpcClient = new DiscordRPC.Client({ transport: 'ipc' });
+    rpcClient.on('ready', () => {
+      console.log('[Discord] Authed for user', rpcClient.user.username);
+    });
+    rpcClient.login({ clientId: discordClientId }).catch(err => {
+      console.log('[Discord] Could not connect to Discord:', err.message);
+    });
+  } catch (err) {
+    console.log('[Discord] Setup failed:', err.message);
+  }
+}
 
 // Setup file logging to help debug server/ngrok issues in packaged app
 const logFile = path.join(app.getPath('userData'), 'app-debug.log');
@@ -188,6 +207,7 @@ function createWindow(customClientHtmlPath) {
 
 app.whenReady().then(async () => {
   ensureFirewallRule();
+  initDiscord();
 
   // Try checking and applying code updates
   await checkAndApplyUpdates();
@@ -252,6 +272,17 @@ ipcMain.handle('check-for-updates', async (event, force) => {
 ipcMain.handle('relaunch-app', () => {
   app.relaunch();
   app.exit(0);
+});
+
+ipcMain.on('set-discord-activity', (event, activity) => {
+  if (rpcClient && rpcClient.user) {
+    rpcClient.setActivity({
+      ...activity,
+      largeImageKey: activity.largeImageKey || 'logo',
+      largeImageText: 'Codenames',
+      instance: false,
+    }).catch(console.error);
+  }
 });
 
 app.on('window-all-closed', () => {

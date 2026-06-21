@@ -59,7 +59,7 @@ const AVATAR_TEMPLATES = [
 
 const CHANGELOG = [
   {
-    version: "1.5.1",
+    version: "1.5.2",
     features: [
       {
         icon: "🛡️",
@@ -221,7 +221,6 @@ export default function Home() {
     }
   };
 
-
   useEffect(() => {
     if (player) {
       if (player.name) setProfileName(player.name);
@@ -231,6 +230,16 @@ export default function Home() {
 
   useEffect(() => {
     let active = true;
+    if (
+      typeof window !== "undefined" &&
+      (window as any).electronAPI?.setDiscordActivity
+    ) {
+      (window as any).electronAPI.setDiscordActivity({
+        details: "In Main Menu",
+        state: "Waiting to play",
+        startTimestamp: Date.now(),
+      });
+    }
     const checkNgrok = async () => {
       try {
         const port = await getLocalServerPort();
@@ -262,8 +271,6 @@ export default function Home() {
   }, [socket, setSocket]);
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden">
-
-
       {/* Language Toggle Button */}
       <button
         onClick={() => setUiLanguage(uiLanguage === "en" ? "ar" : "en")}
@@ -379,15 +386,16 @@ export default function Home() {
           v{__APP_VERSION__}
         </div>
 
-        {typeof window !== "undefined" && (window as any).electronAPI?.checkForUpdates && (
-          <button
-            disabled={isCheckingUpdate}
-            onClick={handleCheckUpdates}
-            className="px-3 py-1 bg-slate-800/80 hover:bg-slate-700/80 disabled:opacity-50 text-[10px] font-black text-slate-400 hover:text-white rounded-full border border-slate-700/60 shadow transition-all cursor-pointer uppercase tracking-wider"
-          >
-            {isCheckingUpdate ? t("checking") : t("check_for_updates")}
-          </button>
-        )}
+        {typeof window !== "undefined" &&
+          (window as any).electronAPI?.checkForUpdates && (
+            <button
+              disabled={isCheckingUpdate}
+              onClick={handleCheckUpdates}
+              className="px-3 py-1 bg-slate-800/80 hover:bg-slate-700/80 disabled:opacity-50 text-[10px] font-black text-slate-400 hover:text-white rounded-full border border-slate-700/60 shadow transition-all cursor-pointer uppercase tracking-wider"
+            >
+              {isCheckingUpdate ? t("checking") : t("check_for_updates")}
+            </button>
+          )}
 
         {updateMessage && (
           <div className="text-[10px] font-black text-amber-500 animate-pulse transition-all">
