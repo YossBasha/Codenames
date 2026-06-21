@@ -57,6 +57,109 @@ const AVATAR_TEMPLATES = [
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f59e0b'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-size='60'%3E🐱%3C/text%3E%3C/svg%3E",
 ];
 
+const CHANGELOG = [
+  {
+    version: "1.5.1",
+    features: [
+      {
+        icon: "🛡️",
+        title: "Anti-Cheat System",
+        desc: "New report system to flag illegal clues and skip turns for cheaters!",
+      },
+      {
+        icon: "📊",
+        title: "Post-Game Debriefing",
+        desc: "Review detailed statistics and the full game log after the match ends.",
+      },
+      {
+        icon: "🏆",
+        title: "Best Clue Detection",
+        desc: "Automatically detects and showcases the most impactful clue of the round.",
+      },
+    ],
+  },
+  {
+    version: "1.5.0",
+    features: [
+      {
+        icon: "🍪",
+        title: "NimNim's Bite (عضة نمنم)",
+        desc: "Three random cards disappear from the board for 2 turns in Chaos mode!",
+      },
+      {
+        icon: "🌐",
+        title: "Multi-Language Support",
+        desc: "Translate card grids into Dutch, German, French, and Spanish mid-game!",
+      },
+      {
+        icon: "👥",
+        title: "LAN Lobby Enhancements",
+        desc: "Sleek scrollable players container and more profile avatars to choose from.",
+      },
+    ],
+  },
+  {
+    version: "1.4.35",
+    features: [
+      {
+        icon: "🌍",
+        title: "Online Multiplayer (NGROK)",
+        desc: "Host and join public rooms over the internet, no LAN required!",
+      },
+      {
+        icon: "🤖",
+        title: "AI Rework",
+        desc: "Major improvements to bot logic and autonomous play mechanics.",
+      },
+      {
+        icon: "📱",
+        title: "Android Native Builds",
+        desc: "Added robust Capacitor support for compiling the game natively to Android.",
+      },
+    ],
+  },
+  {
+    version: "1.3.1",
+    features: [
+      {
+        icon: "📡",
+        title: "LAN Discovery Service",
+        desc: "Added zero-config LAN discovery using native mobile broadcasts.",
+      },
+      {
+        icon: "🏠",
+        title: "Local Room Management",
+        desc: "Revamped the lobby system to easily manage multiple local game rooms.",
+      },
+    ],
+  },
+  {
+    version: "1.1.8",
+    features: [
+      {
+        icon: "🤝",
+        title: "Pass & Play Mode",
+        desc: "Play with friends on a single device without needing a network connection.",
+      },
+      {
+        icon: "⏱️",
+        title: "Timer Logic",
+        desc: "Introduced synchronized dual-player coordination and timers.",
+      },
+    ],
+  },
+  {
+    version: "1.0.36",
+    features: [
+      {
+        icon: "🚀",
+        title: "Initial Launch",
+        desc: "Core game mechanics, word packs, and state management implemented.",
+      },
+    ],
+  },
+];
+
 export default function Home() {
   const navigate = useNavigate();
   const { socket, setSocket, theme, setTheme, player, setPlayer } =
@@ -549,57 +652,34 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="flex flex-col gap-3.5 my-2">
-              <div className="flex gap-3 bg-slate-800/30 border border-slate-800 p-3.5 rounded-2xl hover:bg-slate-800/50 transition-colors">
-                <div className="text-2xl select-none">🍪</div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-black text-sm text-slate-100 tracking-wide">
-                    NimNim's Bite (عضة نمنم)
-                  </span>
-                  <span className="text-xs font-semibold text-slate-400 leading-relaxed">
-                    Three random cards disappear from the board for 2 turns in
-                    Chaos mode!
-                  </span>
+            <div className="flex flex-col gap-6 my-2">
+              {CHANGELOG.map((log) => (
+                <div key={log.version} className="flex flex-col gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-[1px] flex-1 bg-slate-800"></div>
+                    <span className="text-xs font-black tracking-widest text-emerald-500 uppercase">
+                      v{log.version}
+                    </span>
+                    <div className="h-[1px] flex-1 bg-slate-800"></div>
+                  </div>
+                  {log.features.map((feat, idx) => (
+                    <div
+                      key={idx}
+                      className="flex gap-3 bg-slate-800/30 border border-slate-800 p-3.5 rounded-2xl hover:bg-slate-800/50 transition-colors"
+                    >
+                      <div className="text-2xl select-none">{feat.icon}</div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-black text-sm text-slate-100 tracking-wide">
+                          {feat.title}
+                        </span>
+                        <span className="text-xs font-semibold text-slate-400 leading-relaxed">
+                          {feat.desc}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-
-              <div className="flex gap-3 bg-slate-800/30 border border-slate-800 p-3.5 rounded-2xl hover:bg-slate-800/50 transition-colors">
-                <div className="text-2xl select-none">🌐</div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-black text-sm text-slate-100 tracking-wide">
-                    Multi-Language Support
-                  </span>
-                  <span className="text-xs font-semibold text-slate-400 leading-relaxed">
-                    Translate card grids into Dutch, German, French, and Spanish
-                    mid-game!
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex gap-3 bg-[#111] border border-slate-800/80 p-3.5 rounded-2xl">
-                <div className="text-2xl select-none">👥</div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-black text-sm text-slate-100 tracking-wide">
-                    LAN Lobby Enhancements
-                  </span>
-                  <span className="text-xs font-semibold text-slate-400 leading-relaxed">
-                    Sleek scrollable players container and more profile avatars
-                    to choose from.
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex gap-3 bg-[#111] border border-slate-800/80 p-3.5 rounded-2xl">
-                <div className="text-2xl select-none">📝</div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-black text-sm text-slate-100 tracking-wide">
-                    Change log
-                  </span>
-                  <span className="text-xs font-semibold text-slate-400 leading-relaxed">
-                    Added this very window! Literally.
-                  </span>
-                </div>
-              </div>
+              ))}
             </div>
 
             <button
