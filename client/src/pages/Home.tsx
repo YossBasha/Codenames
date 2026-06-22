@@ -10,6 +10,9 @@ import { useState } from "react";
 import { getLocalServerPort } from "../utils/discovery";
 import { SPECIAL_AVATAR } from "../assets/specialAvatar";
 import packageJson from "../../package.json";
+import { getGameHistories, clearHistory } from "../utils/historyDb";
+import type { GameHistoryEntry } from "../utils/historyDb";
+import PostGameDebrief from "../components/PostGameDebrief";
 
 const AVATAR_TEMPLATES = [
   "https://api.dicebear.com/7.x/adventurer/svg?seed=Felix",
@@ -171,6 +174,10 @@ export default function Home() {
 
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [historyEntries, setHistoryEntries] = useState<GameHistoryEntry[]>([]);
+  const [selectedHistoryGame, setSelectedHistoryGame] = useState<GameHistoryEntry | null>(null);
+  
   const [profileName, setProfileName] = useState(player?.name || "");
   const [profileAvatar, setProfileAvatar] = useState(
     player?.avatarBase64 || AVATAR_TEMPLATES[0],
@@ -281,6 +288,24 @@ export default function Home() {
         <span className="text-sky-400 font-bold text-sm leading-none pt-[2px]">
           {uiLanguage === "en" ? "AR" : "EN"}
         </span>
+      </button>
+
+      {/* History Button */}
+      <button
+        onClick={async () => {
+          playMenuClickSfx();
+          const games = await getGameHistories();
+          setHistoryEntries(games);
+          setShowHistoryModal(true);
+        }}
+        className="absolute top-4 right-20 z-50 p-3 bg-slate-800/80 hover:bg-slate-700/80 rounded-full border border-slate-600 transition-colors shadow-lg backdrop-blur"
+        title="Match History"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+          <path d="M12 7v5l4 2"/>
+        </svg>
       </button>
 
       {/* Theme Button */}
@@ -456,6 +481,108 @@ export default function Home() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* History Modal */}
+      {showHistoryModal && (
+        <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[#1a1a1a] rounded-3xl w-full max-w-lg p-6 border-2 border-slate-700 shadow-2xl relative flex flex-col max-h-[85vh]">
+            <button
+              onClick={() => setShowHistoryModal(false)}
+              className="absolute top-4 right-4 p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition-colors z-10"
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
+
+            <div className="flex items-center gap-4 mb-6 shrink-0">
+              <div className="bg-emerald-500/20 border border-emerald-500/40 p-3 rounded-full text-emerald-400">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                  <path d="M3 3v5h5"/>
+                  <path d="M12 7v5l4 2"/>
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-2xl font-black tracking-widest text-white">
+                  {t("match_history")}
+                </h2>
+                <p className="text-sm font-bold text-slate-400">
+                  {t("review_last_games").replace("{count}", historyEntries.length.toString())}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto flex flex-col gap-3 pr-2 scrollbar-thin">
+              {historyEntries.length === 0 ? (
+                <div className="flex flex-col items-center justify-center flex-1 text-slate-500 py-10">
+                  <p className="font-bold">{t("no_games_recorded")}</p>
+                  <p className="text-xs mt-1">{t("play_to_see_debriefs")}</p>
+                </div>
+              ) : (
+                historyEntries.map((game) => (
+                  <button
+                    key={game.id}
+                    onClick={() => setSelectedHistoryGame(game)}
+                    className="w-full text-left p-4 rounded-xl border border-slate-700 bg-slate-800/50 hover:bg-slate-700 transition-colors flex items-center justify-between"
+                  >
+                    <div>
+                      <div className="text-white font-black text-lg uppercase tracking-wide">
+                        {game.gameMode === "duet" ? t("duet_match") : t("classic_match")}
+                      </div>
+                      <div className="text-slate-400 text-xs font-bold mt-1">
+                        {new Date(game.timestamp).toLocaleString()}
+                      </div>
+                      {game.players && game.players.length > 0 && (
+                        <div className="flex gap-2 mt-2">
+                          {game.players.slice(0, 5).map((p, i) => (
+                            <div key={i} className="flex items-center gap-1 bg-slate-900 rounded-full pr-2">
+                              <img src={p.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${p.name}`} alt="" className="w-5 h-5 rounded-full" />
+                              <span className="text-[10px] font-bold text-slate-300">{p.name}</span>
+                            </div>
+                          ))}
+                          {game.players.length > 5 && <span className="text-[10px] text-slate-500 font-bold self-center">+{game.players.length - 5}</span>}
+                        </div>
+                      )}
+                    </div>
+                    <div className={cn("px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider",
+                      game.gameMode === "duet"
+                        ? (game.winner === "spectator" ? "bg-red-900/50 text-red-500 border border-red-500/30" : "bg-emerald-500/20 text-emerald-400")
+                        : (game.winner === "red" ? "bg-red-500/20 text-red-400" : "bg-blue-500/20 text-blue-400")
+                    )}>
+                      {game.gameMode === "duet"
+                        ? (game.winner === "spectator" ? t("lost") : t("won"))
+                        : (game.winner === "red" ? t("red_won") : t("blue_won"))}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+
+            {historyEntries.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-slate-700 shrink-0">
+                <button
+                  onClick={async () => {
+                    if (confirm(t("confirm_clear_history"))) {
+                      await clearHistory();
+                      setHistoryEntries([]);
+                    }
+                  }}
+                  className="w-full py-2 bg-slate-800 hover:bg-red-900/40 hover:text-red-400 rounded-xl font-bold text-sm text-slate-400 transition-colors"
+                >
+                  {t("clear_history")}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {selectedHistoryGame && (
+        <PostGameDebrief
+          logs={selectedHistoryGame.logs}
+          gameMode={selectedHistoryGame.gameMode}
+          onClose={() => setSelectedHistoryGame(null)}
+        />
       )}
 
       {showHostModal && (

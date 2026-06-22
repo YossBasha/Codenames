@@ -1112,12 +1112,12 @@ function getNextTurnDuet(gameState: GameState): "red" | "blue" {
     gameState.currentTurn === "red" ? "blue" : "red";
   if (nextTurn === "red") {
     const aRemaining = gameState.cards.filter(
-      (c) => c.duetTypeA === "green" && !c.revealedByB,
+      (c) => c.duetTypeA === "green" && !c.revealed,
     ).length;
     if (aRemaining === 0) return "blue";
   } else {
     const bRemaining = gameState.cards.filter(
-      (c) => c.duetTypeB === "green" && !c.revealedByA,
+      (c) => c.duetTypeB === "green" && !c.revealed,
     ).length;
     if (bRemaining === 0) return "red";
   }
@@ -1284,8 +1284,7 @@ function processGuess(io: Server, room: Room, player: Player, cardId: number) {
 
       let foundGreens = 0;
       room.gameState.cards.forEach((c) => {
-        if (c.duetTypeA === "green" && c.revealedByB) foundGreens++;
-        if (c.duetTypeB === "green" && c.revealedByA) foundGreens++;
+        if (c.revealed && c.type === "green") foundGreens++;
       });
 
       if (foundGreens >= 15) {
@@ -1294,11 +1293,11 @@ function processGuess(io: Server, room: Room, player: Player, cardId: number) {
         let remainingTargetsForCurrentTeam = 0;
         if (expectedGuessTeam === "blue") {
           remainingTargetsForCurrentTeam = room.gameState.cards.filter(
-            (c) => c.duetTypeA === "green" && !c.revealedByB,
+            (c) => c.duetTypeA === "green" && !c.revealed,
           ).length;
         } else {
           remainingTargetsForCurrentTeam = room.gameState.cards.filter(
-            (c) => c.duetTypeB === "green" && !c.revealedByA,
+            (c) => c.duetTypeB === "green" && !c.revealed,
           ).length;
         }
 
@@ -1837,6 +1836,7 @@ export function setupRoomManager(io: Server) {
               cueWord: finalCue,
               cueNumber: finalNumber,
               targets: targets,
+              targetWords: targets?.map(id => room.gameState!.cards.find(c => c.id === id)?.word).filter(Boolean) as string[],
               modifier: room.gameState.activeModifier || null,
               timestamp: Date.now(),
             });
@@ -2518,7 +2518,7 @@ export function setupRoomManager(io: Server) {
               .filter((c) => c.duetTypeB === "green")
               .every((c) => c.revealedByA);
             if (allGreenRevealedByA && allGreenRevealedByB) {
-              room.gameState.winner = "green" as any;
+              room.gameState.winner = "red";
             }
           } else {
             const teamCards = room.gameState.cards.filter(

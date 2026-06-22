@@ -88,6 +88,7 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
     }
   }
 
+
   const [justRevealed, setJustRevealed] = useState(false);
   const wasRevealedForMe = useRef(isRevealedForMe);
 
@@ -118,24 +119,21 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
     else if (typeToDisplay === 'blue') typeToDisplay = 'red';
   }
 
-  const colorClasses = {
-    red: "bg-gradient-to-br from-red-500 to-rose-700 text-white",
-    blue: "bg-gradient-to-br from-blue-500 to-indigo-700 text-white",
-    green: "bg-gradient-to-br from-emerald-400 to-teal-600 text-white",
-    neutral: "bg-gradient-to-br from-stone-200 to-stone-400 text-stone-900",
-    assassin: "bg-gradient-to-br from-slate-800 to-slate-950 text-white",
+  const physicalColors = {
+    red: { outer: "bg-[#fb923c]", top: "bg-[#ef4444]", bottom: "bg-[#7f1d1d]", border: "border-[#7f1d1d]", text: "text-white" },
+    blue: { outer: "bg-[#38bdf8]", top: "bg-[#0ea5e9]", bottom: "bg-[#1e3a8a]", border: "border-[#1e3a8a]", text: "text-white" },
+    green: { outer: "bg-[#bef264]", top: "bg-[#84cc16]", bottom: "bg-[#14532d]", border: "border-[#14532d]", text: "text-white" },
+    neutral: { outer: "bg-[#e5c09e]", top: "bg-[#f3dfca]", bottom: "bg-[#967353]", border: "border-[#967353]", text: "text-white" },
+    assassin: { outer: "bg-[#94a3b8]", top: "bg-[#475569]", bottom: "bg-[#0f172a]", border: "border-[#0f172a]", text: "text-white" },
   };
 
-  const shadowClasses = {
-    red: "shadow-lg shadow-red-600/40 border-red-500/50 ring-1 ring-red-400/20",
-    blue: "shadow-lg shadow-blue-600/40 border-blue-500/50 ring-1 ring-blue-400/20",
-    green: "shadow-lg shadow-emerald-600/40 border-emerald-500/50 ring-1 ring-emerald-400/20",
-    neutral: "shadow-lg shadow-stone-400/40 border-stone-300/50 ring-1 ring-white/40",
-    assassin: "shadow-lg shadow-slate-900/50 border-slate-700/50 ring-1 ring-slate-700/30",
+  const hiddenStyle = {
+    outer: "bg-slate-700",
+    top: "bg-slate-800",
+    bottom: "bg-slate-900",
+    border: "border-slate-600",
+    text: "text-white"
   };
-
-  const hiddenClasses =
-    "bg-gradient-to-br from-slate-700 to-slate-800 text-white border border-slate-600/50 shadow-[0_4px_12px_rgb(0_0_0/0.3)] hover:from-slate-600 hover:to-slate-700";
 
   let isValidClueTarget = false;
   if (isGivingClue) {
@@ -244,16 +242,19 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
           : isGivingClue && !isValidClueTarget
             ? "cursor-default opacity-80"
             : "hover:-translate-y-1.5 hover:scale-[1.02] hover:shadow-xl cursor-pointer",
-        hiddenClasses,
         card.revealed && isSpymaster && "opacity-50",
-        showColor && shadowClasses[typeToDisplay],
         (isClueTarget || highlightedBy.length > 0 || (d20FreeReveal && !isDisabled)) && "scale-[1.02] z-10",
         gachaHighlight && "z-40",
         justRevealed && !['green', 'red', 'blue'].includes(typeToDisplay) && "animate-reveal-pop",
         justRevealed && ['green', 'red', 'blue'].includes(typeToDisplay) && "animate-card-flip",
         !isScramblePending && (scrambleDx !== undefined || scrambleDy !== undefined) && activeModifier === 'earthquake' && "animate-earthquake",
         eatenAnimState === 'chomping' && "animate-chomp z-50 pointer-events-none",
-        eatenAnimState === 'spitting' && "animate-spit z-50 pointer-events-none"
+        eatenAnimState === 'spitting' && "animate-spit z-50 pointer-events-none",
+        showColor && !isSpymaster && "animate-ink-bleed",
+        showColor ? physicalColors[typeToDisplay].outer : hiddenStyle.outer,
+        "shadow-[0_4px_12px_rgb(0_0_0/0.3)]",
+        !showColor && "hover:brightness-110",
+        "p-1.5 sm:p-2"
       )}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
@@ -282,17 +283,6 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
         />
       )}
 
-      {/* Background Revealed Layer (Ink Bleed) */}
-      {showColor && (
-        <div 
-          className={cn(
-            "absolute inset-0 flex items-center justify-center w-full h-full",
-            !isSpymaster && "animate-ink-bleed",
-            colorClasses[typeToDisplay]
-          )}
-        />
-      )}
-
       {/* Fog of War Overlay */}
       {activeModifier === 'fog-of-war' && !card.revealed && (
         <div className={cn(
@@ -303,37 +293,81 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
         </div>
       )}
 
-      {/* Base Word - only hide text for globally revealed green/red/blue cards (correct guesses) */}
-      {!card.revealed || !['green', 'red', 'blue'].includes(typeToDisplay) ? (
-        <div 
-          key={`${activeModifier || 'none'}-${currentPhase}`}
-          style={
-            (scrambleDx !== undefined || scrambleDy !== undefined) && activeModifier !== 'earthquake'
-              ? {
-                  "--scramble-dx": `${(scrambleDx ?? 0) * 108}%`,
-                  "--scramble-dy": `${(scrambleDy ?? 0) * 108}%`,
-                  ...(isScramblePending ? { transform: `translate(var(--scramble-dx, 0), var(--scramble-dy, 0))` } : {})
-                } as React.CSSProperties
-              : undefined
-          }
-          className={cn(
-            "relative z-10 flex items-center justify-center h-full w-full p-1 sm:p-2 text-center break-words leading-none sm:leading-tight transform transition-transform",
-            activeModifier === 'eroding-parchment' && currentPhase === 'operative' && isGuesser && !isRevealedForMe && "animate-eroding-parchment",
-            !isScramblePending && (scrambleDx !== undefined || scrambleDy !== undefined) && activeModifier !== 'earthquake' && "animate-scramble",
-            isPoltergeistInverted && !card.revealed && "rotate-180"
-          )}
-        >
-          {activeModifier === 'marquee-madness' && !card.revealed ? (
-            <div className="w-full h-full relative overflow-hidden flex items-center">
-              <div className="absolute inset-0 flex items-center justify-center whitespace-nowrap animate-marquee-scroll">
-                {card.word}
-              </div>
+      {/* Inner Card structure */}
+      <div className={cn(
+        "w-full h-full flex flex-col rounded sm:rounded-md overflow-hidden border",
+        showColor ? physicalColors[typeToDisplay].border : hiddenStyle.border
+      )}>
+        {/* Top Half */}
+        <div className={cn(
+          card.revealed ? "h-full w-full" : "flex-1 w-full",
+          showColor ? physicalColors[typeToDisplay].top : hiddenStyle.top
+        )} />
+        
+        {!card.revealed && (
+          <>
+        
+        {/* Divider line */}
+        <div className={cn(
+          "w-full h-[2px]",
+          showColor ? physicalColors[typeToDisplay].border : hiddenStyle.border
+        )} />
+        
+        {/* Bottom Half (Text Area) */}
+        <div className={cn(
+          "h-[40%] sm:h-[45%] w-full relative flex items-center justify-center p-0.5 sm:p-1 shrink-0",
+          showColor ? physicalColors[typeToDisplay].bottom : hiddenStyle.bottom,
+          showColor ? physicalColors[typeToDisplay].text : hiddenStyle.text
+        )}>
+          {/* Base Word */}
+          <div 
+              key={`${activeModifier || 'none'}-${currentPhase}`}
+              style={
+                (scrambleDx !== undefined || scrambleDy !== undefined) && activeModifier !== 'earthquake'
+                  ? {
+                      "--scramble-dx": `${(scrambleDx ?? 0) * 108}%`,
+                      "--scramble-dy": `${(scrambleDy ?? 0) * 108}%`,
+                      ...(isScramblePending ? { transform: `translate(var(--scramble-dx, 0), var(--scramble-dy, 0))` } : {})
+                    } as React.CSSProperties
+                  : undefined
+              }
+              className={cn(
+                "relative z-10 flex items-center justify-center h-full w-full text-center leading-none transform transition-transform",
+                activeModifier === 'eroding-parchment' && currentPhase === 'operative' && isGuesser && !isRevealedForMe && "animate-eroding-parchment",
+                !isScramblePending && (scrambleDx !== undefined || scrambleDy !== undefined) && activeModifier !== 'earthquake' && "animate-scramble",
+                isPoltergeistInverted && !card.revealed && "rotate-180"
+              )}
+            >
+              {isEmoji ? (
+                <div className="w-full h-full flex items-center justify-center leading-none">
+                  {card.word}
+                </div>
+              ) : activeModifier === 'marquee-madness' && !card.revealed ? (
+                <div className="w-full h-full relative overflow-hidden flex items-center">
+                  <div className="absolute inset-0 flex items-center justify-center whitespace-nowrap animate-marquee-scroll">
+                    {card.word}
+                  </div>
+                </div>
+              ) : (
+                <svg viewBox={`0 0 ${Math.max(card.word.length * 10, 70)} 26`} className="w-full h-full drop-shadow-sm">
+                  <text
+                    x="50%"
+                    y="55%"
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fill="currentColor"
+                    className="font-bold uppercase tracking-wide"
+                    style={{ fontSize: '13px' }}
+                  >
+                    {card.word}
+                  </text>
+                </svg>
+              )}
             </div>
-          ) : (
-            card.word
-          )}
         </div>
-      ) : null}
+          </>
+        )}
+      </div>
 
       {/* Highlight Indicators & Confirm Button - positioned at bottom-left to avoid hiding card text */}
       {highlightedBy.length > 0 && (

@@ -318,6 +318,27 @@ export const translations = {
     clue_rhyme: '⚠️ Must be exactly 2 rhyming words! (e.g. "red bed")',
     clue_boolean:
       "⚠️ Must contain exactly one AND, OR, or NOT (Capitalized and with spaces)!",
+    // History & Debrief
+    match_history: "MATCH HISTORY",
+    review_last_games: "Review your last {count} games",
+    no_games_recorded: "No games recorded yet.",
+    play_to_see_debriefs: "Play a match to see your debriefs here!",
+    duet_match: "Duet Match",
+    classic_match: "Classic Match",
+    lost: "Lost",
+    won: "Won",
+    red_won: "Red Won",
+    blue_won: "Blue Won",
+    clear_history: "Clear History",
+    confirm_clear_history: "Are you sure you want to delete all match history?",
+    game_debrief: "GAME DEBRIEF",
+    clues_given: "clues given {count}",
+    best_clue: "BEST CLUE OF THE ROUND",
+    intended_targets: "INTENDED TARGETS:",
+    guesses_label: "GUESSES:",
+    bonus_label: "+ Bonus!",
+    no_guesses_turn: "No guesses this turn",
+    close_upper: "CLOSE",
   },
   ar: {
     // General
@@ -635,6 +656,28 @@ export const translations = {
     clue_rhyme: '⚠️ يجب أن يتكون من كلمتين متقافيتين بالضبط! (مثال: "قلم علم")',
     clue_boolean:
       "⚠️ يجب أن يحتوي على AND أو OR أو NOT واحدة بالضبط (بأحرف كبيرة ومع مسافات)!",
+      
+    // History & Debrief
+    match_history: "سجل المباريات",
+    review_last_games: "راجع آخر {count} مباريات",
+    no_games_recorded: "لا توجد مباريات مسجلة بعد.",
+    play_to_see_debriefs: "العب مباراة لترى ملخصاتك هنا!",
+    duet_match: "مباراة تعاونية",
+    classic_match: "مباراة كلاسيكية",
+    lost: "خسارة",
+    won: "فوز",
+    red_won: "فوز الأحمر",
+    blue_won: "فوز الأزرق",
+    clear_history: "مسح السجل",
+    confirm_clear_history: "هل أنت متأكد أنك تريد حذف كل سجل المباريات؟",
+    game_debrief: "ملخص اللعبة",
+    clues_given: "الأدلة المعطاة {count}",
+    best_clue: "أفضل دليل في الجولة",
+    intended_targets: "الأهداف المقصودة:",
+    guesses_label: "التخمينات:",
+    bonus_label: "+ إضافي!",
+    no_guesses_turn: "لا توجد تخمينات هذا الدور",
+    close_upper: "إغلاق",
   },
 };
 

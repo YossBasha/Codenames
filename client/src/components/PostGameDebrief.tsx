@@ -3,6 +3,7 @@ import { X, Trophy } from 'lucide-react';
 import type { LogEntry, CueEntry, GuessEntry, GameMode } from '../../../shared/types';
 import { MODIFIERS } from '../../../shared/modifiers';
 import { MODIFIER_ICONS } from './GameSettingsPanel';
+import { useI18n } from '../context/I18nContext';
 import { cn } from '../utils';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -99,12 +100,14 @@ function CardChip({ word, color, isStar }: { word: string; color: string; isStar
 
 // ─── Turn card ────────────────────────────────────────────────────────────────
 
-function TurnCard({ block, isBest, index, gameMode }: {
+function TurnCard({ block, isBest, index, gameMode, onZoomDoodle }: {
   block: TurnBlock;
   isBest: boolean;
   index: number;
   gameMode: GameMode;
+  onZoomDoodle?: (url: string) => void;
 }) {
+  const { t } = useI18n();
   const { cue, guesses, bonusGuesses } = block;
   const isRed = cue.team === 'red';
   const isDuet = gameMode === 'duet';
@@ -137,7 +140,7 @@ function TurnCard({ block, isBest, index, gameMode }: {
       {isBest && (
         <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 bg-amber-400 text-amber-950 text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full shadow-lg shadow-amber-500/30 whitespace-nowrap">
           <Trophy className="w-2.5 h-2.5" />
-          Best Clue of the Round
+          {t("best_clue")}
         </div>
       )}
 
@@ -158,7 +161,12 @@ function TurnCard({ block, isBest, index, gameMode }: {
           )}
           <div className={cn("w-full flex items-center justify-center", cue.invalidated && "blur-[3px] brightness-75 select-none")}>
             {cue.cueWord.startsWith('data:image') ? (
-              <img src={cue.cueWord} alt="Clue" className="h-6 object-contain mx-auto" />
+              <img 
+                src={cue.cueWord} 
+                alt="Clue" 
+                className="h-6 object-contain mx-auto cursor-pointer hover:scale-110 transition-transform" 
+                onClick={() => onZoomDoodle && onZoomDoodle(cue.cueWord)}
+              />
             ) : (
               <span className="text-slate-900 font-black text-xs sm:text-sm uppercase tracking-tight truncate">
                 {cue.cueWord}
@@ -182,13 +190,35 @@ function TurnCard({ block, isBest, index, gameMode }: {
         </div>
       )}
 
+      {/* Intended Targets */}
+      {cue.targetWords && cue.targetWords.length > 0 && (
+        <div className="mt-2.5 flex items-center gap-1.5 border-t border-slate-700/50 pt-2.5">
+          <span className="text-slate-400 text-[9px] font-black uppercase tracking-widest shrink-0">{t("intended_targets")}</span>
+          <div className="flex flex-wrap gap-1 items-center">
+            {cue.targetWords.map((word, i) => {
+              const matchedGuess = [...guesses, ...bonusGuesses].find(g => g.cardWord === word);
+              if (matchedGuess) {
+                return <CardChip key={i} word={word} color={matchedGuess.revealedColor || 'neutral'} />;
+              }
+              return (
+               <span key={i} className="text-[10px] font-bold text-white bg-slate-700/50 px-1.5 py-0.5 rounded border border-slate-600/50 shadow-sm">{word}</span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Guesses */}
       {(guesses.length > 0 || bonusGuesses.length > 0) && (
-        <div className="mt-2.5 flex flex-col gap-1.5">
+        <div className="mt-2.5 flex flex-col gap-1.5 border-t border-slate-700/50 pt-2.5">
+          <span className="text-slate-400 text-[9px] font-black uppercase tracking-widest shrink-0">{t("guesses_label")}</span>
           {guesses.length > 0 && (
             <div className="flex flex-wrap gap-1.5 items-center">
               {guesses.map((g) => (
-                <CardChip key={g.id} word={g.cardWord} color={g.revealedColor || 'neutral'} />
+                <div key={g.id} className="flex items-center gap-1 bg-slate-900/40 rounded-full pr-1">
+                  <Avatar src={g.player?.avatarUrl || ''} name={g.player?.name || '?'} size="sm" />
+                  <CardChip word={g.cardWord} color={g.revealedColor || 'neutral'} />
+                </div>
               ))}
             </div>
           )}
@@ -196,10 +226,13 @@ function TurnCard({ block, isBest, index, gameMode }: {
           {bonusGuesses.length > 0 && (
             <div className="flex flex-wrap gap-1.5 items-center">
               <span className="text-amber-400 font-black text-[9px] uppercase tracking-widest shrink-0">
-                + Bonus!
+                {t("bonus_label")}
               </span>
               {bonusGuesses.map((g) => (
-                <CardChip key={g.id} word={g.cardWord} color={g.revealedColor || 'neutral'} isStar />
+                <div key={g.id} className="flex items-center gap-1 bg-slate-900/40 rounded-full pr-1">
+                  <Avatar src={g.player?.avatarUrl || ''} name={g.player?.name || '?'} size="sm" />
+                  <CardChip word={g.cardWord} color={g.revealedColor || 'neutral'} isStar />
+                </div>
               ))}
             </div>
           )}
@@ -207,7 +240,7 @@ function TurnCard({ block, isBest, index, gameMode }: {
       )}
 
       {guesses.length === 0 && bonusGuesses.length === 0 && (
-        <p className="mt-2 text-slate-500 text-xs italic text-center">No guesses this turn</p>
+        <p className="mt-2 text-slate-500 text-xs italic text-center">{t("no_guesses_turn")}</p>
       )}
     </div>
   );
@@ -222,7 +255,9 @@ interface PostGameDebriefProps {
 }
 
 export default function PostGameDebrief({ logs, gameMode, onClose }: PostGameDebriefProps) {
+  const { t } = useI18n();
   const [activeTeam, setActiveTeam] = useState<'all' | 'red' | 'blue'>('all');
+  const [zoomedDoodle, setZoomedDoodle] = useState<string | null>(null);
 
   const allBlocks = useMemo(() => buildTurnBlocks(logs, gameMode), [logs, gameMode]);
 
@@ -257,8 +292,8 @@ export default function PostGameDebrief({ logs, gameMode, onClose }: PostGameDeb
               <Trophy className="w-4 h-4 text-amber-950" />
             </div>
             <div>
-              <h2 className="text-sm font-black text-white tracking-widest uppercase">Game Debrief</h2>
-              <p className="text-[10px] text-slate-400 font-medium">{allBlocks.length} clues given</p>
+              <h2 className="text-sm font-black text-white tracking-widest uppercase">{t("game_debrief")}</h2>
+              <p className="text-[10px] text-slate-400 font-medium">{t("clues_given").replace("{count}", allBlocks.length.toString())}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 rounded-full bg-slate-800 hover:bg-slate-700 transition-colors">
@@ -295,6 +330,7 @@ export default function PostGameDebrief({ logs, gameMode, onClose }: PostGameDeb
                   isBest={globalIdx === bestBlockIndex}
                   index={i}
                   gameMode={gameMode}
+                  onZoomDoodle={setZoomedDoodle}
                 />
               );
             })
@@ -302,16 +338,31 @@ export default function PostGameDebrief({ logs, gameMode, onClose }: PostGameDeb
           <div className="h-2" />
         </div>
 
-        {/* Footer */}
-        <div className="shrink-0 p-4 pt-2 border-t border-slate-700/50">
+        {/* Close button */}
+        <div className="p-4 pt-2 border-t border-slate-700/50 bg-slate-800/20 shrink-0">
           <button
             onClick={onClose}
-            className="w-full py-3 bg-gradient-to-r from-slate-700 to-slate-600 hover:from-slate-600 hover:to-slate-500 text-white font-black rounded-2xl text-sm uppercase tracking-widest transition-all active:scale-[0.98] shadow-lg"
+            className="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white font-black uppercase tracking-widest text-sm rounded-xl transition-all shadow-md"
           >
-            Close
+            {t("close_upper")}
           </button>
         </div>
       </div>
+
+      {/* Zoom Modal */}
+      {zoomedDoodle && (
+        <div 
+          className="fixed inset-0 z-[300] bg-black/95 backdrop-blur-sm flex flex-col items-center justify-center p-4 cursor-zoom-out animate-in fade-in duration-200"
+          onClick={() => setZoomedDoodle(null)}
+        >
+          <img 
+            src={zoomedDoodle} 
+            alt="Zoomed doodle" 
+            className="w-full max-w-3xl max-h-[85vh] object-contain rounded-xl bg-white/5 border-2 border-white/10 p-2 shadow-2xl"
+          />
+          <p className="text-slate-400 mt-6 font-black uppercase tracking-widest text-xs">Tap anywhere to close</p>
+        </div>
+      )}
     </div>
   );
 }

@@ -35,6 +35,7 @@ export interface CueEntry {
   cueWord: string;
   cueNumber: number;
   targets?: number[];
+  targetWords?: string[];
   reasoning?: string;
   modifier?: string | null; // active chaos modifier when this clue was given
   invalidated?: boolean; // True if host confirmed it as a cheat

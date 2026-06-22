@@ -21,10 +21,10 @@ type LocalPhase = 'Setup' | 'Spymaster_Setup' | 'Spymaster_Input' | 'Operative_H
 function getNextTurnDuetLocal(currentTurn: Team, cards: any[]): 'red' | 'blue' {
   let nextTurn: 'red' | 'blue' = currentTurn === 'red' ? 'blue' : 'red';
   if (nextTurn === 'red') {
-    const aRemaining = cards.filter(c => c.duetTypeA === 'green' && !c.revealedByB).length;
+    const aRemaining = cards.filter(c => c.duetTypeA === 'green' && !c.revealed).length;
     if (aRemaining === 0) return 'blue';
   } else {
-    const bRemaining = cards.filter(c => c.duetTypeB === 'green' && !c.revealedByA).length;
+    const bRemaining = cards.filter(c => c.duetTypeB === 'green' && !c.revealed).length;
     if (bRemaining === 0) return 'red';
   }
   return nextTurn;
@@ -185,6 +185,17 @@ export default function PassAndPlay() {
         triggerPrankVibration();
       });
       setTimeout(() => setShowBestClue(true), 600);
+
+      // Save game history
+      import("../utils/historyDb").then(({ saveGameHistory }) => {
+        saveGameHistory({
+          id: 'local-' + Date.now(),
+          timestamp: Date.now(),
+          gameMode: gameState.gameMode,
+          winner: gameState.winner!,
+          logs: gameState.gameLog,
+        }).catch(err => console.error("Failed to save game history", err));
+      });
     }
     previousWinner.current = gameState?.winner || null;
   }, [gameState?.winner]);
@@ -327,8 +338,7 @@ export default function PassAndPlay() {
         newGuesses++;
         let foundGreens = 0;
         newCards.forEach(c => {
-          if (c.duetTypeA === 'green' && c.revealedByB) foundGreens++;
-          if (c.duetTypeB === 'green' && c.revealedByA) foundGreens++;
+          if (c.revealed && c.type === 'green') foundGreens++;
         });
         
         if (foundGreens >= 15) {
@@ -336,9 +346,9 @@ export default function PassAndPlay() {
         } else {
           let remainingTargetsForCurrentTeam = 0;
           if (expectedGuessTeam === 'blue') {
-            remainingTargetsForCurrentTeam = newCards.filter(c => c.duetTypeA === 'green' && !c.revealedByB).length;
+            remainingTargetsForCurrentTeam = newCards.filter(c => c.duetTypeA === 'green' && !c.revealed).length;
           } else {
-            remainingTargetsForCurrentTeam = newCards.filter(c => c.duetTypeB === 'green' && !c.revealedByA).length;
+            remainingTargetsForCurrentTeam = newCards.filter(c => c.duetTypeB === 'green' && !c.revealed).length;
           }
 
           if (remainingTargetsForCurrentTeam === 0 || newGuesses >= maxGuesses) {
@@ -468,6 +478,8 @@ export default function PassAndPlay() {
         team: prev.currentTurn as 'red' | 'blue',
         cueWord: cue,
         cueNumber: number,
+        targets: clueTargets,
+        targetWords: clueTargets.map(id => prev.cards.find(c => c.id === id)?.word).filter(Boolean) as string[],
         modifier: prev.activeModifier || null,
         timestamp: Date.now()
       }]
@@ -540,30 +552,48 @@ export default function PassAndPlay() {
 
   const handleEndTurn = () => {
     if (!gameState || gameState.winner || localPhase !== "Operative_Guessing") return;
-    
-    setGameState(prev => {
-      if (!prev) return null;
-      let newTokens = prev.timerTokens;
-      let winner: Team | null = prev.winner;
-      if (prev.gameMode === 'duet') {
-        newTokens--;
-        if (newTokens <= 0) winner = 'spectator';
-      }
-      return {
-        ...prev,
-        currentTurn: prev.gameMode === 'duet' 
-          ? getNextTurnDuetLocal(prev.currentTurn, prev.cards)
-          : (prev.currentTurn === "red" ? "blue" : "red"),
-        activeCue: null,
-        activeCueNumber: null,
-        successfulGuessesThisTurn: 0,
-        isFirstTurnOfGame: false,
-        currentPhase: 'spymaster',
-        timerTokens: newTokens,
-        winner
-      };
-    });
-    setLocalPhase("Spymaster_Setup");
+
+    const endTurnLocal = () => {
+      setGameState(prev => {
+        if (!prev) return null;
+        let newTokens = prev.timerTokens;
+        let winner: Team | null = prev.winner;
+        if (prev.gameMode === 'duet') {
+          newTokens--;
+          if (newTokens <= 0) winner = 'spectator';
+        }
+        return {
+          ...prev,
+          currentTurn: prev.gameMode === 'duet' 
+            ? getNextTurnDuetLocal(prev.currentTurn, prev.cards)
+            : (prev.currentTurn === "red" ? "blue" : "red"),
+          activeCue: null,
+          activeCueNumber: null,
+          successfulGuessesThisTurn: 0,
+          isFirstTurnOfGame: false,
+          currentPhase: 'spymaster',
+          timerTokens: newTokens,
+          winner
+        };
+      });
+      setLocalPhase("Spymaster_Setup");
+    };
+
+    const hasHighlightedCards = Object.values(gameState.highlightedCards || {}).some(cards => cards.length > 0);
+
+    if (hasHighlightedCards) {
+      setConfirmModal({
+        isOpen: true,
+        title: "Unconfirmed Selections",
+        description: "You still have selected cards that are unconfirmed. Do you wish to end your turn?",
+        onConfirm: () => {
+          endTurnLocal();
+          setConfirmModal(null);
+        }
+      });
+    } else {
+      endTurnLocal();
+    }
   };
 
   if (localPhase === 'Setup') {
@@ -640,9 +670,7 @@ export default function PassAndPlay() {
   if (gameState.gameMode === 'duet') {
     let distinctGreensFound = 0;
     gameState.cards.forEach(c => {
-      const correctForB = c.duetTypeA === 'green' && c.revealedByB;
-      const correctForA = c.duetTypeB === 'green' && c.revealedByA;
-      if (correctForA || correctForB) distinctGreensFound++;
+      if (c.revealed && c.type === 'green') distinctGreensFound++;
     });
     remainingGreens = Math.max(0, 15 - distinctGreensFound);
   }

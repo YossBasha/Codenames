@@ -57,7 +57,7 @@ export default function GameLog({ logs, gameMode = "classic", onReportClue }: Ga
   }, [logs]);
 
   return (
-    <div className="flex flex-col bg-black/40 border border-slate-700/50 rounded-2xl overflow-hidden h-[190px] lg:h-[420px] shrink-0 relative w-full">
+    <div className="flex flex-col bg-black/40 border border-slate-700/50 rounded-2xl overflow-hidden h-[190px] lg:h-auto lg:flex-1 shrink-0 relative w-full">
       <div className="bg-black/40 p-2 lg:py-2.5 text-center text-xs lg:text-sm font-black tracking-widest text-slate-500 absolute top-0 left-0 right-0 z-10 shadow-md h-8 lg:h-10">
         {t("game_log")}
       </div>

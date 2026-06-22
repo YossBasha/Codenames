@@ -219,11 +219,17 @@ export default function LANGame() {
     }
   }, [gameState]);
 
+  const prevPhaseRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (gameState?.activeModifier) {
-      // Modifiers only change when the turn changes (or when a new modifier is explicitly applied)
+      // Modifiers change when a new modifier is explicitly applied OR when the turn changes
+      const isNewTurn =
+        gameState.currentTurn !== prevTurnRef.current ||
+        gameState.currentPhase !== prevPhaseRef.current;
+      
       const isNewModifier =
-        gameState.activeModifier !== prevModifierRef.current;
+        gameState.activeModifier !== prevModifierRef.current || isNewTurn;
 
       if (isNewModifier) {
         // If turn announcer is about to show or is currently showing, queue the modifier banner
@@ -248,6 +254,7 @@ export default function LANGame() {
     if (gameState) {
       prevModifierRef.current = gameState.activeModifier || null;
       prevTurnRef.current = gameState.currentTurn;
+      prevPhaseRef.current = gameState.currentPhase;
     }
   }, [
     gameState?.activeModifier,
@@ -255,7 +262,6 @@ export default function LANGame() {
     gameState?.currentPhase,
     gameState?.winner,
     isMyTurn,
-    showTurnAnnouncer,
   ]);
 
   useEffect(() => {
@@ -277,6 +283,14 @@ export default function LANGame() {
     gameState?.currentTurn,
     gameState?.winner,
   ]);
+
+  // Trigger queued modifier banner after turn announcer finishes
+  useEffect(() => {
+    if (!showTurnAnnouncer && queuedModifierBanner) {
+      triggerModifierBanner(queuedModifierBanner);
+      setQueuedModifierBanner(null);
+    }
+  }, [showTurnAnnouncer, queuedModifierBanner]);
 
   const dismissTurnAnnouncer = () => {
     setShowTurnAnnouncer(false);
@@ -516,6 +530,18 @@ export default function LANGame() {
       });
       // Delay showcase slightly so win banner renders first
       setTimeout(() => setShowBestClue(true), 600);
+
+      // Save game history
+      import("../utils/historyDb").then(({ saveGameHistory }) => {
+        saveGameHistory({
+          id: roomId + '-' + Date.now(),
+          timestamp: Date.now(),
+          gameMode: gameState.gameMode,
+          winner: gameState.winner!,
+          logs: gameState.gameLog,
+          players: roomPlayers.map(p => ({ name: p.name, avatarUrl: p.avatarBase64 || '' }))
+        }).catch(err => console.error("Failed to save game history", err));
+      });
     }
     previousWinner.current = gameState?.winner || null;
   }, [gameState?.winner]);
@@ -662,7 +688,28 @@ export default function LANGame() {
 
   const handleEndTurn = () => {
     if (!gameState || gameState.winner || !socket || !roomId) return;
-    socket.emit("end_turn", { roomId });
+    
+    // Check if the current team has any highlighted cards
+    const hasHighlightedCards = Object.entries(gameState.highlightedCards || {}).some(([pid, cards]) => {
+      if (cards.length === 0) return false;
+      const p = roomPlayers.find((rp) => rp.id === pid);
+      if (!p) return false;
+      return p.team === gameState.currentTurn || gameState.gameMode === "duet";
+    });
+
+    if (hasHighlightedCards) {
+      setConfirmModal({
+        isOpen: true,
+        title: "Unconfirmed Selections",
+        description: "You still have selected cards that are unconfirmed. Do you wish to end your turn?",
+        onConfirm: () => {
+          socket.emit("end_turn", { roomId });
+          setConfirmModal(null);
+        }
+      });
+    } else {
+      socket.emit("end_turn", { roomId });
+    }
   };
 
   const handleRestart = () => {
