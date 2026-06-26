@@ -277,6 +277,16 @@ function startServer(port: number) {
   });
 }
 
+app.get('/api/debug-dist', (req, res) => {
+  res.json({
+    clientDistPath: clientDistPath,
+    dirname: __dirname,
+    cwd: process.cwd(),
+    execPath: process.execPath,
+    exists: clientDistPath ? fs.existsSync(path.join(clientDistPath, 'index.html')) : false
+  });
+});
+
 // Fallback for single page app routing
 app.get('*', (req, res, next) => {
   if (clientDistPath && req.method === 'GET' && fs.existsSync(path.join(clientDistPath, 'index.html')) && !req.path.startsWith('/api/')) {
