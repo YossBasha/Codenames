@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect } from "react";
 import { useGameContext } from "../context/GameContext";
 import { useI18n } from "../context/I18nContext";
@@ -186,6 +186,8 @@ const CHANGELOG = [
 
 export default function Home() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get("returnTo");
   const { socket, setSocket, theme, setTheme, player, setPlayer } =
     useGameContext();
   const { t, uiLanguage, setUiLanguage } = useI18n();
@@ -774,7 +776,11 @@ export default function Home() {
                   }));
                 }
                 playMenuClickSfx();
-                setShowProfileModal(false);
+                if (returnTo) {
+                  navigate(returnTo);
+                } else {
+                  setShowProfileModal(false);
+                }
               }}
               className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black rounded-xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95 uppercase tracking-widest text-sm"
             >

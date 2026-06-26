@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { useGameContext } from '../context/GameContext';
 import { useI18n } from '../context/I18nContext';
@@ -23,8 +23,18 @@ function cn(...inputs: ClassValue[]) {
 export default function LANLobby() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const isHost = searchParams.get('host') === 'true';
   const isWan = searchParams.get('wan') === 'true';
+
+  useEffect(() => {
+    const savedName = localStorage.getItem('codenames_nickname');
+    if (!savedName || !savedName.trim()) {
+      if (!isHost) {
+        navigate(`/?returnTo=${encodeURIComponent(location.pathname + location.search)}`);
+      }
+    }
+  }, [isHost, navigate, location]);
 
   const { player, setPlayer, roomId, setRoomId, socket, setSocket, language, setLanguage } = useGameContext();
   const { t } = useI18n();
