@@ -2,6 +2,11 @@
   "name": "client",
   "private": true,
   "version": "1.5.18",
+  "author": {
+    "name": "YossBasha",
+    "email": "yossbasha@gmail.com"
+  },
+  "homepage": "https://github.com/YossBasha/Codenames",
   "coreVersion": "1.0.0",
   "type": "module",
   "main": "electron/main.cjs",
