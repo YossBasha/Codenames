@@ -413,7 +413,21 @@ export default function LANLobby() {
       role
     };
     
+    // Update local context player state
     setPlayer(newPlayer);
+
+    // Optimistic UI Update: Instantly move the player to the new team column in the UI
+    setRoomPlayers(prevPlayers => {
+      const existingIndex = prevPlayers.findIndex(p => p.id === socket.id!);
+      if (existingIndex !== -1) {
+        const newPlayers = [...prevPlayers];
+        newPlayers[existingIndex] = { ...newPlayers[existingIndex], team, role };
+        return newPlayers;
+      } else {
+        return [...prevPlayers, { ...newPlayer, connected: true }];
+      }
+    });
+
     socket.emit('join_room', { roomId, player: newPlayer, explicitChange: true, isPublic: isWan });
     playLobbyClickSfx();
   };

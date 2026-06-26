@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.14] - 2026-06-26
+
+### Fixed
+- **Optimistic UI Updates for Team Joins**: Eradicated the annoying ~5-second network delay when clicking "Join Team" while connected remotely through Ngrok! The UI now optimistically moves you to your selected team instantly, masking latency and making the lobby feel incredibly snappy even on weak connections.
+
 ## [1.5.13] - 2026-06-26
 
 ### Added
