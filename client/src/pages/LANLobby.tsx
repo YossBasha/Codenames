@@ -381,11 +381,24 @@ export default function LANLobby() {
         setEnabledModifiers(settings.enabledModifiers);
       }
     });
+
+    socket.on('custom_words_text_updated', (text) => {
+      if (isHost) return;
+      setCustomWordsText(text);
+    });
     
     return () => {
       socket.off('settings_updated');
+      socket.off('custom_words_text_updated');
     };
   }, [socket, isHost, setLanguage]);
+
+  const handleCustomWordsTextChange = (text: string) => {
+    setCustomWordsText(text);
+    if (!isHost && socket && roomId) {
+      socket.emit('update_custom_words_text', { roomId, text });
+    }
+  };
 
   const handleJoinTeam = (team: Team, role: Role) => {
     if (!socket || !roomId || !isConnected) {
@@ -807,7 +820,7 @@ export default function LANLobby() {
               timerSettings={timerSettings}
               setTimerSettings={setTimerSettings}
               customWordsText={customWordsText}
-              setCustomWordsText={setCustomWordsText}
+              setCustomWordsText={handleCustomWordsTextChange}
               customWordWeight={customWordWeight}
               setCustomWordWeight={setCustomWordWeight}
               customWordsArray={customWordsArray}

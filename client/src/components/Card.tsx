@@ -236,7 +236,7 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
       className={cn(
         "group relative w-full aspect-[4/3] sm:aspect-[3/2] min-h-[60px] sm:min-h-[70px] max-h-[calc((100vh_-_220px)_/_5)] sm:max-h-[calc((100vh_-_340px)_/_5)] rounded-lg sm:rounded-xl font-black transition-all duration-300 transform",
         !(scrambleDx !== undefined || scrambleDy !== undefined) && "overflow-hidden",
-        isEmoji ? "text-4xl sm:text-5xl lg:text-7xl" : "text-[9px] xs:text-[11px] sm:text-sm lg:text-lg tracking-tighter sm:tracking-tight",
+        isEmoji ? "text-2xl sm:text-4xl lg:text-5xl" : "text-[9px] xs:text-[11px] sm:text-sm lg:text-lg tracking-tighter sm:tracking-tight",
         isDisabled && !isRevealedForMe && !isGivingClue && !d20FreeReveal
           ? "cursor-default opacity-80"
           : isGivingClue && !isValidClueTarget

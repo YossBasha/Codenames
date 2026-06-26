@@ -435,6 +435,9 @@ function applyRandomModifier(room: Room) {
       type: string;
       duetTypeA?: string;
       duetTypeB?: string;
+      revealedByA?: boolean;
+      revealedByB?: boolean;
+      shieldedTurns?: number;
     }
 
     const unrevealedData: CardData[] = unrevealedCards.map((c) => ({
@@ -442,6 +445,9 @@ function applyRandomModifier(room: Room) {
       type: c.type,
       duetTypeA: c.duetTypeA,
       duetTypeB: c.duetTypeB,
+      revealedByA: c.revealedByA,
+      revealedByB: c.revealedByB,
+      shieldedTurns: c.shieldedTurns,
     }));
 
     const shuffledData = shuffleArray([...unrevealedData]);
@@ -454,6 +460,9 @@ function applyRandomModifier(room: Room) {
         c.type = data.type as any;
         c.duetTypeA = data.duetTypeA as any;
         c.duetTypeB = data.duetTypeB as any;
+        c.revealedByA = data.revealedByA;
+        c.revealedByB = data.revealedByB;
+        c.shieldedTurns = data.shieldedTurns;
       }
     });
   } else if (randomModifier.id === "forced-acronym") {
@@ -1632,6 +1641,17 @@ export function setupRoomManager(io: Server) {
       },
     );
 
+    socket.on(
+      "update_custom_words_text",
+      ({ roomId, text }: { roomId: string; text: string }) => {
+        const room = rooms[roomId];
+        if (room && room.settings) {
+          room.settings.customWordsText = text;
+          io.to(roomId).emit("custom_words_text_updated", text);
+        }
+      }
+    );
+
     socket.on("randomize_teams", ({ roomId }: { roomId: string }) => {
       const room = rooms[roomId];
       if (room) {
@@ -2587,9 +2607,7 @@ export function setupRoomManager(io: Server) {
 
         const unrevealedCards = room.gameState.cards.filter((c) => {
           if (isDuet) {
-            return expectedGuessTeam === "blue"
-              ? !c.revealedByB
-              : !c.revealedByA;
+            return !c.revealedByA && !c.revealedByB;
           } else {
             return !c.revealed;
           }

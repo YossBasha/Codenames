@@ -442,23 +442,19 @@ export default function GameSettingsPanel({
 
                   <div className="flex bg-[#222] p-1 rounded-lg border border-[#444]">
                     <button
-                      onClick={() => isHost && setCustomWordsTab('type')}
-                      disabled={!isHost}
+                      onClick={() => setCustomWordsTab('type')}
                       className={cn(
                         "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-colors",
-                        customWordsTab === 'type' ? "bg-emerald-500 text-white" : "text-slate-400 hover:text-white",
-                        !isHost && "opacity-50 cursor-not-allowed"
+                        customWordsTab === 'type' ? "bg-emerald-500 text-white" : "text-slate-400 hover:text-white"
                       )}
                     >
                       <Keyboard className="w-3.5 h-3.5" /> {t('type_words')}
                     </button>
                     <button
-                      onClick={() => isHost && setCustomWordsTab('upload')}
-                      disabled={!isHost}
+                      onClick={() => setCustomWordsTab('upload')}
                       className={cn(
                         "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-colors",
-                        customWordsTab === 'upload' ? "bg-emerald-500 text-white" : "text-slate-400 hover:text-white",
-                        !isHost && "opacity-50 cursor-not-allowed"
+                        customWordsTab === 'upload' ? "bg-emerald-500 text-white" : "text-slate-400 hover:text-white"
                       )}
                     >
                       <Upload className="w-3.5 h-3.5" /> {t('upload_file')}
@@ -470,19 +466,17 @@ export default function GameSettingsPanel({
                   <textarea
                     value={customWordsText}
                     onChange={(e) => setCustomWordsText(e.target.value)}
-                    disabled={!isHost}
                     placeholder={t('type_words_placeholder')}
-                    className="w-full h-32 bg-[#222] border border-[#444] rounded-xl p-3 text-sm font-mono text-white focus:border-emerald-500 outline-none resize-none disabled:opacity-50"
+                    className="w-full h-32 bg-[#222] border border-[#444] rounded-xl p-3 text-sm font-mono text-white focus:border-emerald-500 outline-none resize-none"
                   />
                 ) : (
-                  <div className={cn("w-full h-32 bg-[#222] border-2 border-dashed border-[#444] rounded-xl flex flex-col items-center justify-center gap-2 relative transition-colors", isHost ? "hover:border-emerald-500" : "opacity-50")}>
+                  <div className={cn("w-full h-32 bg-[#222] border-2 border-dashed border-[#444] rounded-xl flex flex-col items-center justify-center gap-2 relative transition-colors hover:border-emerald-500")}>
                     <Upload className="w-8 h-8 text-slate-500" />
                     <div className="text-sm font-bold text-slate-400">{t('drag_drop_file')}</div>
                     <input
                       type="file"
                       accept=".txt,.csv"
                       onChange={handleFileUpload}
-                      disabled={!isHost}
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     />
                   </div>
