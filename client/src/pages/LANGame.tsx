@@ -234,9 +234,7 @@ export default function LANGame() {
   useEffect(() => {
     if (gameState?.activeModifier) {
       // Modifiers change when a new modifier is explicitly applied OR when the turn changes
-      const isNewTurn =
-        gameState.currentTurn !== prevTurnRef.current ||
-        gameState.currentPhase !== prevPhaseRef.current;
+      const isNewTurn = gameState.currentTurn !== prevTurnRef.current;
       
       const isNewModifier =
         gameState.activeModifier !== prevModifierRef.current || isNewTurn;

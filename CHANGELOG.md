@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.15] - 2026-06-26
+
+### Fixed
+- **Double Modifier Announcement Fix**: Fixed an annoying bug in Chaos Mode where the active event modifier was incorrectly announcing itself twice (once at the start of the Spymaster's turn, and again after they submitted a clue). Modifiers will now correctly announce only once when they are initially rolled.
+
 ## [1.5.14] - 2026-06-26
 
 ### Fixed
