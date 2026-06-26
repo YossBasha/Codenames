@@ -97,3 +97,53 @@ jobs:
             client/android/app/build/outputs/apk/debug/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Cache npm (server)
+        uses: actions/cache@v4
+        with:
+          path: server/node_modules
+          key: npm-server-linux-${{ hashFiles('server/package-lock.json') }}
+
+      - name: Cache npm (client)
+        uses: actions/cache@v4
+        with:
+          path: client/node_modules
+          key: npm-client-linux-${{ hashFiles('client/package-lock.json') }}
+
+      - name: Install Server Dependencies
+        run: |
+          cd server
+          npm install --no-audit --no-fund
+
+      - name: Install Client Dependencies
+        run: |
+          cd client
+          npm install --no-audit --no-fund
+
+      - name: Build Electron App for Linux
+        run: |
+          cd client
+          npm run electron:build -- --linux -p never
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: false
+          generate_release_notes: true
+          files: |
+            client/dist-electron/*.AppImage
+            client/dist-electron/*.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
