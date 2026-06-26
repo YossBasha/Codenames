@@ -36,6 +36,19 @@ export default function LANLobby() {
     }
   }, [isHost, navigate, location]);
 
+  useEffect(() => {
+    // If running in browser and haven't attempted to deep link yet
+    if (!(window as any).isElectron && !sessionStorage.getItem('deepLinkAttempted')) {
+      sessionStorage.setItem('deepLinkAttempted', 'true');
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (!isMobile) {
+        // Build the deep link URL based on the current pathname and search
+        const deepLink = `codenames://${location.pathname.replace(/^\//, '')}${location.search}`;
+        window.location.href = deepLink;
+      }
+    }
+  }, [location]);
+
   const { player, setPlayer, roomId, setRoomId, socket, setSocket, language, setLanguage } = useGameContext();
   const { t } = useI18n();
   

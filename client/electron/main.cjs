@@ -6,6 +6,41 @@ const fs = require('fs');
 const AdmZip = require('adm-zip');
 const DiscordRPC = require('discord-rpc');
 
+app.setAsDefaultProtocolClient('codenames');
+
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+  process.exit(0);
+}
+
+app.on('second-instance', (event, commandLine, workingDirectory) => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+    const url = commandLine.find(arg => arg.startsWith('codenames://'));
+    if (url) {
+      mainWindow.webContents.send('deep-link', url);
+    }
+  }
+});
+
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+    mainWindow.webContents.send('deep-link', url);
+  } else {
+    app.whenReady().then(() => {
+      // Small delay to ensure window is fully initialized before sending IPC
+      setTimeout(() => {
+        if (mainWindow) mainWindow.webContents.send('deep-link', url);
+      }, 1000);
+    });
+  }
+});
+
 const discordClientId = '1518219109299519538';
 let rpcClient;
 

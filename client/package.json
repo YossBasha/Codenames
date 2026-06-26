@@ -1,7 +1,7 @@
 {
   "name": "client",
   "private": true,
-  "version": "1.5.8",
+  "version": "1.5.9",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -17,6 +17,12 @@
   "build": {
     "appId": "com.codenames.app",
     "productName": "Codenames",
+    "protocols": {
+      "name": "Codenames",
+      "schemes": [
+        "codenames"
+      ]
+    },
     "directories": {
       "output": "dist-electron"
     },

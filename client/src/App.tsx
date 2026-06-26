@@ -1,4 +1,4 @@
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { GameProvider } from './context/GameContext';
 import { I18nProvider } from './context/I18nContext';
 import Home from './pages/Home';
@@ -10,6 +10,26 @@ import { Capacitor } from '@capacitor/core';
 import { NodeJS } from '@choreruiz/capacitor-node-js';
 import { useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
+
+function DeepLinkHandler() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    if ((window as any).electronAPI && (window as any).electronAPI.onDeepLink) {
+      (window as any).electronAPI.onDeepLink((url: string) => {
+        try {
+          new URL(url); // validate url format
+          // e.g. codenames://lan-lobby?wan=true&room=123 -> pathname: //lan-lobby (or empty on some systems), hostname: lan-lobby
+          // We can reliably extract everything after "codenames://"
+          const pathAndSearch = url.replace(/^codenames:\/\/\/?/i, '/');
+          navigate(pathAndSearch);
+        } catch (e) {
+          console.error('Invalid deep link URL', url, e);
+        }
+      });
+    }
+  }, [navigate]);
+  return null;
+}
 
 function App() {
   useEffect(() => {
@@ -67,6 +87,7 @@ function App() {
     <I18nProvider>
       <GameProvider>
         <Router>
+          <DeepLinkHandler />
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/pass-and-play" element={<PassAndPlay />} />
