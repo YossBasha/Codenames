@@ -33,6 +33,13 @@
     "mac": {
       "icon": "build/icon.png"
     },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "build/icon.png"
+    },
     "files": [
       "dist/**/*",
       "electron/**/*"
