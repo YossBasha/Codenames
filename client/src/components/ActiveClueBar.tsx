@@ -41,12 +41,14 @@ export default function ActiveClueBar({
               title={t('click_to_enlarge')}
             />
           ) : (
-            <span className={cn(
-              "text-slate-900 font-black uppercase tracking-widest truncate flex-1 min-w-0",
-              activeCue.length > 20 ? "text-sm sm:text-lg" : activeCue.length > 12 ? "text-base sm:text-2xl" : "text-xl sm:text-3xl"
-            )}>
-              {activeCue}
-            </span>
+            <div className="flex-1 min-w-0 max-h-[60px] sm:max-h-[80px] overflow-y-auto overflow-x-hidden scrollbar-none pr-1 flex items-center">
+              <span className={cn(
+                "text-slate-900 font-black uppercase tracking-widest break-words whitespace-normal block w-full leading-tight",
+                activeCue.length > 20 ? "text-sm sm:text-lg" : activeCue.length > 12 ? "text-base sm:text-2xl" : "text-xl sm:text-3xl"
+              )}>
+                {activeCue}
+              </span>
+            </div>
           )}
           
           {isBonus ? (

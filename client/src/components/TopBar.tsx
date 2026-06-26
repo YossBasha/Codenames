@@ -111,40 +111,43 @@ export default function TopBar({
         )}
       </div>
 
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none z-10">
-        <div className="relative pointer-events-auto flex flex-col items-center justify-center leading-none">
-          {/* Centered Turn and Role Info */}
-          <div className="text-xs xs:text-sm sm:text-base lg:text-lg font-black tracking-tight truncate max-w-full">
-            {gameMode === 'classic' ? (
-              <span className={cn(
-                "transition-colors duration-300",
-                currentTurn === 'red' ? 'text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-rose-600' : 'text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-600'
-              )}>
-                {currentTurn === 'red' ? t('red_team_turn') : t('blue_team_turn')}
-              </span>
-            ) : (
-              <>
-                <span className={currentTurn === 'red' ? 'text-lime-400' : 'text-green-400'}>
-                  {currentTurn === 'red' ? t('side_a') : t('side_b')}
-                </span>
-                <span className="hidden sm:inline"> {t('gives_clue')}</span>
-              </>
-            )}
-          </div>
-          {gameMode !== 'duet' && (
-            <div className="text-[7px] sm:text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest whitespace-nowrap">
-              {currentPhase === 'spymaster' ? t('spymaster_role_label') : t('operative_role_label')}
-            </div>
-          )}
-
-          {/* Absolutely Positioned Timer (floats to the left, prevents wiggling) */}
+      <div className="flex-1 lg:flex-none lg:absolute lg:left-1/2 lg:top-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 flex items-center justify-center pointer-events-none z-10 min-w-0 px-1 sm:px-2">
+        <div className="relative pointer-events-auto flex flex-row lg:flex-col items-center justify-center gap-1.5 sm:gap-3 lg:gap-0 leading-none min-w-0 w-full lg:w-auto">
+          
+          {/* Timer (Flows inline on mobile, absolutely positioned on desktop) */}
           {isTimerEnabled && (
-            <div className="absolute right-full mr-3 sm:mr-4 top-1/2 -translate-y-1/2 text-sm sm:text-lg lg:text-xl font-black text-orange-500 drop-shadow-[0_0_8px_rgba(249,115,22,0.5)] tabular-nums whitespace-nowrap">
+            <div className="lg:absolute lg:right-full lg:mr-3 sm:lg:mr-4 lg:top-1/2 lg:-translate-y-1/2 text-xs xs:text-sm sm:text-lg lg:text-xl font-black text-orange-500 drop-shadow-[0_0_8px_rgba(249,115,22,0.5)] tabular-nums whitespace-nowrap shrink-0">
               {timeRemaining}s
             </div>
           )}
 
-          {/* Absolutely Positioned Active Modifier (floats to the right, prevents wiggling) */}
+          {/* Centered Turn and Role Info */}
+          <div className="flex flex-col items-center justify-center shrink min-w-0">
+            <div className="text-[10px] xs:text-xs sm:text-base lg:text-lg font-black tracking-tight truncate max-w-full">
+              {gameMode === 'classic' ? (
+                <span className={cn(
+                  "transition-colors duration-300",
+                  currentTurn === 'red' ? 'text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-rose-600' : 'text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-600'
+                )}>
+                  {currentTurn === 'red' ? t('red_team_turn') : t('blue_team_turn')}
+                </span>
+              ) : (
+                <>
+                  <span className={currentTurn === 'red' ? 'text-lime-400' : 'text-green-400'}>
+                    {currentTurn === 'red' ? t('side_a') : t('side_b')}
+                  </span>
+                  <span className="hidden sm:inline"> {t('gives_clue')}</span>
+                </>
+              )}
+            </div>
+            {gameMode !== 'duet' && (
+              <div className="text-[6px] xs:text-[7px] sm:text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest whitespace-nowrap truncate max-w-full">
+                {currentPhase === 'spymaster' ? t('spymaster_role_label') : t('operative_role_label')}
+              </div>
+            )}
+          </div>
+
+          {/* Active Modifier (Flows inline on mobile, absolutely positioned on desktop) */}
           {activeModifier && (() => {
             const mod = MODIFIERS.find(m => m.id === activeModifier);
             if (!mod) return null;
@@ -152,29 +155,29 @@ export default function TopBar({
             return (
               <div 
                 ref={tooltipRef}
-                className="absolute left-full ml-3 sm:ml-4 top-1/2 -translate-y-1/2 group cursor-pointer z-50 shrink-0"
+                className="lg:absolute lg:left-full lg:ml-3 sm:lg:ml-4 lg:top-1/2 lg:-translate-y-1/2 group cursor-pointer z-50 shrink-0"
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowTooltip(!showTooltip);
                 }}
               >
-                <div className="flex items-center gap-1 bg-red-500/20 border border-red-500/40 hover:bg-red-500/30 transition-all rounded-full px-2 py-0.5 shadow-[0_0_10px_rgba(239,68,68,0.2)]">
-                  <IconComponent className="w-3 h-3 sm:w-4 sm:h-4 text-red-400" />
-                  <span className="hidden xs:inline text-[7px] sm:text-[9px] font-black tracking-widest text-red-400 uppercase">{mod.name}</span>
+                <div className="flex items-center gap-1 bg-red-500/20 border border-red-500/40 hover:bg-red-500/30 transition-all rounded-full px-1.5 py-0.5 sm:px-2 shadow-[0_0_10px_rgba(239,68,68,0.2)]">
+                  <IconComponent className="w-3 h-3 sm:w-4 sm:h-4 text-red-400 shrink-0" />
+                  <span className="hidden xs:inline text-[6px] sm:text-[9px] font-black tracking-widest text-red-400 uppercase truncate max-w-[60px] sm:max-w-none">{mod.name}</span>
                 </div>
                 
                 <div className={cn(
-                  "absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-slate-950/95 border border-red-500/30 rounded-2xl p-4 shadow-2xl transition-opacity duration-200 z-50",
+                  "absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 sm:w-64 bg-slate-950/95 border border-red-500/30 rounded-2xl p-3 sm:p-4 shadow-2xl transition-opacity duration-200 z-50",
                   showTooltip 
                     ? "opacity-100 pointer-events-auto" 
                     : "pointer-events-none opacity-0 group-hover:opacity-100"
                 )}>
                   <div className="flex items-center gap-2 mb-2 text-red-400">
-                    <IconComponent className="w-5 h-5" />
-                    <h4 className="font-black tracking-wider text-xs uppercase">{uiLanguage === 'ar' ? mod.nameAr || mod.name : mod.name}</h4>
+                    <IconComponent className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <h4 className="font-black tracking-wider text-[10px] sm:text-xs uppercase">{uiLanguage === 'ar' ? mod.nameAr || mod.name : mod.name}</h4>
                   </div>
-                  <p className="text-[11px] font-bold text-slate-300 leading-normal">{uiLanguage === 'ar' ? mod.descriptionAr || mod.description : mod.description}</p>
-                  <div className="mt-2 pt-2 border-t border-white/5 text-[9px] font-black text-slate-500 tracking-wider uppercase text-center">
+                  <p className="text-[9px] sm:text-[11px] font-bold text-slate-300 leading-normal">{uiLanguage === 'ar' ? mod.descriptionAr || mod.description : mod.description}</p>
+                  <div className="mt-2 pt-2 border-t border-white/5 text-[7px] sm:text-[9px] font-black text-slate-500 tracking-wider uppercase text-center">
                     {t('category_label')} {uiLanguage === 'ar' ? mod.categoryAr || mod.category : mod.category}
                   </div>
                 </div>

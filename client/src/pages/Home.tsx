@@ -9,6 +9,7 @@ import type { ThemeType } from "../../../shared/types";
 import { useState } from "react";
 import { getLocalServerPort } from "../utils/discovery";
 import { SPECIAL_AVATAR } from "../assets/specialAvatar";
+import { SPECIAL_AVATAR_GAV } from "../assets/specialAvatarGav";
 import packageJson from "../../package.json";
 import { getGameHistories, clearHistory } from "../utils/historyDb";
 import type { GameHistoryEntry } from "../utils/historyDb";
@@ -61,6 +62,26 @@ const AVATAR_TEMPLATES = [
 ];
 
 const CHANGELOG = [
+  {
+    version: "1.5.5",
+    features: [
+      {
+        icon: "🔌",
+        title: "Offline Status & Kicks",
+        desc: "Lobby now clearly indicates disconnected players, and hosts can kick anyone.",
+      },
+      {
+        icon: "📱",
+        title: "Mobile UI Polish",
+        desc: "Fixed squished grid layouts and top bar overlaps on smaller screens.",
+      },
+      {
+        icon: "✍️",
+        title: "Clear Doodles",
+        desc: "Added a quick cancel 'X' button to easily discard your drawn clues.",
+      },
+    ],
+  },
   {
     version: "1.5.3",
     features: [
@@ -704,11 +725,16 @@ export default function Home() {
               </label>
               <div className="grid grid-cols-4 gap-2 bg-[#111] p-3 rounded-2xl border border-slate-800 max-h-48 overflow-y-auto scrollbar-thin">
                 {(() => {
-                  const showSpecial =
+                  const showSpecialYoss =
                     profileName.includes("Yoss") && !profileName.includes(" ");
-                  const list = showSpecial
-                    ? [SPECIAL_AVATAR, ...AVATAR_TEMPLATES]
-                    : AVATAR_TEMPLATES;
+                  const showSpecialGav =
+                    profileName.includes("Gav") && !profileName.includes(" ");
+
+                  let list = [...AVATAR_TEMPLATES];
+                  if (showSpecialYoss) list = [SPECIAL_AVATAR, ...list];
+                  if (showSpecialGav) list = [SPECIAL_AVATAR_GAV, ...list];
+                  console.log("Profile Name:", profileName, "showGav:", showSpecialGav);
+
                   return list.map((url, idx) => (
                     <button
                       key={idx}

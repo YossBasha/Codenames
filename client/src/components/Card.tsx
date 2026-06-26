@@ -184,7 +184,7 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
   if (eatenAnimState === 'eaten') {
     return (
       <div 
-        className="w-full aspect-[4/3] sm:aspect-[3/2] max-h-[calc((100vh_-_220px)_/_5)] sm:max-h-[calc((100vh_-_340px)_/_5)] rounded-lg sm:rounded-xl bg-slate-900/5 border border-dashed border-slate-700/20 flex items-center justify-center opacity-25 pointer-events-none"
+        className="w-full aspect-[4/3] sm:aspect-[3/2] min-h-[60px] sm:min-h-[70px] max-h-[calc((100vh_-_220px)_/_5)] sm:max-h-[calc((100vh_-_340px)_/_5)] rounded-lg sm:rounded-xl bg-slate-900/5 border border-dashed border-slate-700/20 flex items-center justify-center opacity-25 pointer-events-none"
       />
     );
   }
@@ -234,7 +234,7 @@ function Card({ card, isSpymaster, disabled, playerTeam, gameMode = 'classic', i
       }}
       aria-disabled={isDisabled}
       className={cn(
-        "group relative w-full aspect-[4/3] sm:aspect-[3/2] max-h-[calc((100vh_-_220px)_/_5)] sm:max-h-[calc((100vh_-_340px)_/_5)] rounded-lg sm:rounded-xl font-black transition-all duration-300 transform",
+        "group relative w-full aspect-[4/3] sm:aspect-[3/2] min-h-[60px] sm:min-h-[70px] max-h-[calc((100vh_-_220px)_/_5)] sm:max-h-[calc((100vh_-_340px)_/_5)] rounded-lg sm:rounded-xl font-black transition-all duration-300 transform",
         !(scrambleDx !== undefined || scrambleDy !== undefined) && "overflow-hidden",
         isEmoji ? "text-4xl sm:text-5xl lg:text-7xl" : "text-[9px] xs:text-[11px] sm:text-sm lg:text-lg tracking-tighter sm:tracking-tight",
         isDisabled && !isRevealedForMe && !isGivingClue && !d20FreeReveal

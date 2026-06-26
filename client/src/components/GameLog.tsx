@@ -61,7 +61,7 @@ export default function GameLog({ logs, gameMode = "classic", onReportClue }: Ga
       <div className="bg-black/40 p-2 lg:py-2.5 text-center text-xs lg:text-sm font-black tracking-widest text-slate-500 absolute top-0 left-0 right-0 z-10 shadow-md h-8 lg:h-10">
         {t("game_log")}
       </div>
-      <div className="absolute top-8 lg:top-10 left-0 right-0 bottom-0 overflow-y-auto p-2.5 lg:p-3.5 flex flex-row flex-wrap content-start gap-1.5 lg:gap-2.5 scrollbar-thin scrollbar-thumb-slate-700">
+      <div className="absolute top-8 lg:top-10 left-0 right-0 bottom-0 overflow-y-auto overflow-x-auto p-2.5 lg:p-3.5 flex flex-row flex-wrap content-start gap-1.5 lg:gap-2.5 scrollbar-thin scrollbar-thumb-slate-700">
         {logs.length === 0 ? (
           <div className="text-slate-500 text-sm text-center italic mt-auto mb-auto w-full">
             {t("no_moves_yet")}
@@ -88,7 +88,7 @@ export default function GameLog({ logs, gameMode = "classic", onReportClue }: Ga
               return (
                 <div
                   key={log.id}
-                  className="flex flex-col w-full shrink-0 animate-in fade-in slide-in-from-bottom-2 relative gap-1"
+                  className="flex flex-col w-full shrink-0 animate-in fade-in slide-in-from-bottom-2 relative gap-1 items-start"
                 >
                   {/* Clue row */}
                   <div className="flex items-center relative">
@@ -129,7 +129,7 @@ export default function GameLog({ logs, gameMode = "classic", onReportClue }: Ga
                           {log.cueWord.startsWith("data:image") ? (
                             <img src={log.cueWord} alt="Clue" className="h-5 lg:h-7 object-contain mx-auto" />
                           ) : (
-                            <span className="text-slate-950 font-black text-[9px] lg:text-xs tracking-normal uppercase whitespace-normal break-words leading-tight w-full">
+                            <span className="text-slate-950 font-black text-[9px] lg:text-xs tracking-normal uppercase whitespace-normal break-words leading-tight w-full text-center">
                               {log.cueWord}
                             </span>
                           )}
@@ -218,7 +218,7 @@ export default function GameLog({ logs, gameMode = "classic", onReportClue }: Ga
             return null;
           })
         )}
-        <div ref={bottomRef} className="h-1 w-full" />
+        <div ref={bottomRef} className="h-1 w-full shrink-0" />
       </div>
     </div>
   );

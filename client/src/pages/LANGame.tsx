@@ -39,6 +39,11 @@ export default function LANGame() {
   const [hostDisconnected, setHostDisconnected] = useState(false);
   const [showPrankMenu, setShowPrankMenu] = useState(false);
 
+  // Prank Menu Drag State
+  const [prankMenuOffset, setPrankMenuOffset] = useState({ x: 0, y: 0 });
+  const [isDraggingPrank, setIsDraggingPrank] = useState(false);
+  const prankDragRef = useRef({ startX: 0, startY: 0, startOffsetX: 0, startOffsetY: 0 });
+
   // Custom Confirm Modal State
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -201,19 +206,24 @@ export default function LANGame() {
   useEffect(() => {
     if (typeof window !== "undefined" && (window as any).electronAPI?.setDiscordActivity && gameState) {
       const mode = gameState.gameMode === "duet" ? "Duet" : "Classic";
-      const phaseStr = gameState.currentPhase === "spymaster" ? "Spymaster's Turn" : "Operatives' Turn";
-      const turnStr = gameState.currentTurn === "red" ? "Red Team" : "Blue Team";
       
-      let scoreStr = "";
+      let stateStr = "";
       if (gameState.gameMode === "classic") {
-        scoreStr = ` | Score: ${gameState.redScore} - ${gameState.blueScore}`;
+        const phaseStr = gameState.currentPhase === "spymaster" ? "Spymaster's Turn" : "Operatives' Turn";
+        const turnStr = gameState.currentTurn === "red" ? "Red Team" : "Blue Team";
+        stateStr = `${turnStr} - ${phaseStr} | Score: ${gameState.redScore} - ${gameState.blueScore}`;
       } else {
-        scoreStr = ` | Mistakes: ${gameState.timerTokens}/9`;
+        let distinctGreensFound = 0;
+        gameState.cards.forEach(card => {
+          if (card.revealedByA && card.duetTypeA === 'green') distinctGreensFound++;
+          else if (card.revealedByB && card.duetTypeB === 'green') distinctGreensFound++;
+        });
+        stateStr = `Cooperative Play | Green Cards: ${distinctGreensFound}/15`;
       }
 
       (window as any).electronAPI.setDiscordActivity({
         details: `Playing Multiplayer (${mode})`,
-        state: `${turnStr} - ${phaseStr}${scoreStr}`,
+        state: stateStr,
         startTimestamp: Date.now()
       });
     }
@@ -1622,7 +1632,10 @@ export default function LANGame() {
 
       {/* HOST PRANK MENU */}
       {isHost && (
-        <div className="fixed bottom-4 left-4 z-50">
+        <div 
+          className="fixed bottom-4 left-4 z-50"
+          style={{ transform: `translate(${prankMenuOffset.x}px, ${prankMenuOffset.y}px)` }}
+        >
           {showPrankMenu && (
             <div className="absolute bottom-full left-0 mb-2 w-48 bg-slate-800 border border-slate-600 rounded-xl shadow-2xl p-2 animate-fade-in origin-bottom-left">
               <div className="text-xs text-slate-400 font-bold mb-2 px-2 uppercase">
@@ -1659,8 +1672,35 @@ export default function LANGame() {
             </div>
           )}
           <button
-            onClick={() => setShowPrankMenu(!showPrankMenu)}
-            className="w-10 h-10 rounded-full bg-slate-800 border border-slate-600 shadow-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all active:scale-95"
+            onPointerDown={(e) => {
+              e.currentTarget.setPointerCapture(e.pointerId);
+              prankDragRef.current = {
+                startX: e.clientX,
+                startY: e.clientY,
+                startOffsetX: prankMenuOffset.x,
+                startOffsetY: prankMenuOffset.y,
+              };
+              setIsDraggingPrank(true);
+            }}
+            onPointerMove={(e) => {
+              if (!isDraggingPrank) return;
+              setPrankMenuOffset({
+                x: prankDragRef.current.startOffsetX + (e.clientX - prankDragRef.current.startX),
+                y: prankDragRef.current.startOffsetY + (e.clientY - prankDragRef.current.startY),
+              });
+            }}
+            onPointerUp={(e) => {
+              if (!isDraggingPrank) return;
+              setIsDraggingPrank(false);
+              e.currentTarget.releasePointerCapture(e.pointerId);
+              
+              const dx = e.clientX - prankDragRef.current.startX;
+              const dy = e.clientY - prankDragRef.current.startY;
+              if (Math.abs(dx) < 5 && Math.abs(dy) < 5) {
+                setShowPrankMenu(!showPrankMenu);
+              }
+            }}
+            className="w-10 h-10 rounded-full bg-slate-800 border border-slate-600 shadow-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all active:scale-95 touch-none cursor-move"
             title="Prank Menu"
           >
             <svg

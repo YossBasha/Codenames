@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { PenTool, Send } from 'lucide-react';
+import { PenTool, Send, X } from 'lucide-react';
 import DrawingModal from './DrawingModal';
 import { checkRhyme } from '../../../shared/modifiers';
 import type { ClueType } from '../../../shared/types';
@@ -55,6 +55,9 @@ export default function GiveClueBar({
   const effectiveClueType: ClueType = isDoodleDisabled ? 'text' : clueType;
   const limit = activeModifier === 'five-letter-curse' ? 5 : 32;
 
+  const [isFullScreenInput, setIsFullScreenInput] = useState(false);
+  const [focusedField, setFocusedField] = useState<'word' | 'number'>('word');
+
   useEffect(() => {
     if (activeModifier === 'the-dictator' && modifierState?.forcedNumber !== undefined) {
       setNumInput(modifierState.forcedNumber);
@@ -62,6 +65,41 @@ export default function GiveClueBar({
       setNumInput(clueTargetCount);
     }
   }, [clueTargetCount, activeModifier, modifierState]);
+
+  const handleWordChange = (val: string) => {
+    if (val.length > limit) return;
+    if (activeModifier === 'oracle-riddle' || activeModifier === 'boolean-search' || activeModifier === 'forced-acronym') {
+      const cleanVal = val.replace(/[^a-zA-Z0-9\u0600-\u06FF\s-]/g, '');
+      if (activeModifier === 'oracle-riddle') {
+        const words = cleanVal.trim().split(/\s+/).filter(Boolean);
+        if (words.length > 2) return;
+      } else if (activeModifier === 'forced-acronym') {
+        const words = cleanVal.trim().split(/\s+/).filter(Boolean);
+        if (words.length > (modifierState?.acronym?.split('-').length || 3)) return;
+      }
+      setCueInput(cleanVal);
+    } else {
+      setCueInput(val.replace(/[^a-zA-Z0-9\u0600-\u06FF\s-]/g, ''));
+    }
+  };
+
+  const handleNumberChange = (val: string) => {
+    const cleanVal = val.replace(/[^0-9∞]/g, '');
+    if (cleanVal.includes('∞')) {
+      setNumInput(99);
+    } else if (cleanVal === '') {
+      setNumInput('');
+    } else {
+      const num = parseInt(cleanVal, 10);
+      if (num === 99) {
+        setNumInput(99);
+      } else if (num > 9) {
+        setNumInput(num % 10);
+      } else {
+        setNumInput(num);
+      }
+    }
+  };
 
   const isNumberValid = () => {
     if (numInput === '') return false;
@@ -126,6 +164,54 @@ export default function GiveClueBar({
 
   return (
     <>
+      {isFullScreenInput && (
+        <div className="fixed inset-0 z-[9999] bg-black/80 sm:hidden flex flex-col animate-fade-in">
+          <div className="w-full bg-white flex items-center shadow-2xl p-1">
+            <div className="flex-1 relative flex items-center min-w-0">
+              <input
+                autoFocus={focusedField === 'word'}
+                type="text"
+                placeholder={activeModifier === 'oracle-riddle' ? t('enter_rhyme_placeholder') : t('enter_clue_placeholder')}
+                value={cueInput.startsWith('data:image') ? t('doodle_clue_ready') : cueInput}
+                readOnly={cueInput.startsWith('data:image')}
+                onChange={(e) => handleWordChange(e.target.value)}
+                className="w-full bg-transparent text-slate-900 text-[17px] pl-3 pr-10 py-3 outline-none font-medium placeholder:text-slate-400"
+                maxLength={limit}
+              />
+              {cueInput.startsWith('data:image') && (
+                <button
+                  type="button"
+                  onClick={() => setCueInput('')}
+                  className="absolute right-2 p-1.5 bg-slate-200 hover:bg-slate-300 rounded-full text-slate-600 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            <div className="h-8 w-px bg-slate-300 mx-1 shrink-0" />
+            <input
+              autoFocus={focusedField === 'number'}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              placeholder="-"
+              value={numInput === 99 ? '∞' : numInput}
+              onChange={(e) => handleNumberChange(e.target.value)}
+              disabled={activeModifier === 'the-dictator'}
+              className="w-[50px] bg-transparent text-slate-900 text-xl px-1 py-3 text-center outline-none font-black placeholder:text-slate-400 shrink-0"
+            />
+            <button
+              type="button"
+              onClick={() => setIsFullScreenInput(false)}
+              className="ml-1 mr-1 px-5 py-2.5 bg-slate-200 active:bg-slate-300 text-slate-800 rounded-full font-bold text-sm transition-colors shrink-0"
+            >
+              Done
+            </button>
+          </div>
+          <div className="flex-1 w-full" onClick={() => setIsFullScreenInput(false)} />
+        </div>
+      )}
+
       <div className="w-full shrink-0 max-w-3xl mx-auto mt-4 sm:mt-6 lg:mt-2 px-2 sm:px-4 animate-fade-in relative z-20 flex flex-col items-center">
         <form 
           onSubmit={handleSubmitCue} 
@@ -149,25 +235,11 @@ export default function GiveClueBar({
                 placeholder={activeModifier === 'oracle-riddle' ? t('enter_rhyme_placeholder') : t('enter_clue_placeholder')}
                 value={cueInput.startsWith('data:image') ? t('doodle_clue_ready') : cueInput}
                 readOnly={cueInput.startsWith('data:image')}
-                onChange={(e) => {
-                  let val = e.target.value;
-                  if (val.length > limit) return;
-                  if (activeModifier === 'oracle-riddle' || activeModifier === 'boolean-search' || activeModifier === 'forced-acronym') {
-                    const cleanVal = val.replace(/[^a-zA-Z0-9\u0600-\u06FF\s-]/g, '');
-                    if (activeModifier === 'oracle-riddle') {
-                      const words = cleanVal.trim().split(/\s+/).filter(Boolean);
-                      if (words.length > 2) {
-                        return;
-                      }
-                    } else if (activeModifier === 'forced-acronym') {
-                      const words = cleanVal.trim().split(/\s+/).filter(Boolean);
-                      if (words.length > (modifierState?.acronym?.split('-').length || 3)) {
-                        return;
-                      }
-                    }
-                    setCueInput(cleanVal);
-                  } else {
-                    setCueInput(val.replace(/[^a-zA-Z0-9\u0600-\u06FF\s-]/g, ''));
+                onChange={(e) => handleWordChange(e.target.value)}
+                onFocus={() => {
+                  if (typeof window !== 'undefined' && window.innerWidth < 640) {
+                    setFocusedField('word');
+                    setIsFullScreenInput(true);
                   }
                 }}
                 className="w-full bg-slate-900/80 border border-slate-700/50 focus:border-slate-500/80 text-white pl-3.5 pr-14 py-2.5 sm:py-3.5 rounded-xl sm:rounded-full outline-none text-sm sm:text-base placeholder:text-slate-500 font-bold"
@@ -178,20 +250,39 @@ export default function GiveClueBar({
                   {cueInput.length}/{limit}
                 </span>
               )}
+              {cueInput.startsWith('data:image') && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCueInput('');
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 bg-slate-800 hover:bg-slate-700 rounded-full text-slate-400 hover:text-red-400 transition-colors z-10"
+                  title={t('cancel') || "Cancel Doodle"}
+                >
+                  <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </button>
+              )}
             </div>
           )}
 
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            <select 
-              value={numInput} 
-              onChange={(e) => setNumInput(e.target.value ? Number(e.target.value) : '')}
+            <input 
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              placeholder="-"
+              value={numInput === 99 ? '∞' : numInput}
+              onChange={(e) => handleNumberChange(e.target.value)}
+              onFocus={() => {
+                if (typeof window !== 'undefined' && window.innerWidth < 640) {
+                  setFocusedField('number');
+                  setIsFullScreenInput(true);
+                }
+              }}
               disabled={activeModifier === 'the-dictator'}
-              className={`bg-slate-900 border border-slate-700/50 text-white h-10 sm:h-12 px-3 rounded-xl sm:rounded-full outline-none text-sm sm:text-base font-bold min-w-[50px] sm:min-w-[65px] text-center appearance-none ${activeModifier === 'the-dictator' ? 'opacity-50 cursor-not-allowed bg-red-900/40 text-red-400 border-red-500/50' : 'cursor-pointer'}`}
-            >
-              <option value="" disabled>-</option>
-              {[0,1,2,3,4,5,6,7,8,9].map(n => <option key={n} value={n}>{n}</option>)}
-              <option value={99}>∞</option>
-            </select>
+              className={`bg-slate-900 border border-slate-700/50 text-white h-10 sm:h-12 px-2 sm:px-3 rounded-xl sm:rounded-full outline-none text-sm sm:text-base font-bold w-[50px] sm:w-[65px] text-center placeholder:text-slate-500 transition-colors ${activeModifier === 'the-dictator' ? 'opacity-50 cursor-not-allowed bg-red-900/40 text-red-400 border-red-500/50' : 'focus:border-slate-500/80 focus:bg-slate-800'}`}
+            />
 
             <button 
               type="submit"

@@ -132,7 +132,7 @@ export default function Grid({ cards, isSpymaster, disabled, playerTeam, gameMod
         activeModifier === 'fog-of-war' && "touch-none",
         scrambleActive && activeModifier === 'earthquake' && "animate-ground-rumble",
       )}
-      style={{ maxWidth: 'min(896px, calc(1.5 * (100vh - 340px)))' }}
+      style={{ maxWidth: 'max(500px, min(896px, calc(1.5 * (100vh - 340px))))' }}
       dir="ltr"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}

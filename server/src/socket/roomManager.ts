@@ -1585,6 +1585,28 @@ export function setupRoomManager(io: Server) {
       },
     );
 
+    socket.on(
+      "kick_player",
+      ({ roomId, playerId }: { roomId: string; playerId: string }) => {
+        const room = rooms[roomId];
+        if (!room) return;
+        
+        // Find the player before removing
+        const playerToKick = room.players.find(p => p.id === playerId);
+        if (!playerToKick) return;
+
+        // Remove from room
+        room.players = room.players.filter((p) => p.id !== playerId);
+        
+        // Notify the kicked player if they are currently connected
+        if (playerToKick.connected) {
+          io.to(playerId).emit("kicked_from_room");
+        }
+
+        io.to(roomId).emit("room_update", getSafeRoom(room));
+      },
+    );
+
     socket.on("reset_teams", ({ roomId }: { roomId: string }) => {
       const room = rooms[roomId];
       if (room) {

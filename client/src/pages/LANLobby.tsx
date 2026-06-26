@@ -117,6 +117,7 @@ export default function LANLobby() {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [hostDisconnected, setHostDisconnected] = useState(false);
+  const [kickedFromRoom, setKickedFromRoom] = useState(false);
   const [versionMismatch, setVersionMismatch] = useState<{ yourVersion: string; roomVersion: string } | null>(null);
   
   const connectionRef = useRef({ serverIp, inputRoom, name });
@@ -234,6 +235,10 @@ export default function LANLobby() {
             setHostDisconnected(true);
             setTimeout(() => navigate('/'), 4000);
           });
+          socket.on('kicked_from_room', () => {
+            setKickedFromRoom(true);
+            socket.disconnect();
+          });
         }
         return;
       }
@@ -301,6 +306,10 @@ export default function LANLobby() {
         newSocket.on('host_disconnected', () => {
           setHostDisconnected(true);
           setTimeout(() => navigate('/'), 4000);
+        });
+        newSocket.on('kicked_from_room', () => {
+          setKickedFromRoom(true);
+          newSocket.disconnect();
         });
       }
 
@@ -442,23 +451,40 @@ export default function LANLobby() {
     }
   };
 
-  const renderPlayerEntry = (p: Player, colorClass: string) => (
-    <div key={p.id} className={cn(colorClass, "ml-4 lg:ml-5 pr-2 py-1.5 lg:pr-4 lg:py-2.5 pl-6 lg:pl-8 rounded-xl text-center font-bold text-sm lg:text-base flex items-center justify-center gap-1.5 relative group/entry", p.isBot && isHost && "pr-8 lg:pr-10")}>
-      <img src={getPlayerAvatarUrl(p)} alt={p.name} className="absolute -left-4 lg:-left-5 w-9 h-9 lg:w-11 lg:h-11 rounded-full border-2 border-black/40 shadow-md bg-slate-900" />
-      {p.isBot && <Bot className="w-3.5 h-3.5 lg:w-4 lg:h-4 shrink-0 opacity-70" />}
-      <span className="truncate">{p.name}</span>
-      {p.id === player?.id && <span className="shrink-0">(You)</span>}
-      {p.isBot && isHost && (
-        <button
-          onClick={(e) => { e.stopPropagation(); handleRemoveBot(p.id); }}
-          className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 bg-red-500 hover:bg-red-400 rounded-full flex items-center justify-center opacity-0 group-hover/entry:opacity-100 transition-opacity shadow-md"
-          title="Remove Bot"
-        >
-          <X className="w-3 h-3" />
-        </button>
-      )}
-    </div>
-  );
+  const handleKickPlayer = (playerId: string) => {
+    if (socket && roomId && isHost) {
+      socket.emit('kick_player', { roomId, playerId });
+      playLobbyClickSfx();
+    }
+  };
+
+  const renderPlayerEntry = (p: Player, colorClass: string) => {
+    const showKickBtn = isHost && p.id !== player?.id;
+    return (
+      <div key={p.id} className={cn(colorClass, "ml-4 lg:ml-5 pr-2 py-1.5 lg:pr-4 lg:py-2.5 pl-6 lg:pl-8 rounded-xl text-center font-bold text-sm lg:text-base flex items-center justify-center gap-1.5 relative group/entry", showKickBtn && "pr-8 lg:pr-10", p.connected === false && "opacity-60")}>
+        <img src={getPlayerAvatarUrl(p)} alt={p.name} className={cn("absolute -left-4 lg:-left-5 w-9 h-9 lg:w-11 lg:h-11 rounded-full border-2 border-black/40 shadow-md bg-slate-900", p.connected === false && "grayscale")} />
+        {p.isBot && <Bot className="w-3.5 h-3.5 lg:w-4 lg:h-4 shrink-0 opacity-70" />}
+        <span className="truncate">
+          {p.name}
+          {p.connected === false && <span className="ml-1.5 text-[10px] sm:text-xs font-black uppercase text-red-300 opacity-80">(Offline)</span>}
+        </span>
+        {p.id === player?.id && <span className="shrink-0">(You)</span>}
+        {showKickBtn && (
+          <button
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              if (p.isBot) handleRemoveBot(p.id);
+              else handleKickPlayer(p.id);
+            }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 bg-red-500 hover:bg-red-400 rounded-full flex items-center justify-center opacity-0 group-hover/entry:opacity-100 transition-opacity shadow-md"
+            title={p.isBot ? "Remove Bot" : "Kick Player"}
+          >
+            <X className="w-3 h-3" />
+          </button>
+        )}
+      </div>
+    );
+  };
 
   const blueOperatives = roomPlayers.filter(p => p.team === 'blue' && p.role === 'operative');
   const blueSpymasters = roomPlayers.filter(p => p.team === 'blue' && p.role === 'spymaster');
@@ -488,6 +514,27 @@ export default function LANLobby() {
             <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden mt-2">
               <div className="h-full bg-red-500 rounded-full animate-shrink-bar" />
             </div>
+            <button
+              onClick={() => navigate('/')}
+              className="mt-1 px-8 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-2xl font-bold text-white transition-colors text-sm tracking-widest"
+            >
+              {t('return_now')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Kicked From Room Overlay */}
+      {kickedFromRoom && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-[#1e1e1e] border-2 border-red-500/40 rounded-3xl p-8 max-w-md w-full shadow-[0_0_60px_rgba(239,68,68,0.2)] text-center flex flex-col items-center gap-5">
+            <div className="w-20 h-20 rounded-full bg-red-500/20 border-2 border-red-500/40 flex items-center justify-center">
+              <X className="w-10 h-10 text-red-400" />
+            </div>
+            <h2 className="text-2xl font-black text-white tracking-wide">Kicked</h2>
+            <p className="text-slate-400 text-sm leading-relaxed">
+              You have been removed from the lobby by the host.
+            </p>
             <button
               onClick={() => navigate('/')}
               className="mt-1 px-8 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-2xl font-bold text-white transition-colors text-sm tracking-widest"
@@ -621,12 +668,31 @@ export default function LANLobby() {
               {spectators.length === 0 ? (
                 <span className="text-slate-500 text-xs italic my-auto">{t('no_spectators')}</span>
               ) : (
-                spectators.map(p => (
-                  <div key={p.id} className="bg-slate-700/50 text-slate-300 ml-3.5 pl-5 pr-2.5 py-0.5 rounded-full text-xs font-bold border border-slate-600 relative flex items-center h-[28px] shrink-0">
-                    <img src={getPlayerAvatarUrl(p, "64748b")} alt={p.name} className="absolute -left-3.5 w-8 h-8 rounded-full border-2 border-black/40 shadow-md bg-slate-800" />
-                    <span className="truncate max-w-[120px]">{p.name} {p.id === player?.id && '(You)'}</span>
-                  </div>
-                ))
+                spectators.map(p => {
+                  const showKickBtn = isHost && p.id !== player?.id;
+                  return (
+                    <div key={p.id} className={cn("bg-slate-700/50 text-slate-300 ml-3.5 pl-5 pr-2.5 py-0.5 rounded-full text-xs font-bold border border-slate-600 relative flex items-center h-[28px] shrink-0 group/entry", p.connected === false && "opacity-60")}>
+                      <img src={getPlayerAvatarUrl(p, "64748b")} alt={p.name} className={cn("absolute -left-3.5 w-8 h-8 rounded-full border-2 border-black/40 shadow-md bg-slate-800", p.connected === false && "grayscale")} />
+                      {showKickBtn && (
+                        <button
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            if (p.isBot) handleRemoveBot(p.id);
+                            else handleKickPlayer(p.id);
+                          }}
+                          className="absolute -left-3.5 w-8 h-8 bg-red-600/90 hover:bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover/entry:opacity-100 transition-opacity shadow-md backdrop-blur-sm z-10"
+                          title={p.isBot ? "Remove Bot" : "Kick Player"}
+                        >
+                          <X className="w-4 h-4 text-white drop-shadow-md" />
+                        </button>
+                      )}
+                      <span className="truncate max-w-[120px]">
+                        {p.name} {p.id === player?.id && '(You)'}
+                        {p.connected === false && <span className="ml-1 text-[9px] uppercase text-red-300 opacity-80">(Offline)</span>}
+                      </span>
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>

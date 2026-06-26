@@ -203,19 +203,24 @@ export default function PassAndPlay() {
   useEffect(() => {
     if (typeof window !== "undefined" && (window as any).electronAPI?.setDiscordActivity && gameState) {
       const mode = gameState.gameMode === "duet" ? "Duet" : "Classic";
-      const phaseStr = gameState.currentPhase === "spymaster" ? "Spymaster's Turn" : "Operatives' Turn";
-      const turnStr = gameState.currentTurn === "red" ? "Red Team" : "Blue Team";
       
-      let scoreStr = "";
+      let stateStr = "";
       if (gameState.gameMode === "classic") {
-        scoreStr = ` | Score: ${gameState.redScore} - ${gameState.blueScore}`;
+        const phaseStr = gameState.currentPhase === "spymaster" ? "Spymaster's Turn" : "Operatives' Turn";
+        const turnStr = gameState.currentTurn === "red" ? "Red Team" : "Blue Team";
+        stateStr = `${turnStr} - ${phaseStr} | Score: ${gameState.redScore} - ${gameState.blueScore}`;
       } else {
-        scoreStr = ` | Mistakes: ${gameState.timerTokens}/9`; // Roughly tracking duet token count
+        let distinctGreensFound = 0;
+        gameState.cards.forEach(card => {
+          if (card.revealedByA && card.duetTypeA === 'green') distinctGreensFound++;
+          else if (card.revealedByB && card.duetTypeB === 'green') distinctGreensFound++;
+        });
+        stateStr = `Cooperative Play | Green Cards: ${distinctGreensFound}/15`;
       }
 
       (window as any).electronAPI.setDiscordActivity({
         details: `Playing Pass & Play (${mode})`,
-        state: `${turnStr} - ${phaseStr}${scoreStr}`,
+        state: stateStr,
         startTimestamp: Date.now() // Could track start time properly, but Date.now is okay for local
       });
     }

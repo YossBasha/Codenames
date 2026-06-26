@@ -22,13 +22,22 @@ function buildTurnBlocks(logs: LogEntry[], gameMode: GameMode): TurnBlock[] {
   let currentCue: CueEntry | null = null;
   let pendingGuesses: GuessEntry[] = [];
 
+  const isRealGuess = (word: string) => {
+    const systemWords = ["Timer Expired", "Turn Ended (Timer)", "Ended Turn", "Rejected the Clue! (Mutiny)", "Clue Invalidated (Cheat)", "Pulled the Gacha Lever!"];
+    if (systemWords.includes(word)) return false;
+    if (word.startsWith("Rolled a ") || word.startsWith("Locked card: ") || word.startsWith("Revealed ") || word.includes("team's turn has been skipped") || word.includes("team missed!")) return false;
+    return true;
+  };
+
   for (const entry of logs) {
     if (entry.type === 'cue') {
       if (currentCue) blocks.push(makeBlock(currentCue, pendingGuesses, gameMode));
       currentCue = entry;
       pendingGuesses = [];
     } else if (entry.type === 'guess') {
-      if (currentCue) pendingGuesses.push(entry);
+      if (currentCue && isRealGuess(entry.cardWord) && (gameMode === 'duet' || entry.guessingTeam === currentCue.team)) {
+        pendingGuesses.push(entry);
+      }
     }
   }
   if (currentCue) blocks.push(makeBlock(currentCue, pendingGuesses, gameMode));

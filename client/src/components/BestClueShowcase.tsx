@@ -19,13 +19,22 @@ function computeBestClue(logs: LogEntry[], gameMode: GameMode): BestClue | null 
 
   const blocks: { cue: CueEntry; guesses: GuessEntry[] }[] = [];
 
+  const isRealGuess = (word: string) => {
+    const systemWords = ["Timer Expired", "Turn Ended (Timer)", "Ended Turn", "Rejected the Clue! (Mutiny)", "Clue Invalidated (Cheat)", "Pulled the Gacha Lever!"];
+    if (systemWords.includes(word)) return false;
+    if (word.startsWith("Rolled a ") || word.startsWith("Locked card: ") || word.startsWith("Revealed ") || word.includes("team's turn has been skipped") || word.includes("team missed!")) return false;
+    return true;
+  };
+
   for (const entry of logs) {
     if (entry.type === 'cue') {
       if (currentCue) blocks.push({ cue: currentCue, guesses: pendingGuesses });
       currentCue = entry;
       pendingGuesses = [];
     } else if (entry.type === 'guess' && currentCue) {
-      pendingGuesses.push(entry);
+      if (isRealGuess(entry.cardWord) && (gameMode === 'duet' || entry.guessingTeam === currentCue.team)) {
+        pendingGuesses.push(entry);
+      }
     }
   }
   if (currentCue) blocks.push({ cue: currentCue, guesses: pendingGuesses });
