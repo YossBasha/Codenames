@@ -725,7 +725,7 @@ export default function Home() {
               <label className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">
                 {t("choose_avatar")}
               </label>
-              <div className="grid grid-cols-4 gap-2 bg-[#111] p-3 rounded-2xl border border-slate-800 max-h-48 overflow-y-auto scrollbar-thin">
+              <div className="grid grid-cols-4 auto-rows-max gap-2 bg-[#111] p-3 rounded-2xl border border-slate-800 max-h-48 overflow-y-auto scrollbar-thin">
                 {(() => {
                   const showSpecialYoss =
                     profileName.includes("Yoss") && !profileName.includes(" ");
@@ -745,7 +745,7 @@ export default function Home() {
                         setProfileAvatar(url);
                       }}
                       className={cn(
-                        "aspect-square rounded-xl border-2 overflow-hidden transition-all bg-slate-800 hover:scale-105 relative",
+                        "aspect-square w-full h-auto rounded-xl border-2 overflow-hidden transition-all bg-slate-800 hover:scale-105 relative flex items-center justify-center",
                         profileAvatar === url
                           ? "border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)] bg-slate-700"
                           : "border-transparent",
@@ -754,7 +754,7 @@ export default function Home() {
                       <img
                         src={url}
                         alt={`Avatar option ${idx + 1}`}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                       />
                     </button>
                   ));
