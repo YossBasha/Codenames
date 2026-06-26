@@ -63,6 +63,26 @@ const AVATAR_TEMPLATES = [
 
 const CHANGELOG = [
   {
+    version: "1.5.15",
+    features: [
+      {
+        icon: "⚡",
+        title: "Snappy Lobby UI",
+        desc: "Instant team joining without network delay, thanks to optimistic UI updates.",
+      },
+      {
+        icon: "📥",
+        title: "In-Game Engine Updates",
+        desc: "Core engine updates can now be downloaded directly in the app with live progress tracking.",
+      },
+      {
+        icon: "🐛",
+        title: "Chaos Mode Fixes",
+        desc: "Fixed a bug where event modifiers were annoyingly announced twice per turn.",
+      },
+    ],
+  },
+  {
     version: "1.5.5",
     features: [
       {
