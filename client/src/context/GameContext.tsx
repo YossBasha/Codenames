@@ -3,6 +3,9 @@ import type { Language, Player, ThemeType } from '../../../shared/types';
 import { Socket } from 'socket.io-client';
 import { setMasterVolume } from '../utils/sfx';
 
+import { SPECIAL_AVATAR } from '../assets/specialAvatar';
+import { SPECIAL_AVATAR_GAV } from '../assets/specialAvatarGav';
+
 interface GameContextProps {
   language: Language;
   setLanguage: (lang: Language) => void;
@@ -37,7 +40,30 @@ export function GameProvider({ children }: { children: ReactNode }) {
       id: '',
       sessionId: getSessionId(),
       name: localStorage.getItem('codenames_nickname') || '',
-      avatarBase64: localStorage.getItem('codenames_avatar') || '',
+      avatarBase64: (() => {
+        let saved = localStorage.getItem('codenames_avatar');
+        if (!saved) return '';
+        
+        // Seamlessly upgrade broken Vite absolute paths back to base64
+        if (saved.toLowerCase().includes('yoss') && saved.startsWith('file://')) {
+          saved = SPECIAL_AVATAR;
+          localStorage.setItem('codenames_avatar', saved);
+          return saved;
+        }
+        if (saved.toLowerCase().includes('gav') && saved.startsWith('file://')) {
+          saved = SPECIAL_AVATAR_GAV;
+          localStorage.setItem('codenames_avatar', saved);
+          return saved;
+        }
+        
+        // Clear any other broken local file paths
+        if (saved.startsWith('file://') || saved.startsWith('http') || saved.startsWith('/assets/')) {
+          localStorage.removeItem('codenames_avatar');
+          return '';
+        }
+        
+        return saved;
+      })(),
       team: 'spectator',
       role: 'spectator'
     };

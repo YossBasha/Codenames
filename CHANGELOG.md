@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.13] - 2026-06-26
+
+### Added
+- **Core Engine Upgrades**: Introduced a robust, native auto-updating architecture for Core Engine updates! The game now gracefully distinguishes between lightning-fast Hot-Swap UI updates and full Core Engine reinstalls. If a Core Engine update is available, you will be prompted right in the app to download it seamlessly with a live progress bar, without ever needing to visit the GitHub Releases page again!
+
 ## [1.5.12] - 2026-06-26
 
 ### Added

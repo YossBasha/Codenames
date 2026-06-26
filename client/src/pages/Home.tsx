@@ -226,6 +226,17 @@ export default function Home() {
 
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
+  const [coreUpdateState, setCoreUpdateState] = useState<'none' | 'pending' | 'downloading' | 'ready'>('none');
+  const [coreUpdateProgress, setCoreUpdateProgress] = useState(0);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && (window as any).electronAPI?.onCoreUpdateProgress) {
+      const cleanup = (window as any).electronAPI.onCoreUpdateProgress((percent: number) => {
+        setCoreUpdateProgress(Math.round(percent));
+      });
+      return cleanup;
+    }
+  }, []);
 
   const handleCheckUpdates = async () => {
     if (isCheckingUpdate) return;
@@ -233,8 +244,11 @@ export default function Home() {
     setIsCheckingUpdate(true);
     setUpdateMessage(null);
     try {
-      const updated = await (window as any).electronAPI.checkForUpdates(true);
-      if (updated) {
+      const result = await (window as any).electronAPI.checkForUpdates(true);
+      if (result && result.type === 'core') {
+        setCoreUpdateState('pending');
+        setUpdateMessage("Core engine update available!");
+      } else if (result && result.type === 'hot-swap') {
         setUpdateMessage(t("update_installed_relaunching"));
         setTimeout(() => {
           (window as any).electronAPI.relaunchApp();
@@ -249,6 +263,26 @@ export default function Home() {
     } finally {
       setIsCheckingUpdate(false);
     }
+  };
+
+  const handleDownloadCoreUpdate = async () => {
+    playMenuClickSfx();
+    setCoreUpdateState('downloading');
+    setUpdateMessage("Downloading update...");
+    try {
+      await (window as any).electronAPI.downloadCoreUpdate();
+      setCoreUpdateState('ready');
+      setUpdateMessage("Ready to install!");
+    } catch (e) {
+      setUpdateMessage("Download failed.");
+      setCoreUpdateState('none');
+      setTimeout(() => setUpdateMessage(null), 3000);
+    }
+  };
+
+  const handleInstallCoreUpdate = () => {
+    playMenuClickSfx();
+    (window as any).electronAPI.installCoreUpdate();
   };
 
   useEffect(() => {
@@ -436,13 +470,41 @@ export default function Home() {
 
         {typeof window !== "undefined" &&
           (window as any).electronAPI?.checkForUpdates && (
-            <button
-              disabled={isCheckingUpdate}
-              onClick={handleCheckUpdates}
-              className="px-3 py-1 bg-slate-800/80 hover:bg-slate-700/80 disabled:opacity-50 text-[10px] font-black text-slate-400 hover:text-white rounded-full border border-slate-700/60 shadow transition-all cursor-pointer uppercase tracking-wider"
-            >
-              {isCheckingUpdate ? t("checking") : t("check_for_updates")}
-            </button>
+            <>
+              {coreUpdateState === 'none' && (
+                <button
+                  disabled={isCheckingUpdate}
+                  onClick={handleCheckUpdates}
+                  className="px-3 py-1 bg-slate-800/80 hover:bg-slate-700/80 disabled:opacity-50 text-[10px] font-black text-slate-400 hover:text-white rounded-full border border-slate-700/60 shadow transition-all cursor-pointer uppercase tracking-wider"
+                >
+                  {isCheckingUpdate ? t("checking") : t("check_for_updates")}
+                </button>
+              )}
+              {coreUpdateState === 'pending' && (
+                <button
+                  onClick={handleDownloadCoreUpdate}
+                  className="px-3 py-1 bg-blue-600/80 hover:bg-blue-500/80 text-[10px] font-black text-white rounded-full shadow cursor-pointer uppercase tracking-wider transition-all"
+                >
+                  Download Core Update
+                </button>
+              )}
+              {coreUpdateState === 'downloading' && (
+                <button
+                  disabled
+                  className="px-3 py-1 bg-slate-800/80 disabled:opacity-80 text-[10px] font-black text-slate-400 rounded-full border border-slate-700/60 shadow uppercase tracking-wider transition-all"
+                >
+                  Downloading ({coreUpdateProgress}%)
+                </button>
+              )}
+              {coreUpdateState === 'ready' && (
+                <button
+                  onClick={handleInstallCoreUpdate}
+                  className="px-3 py-1 bg-green-600/80 hover:bg-green-500/80 text-[10px] font-black text-white rounded-full shadow cursor-pointer uppercase tracking-wider transition-all animate-pulse"
+                >
+                  Install and Relaunch
+                </button>
+              )}
+            </>
           )}
 
         {updateMessage && (

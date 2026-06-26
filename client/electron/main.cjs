@@ -5,6 +5,7 @@ const https = require('https');
 const fs = require('fs');
 const AdmZip = require('adm-zip');
 const DiscordRPC = require('discord-rpc');
+const { autoUpdater } = require('electron-updater');
 
 app.setAsDefaultProtocolClient('codenames');
 
@@ -97,6 +98,16 @@ function ensureFirewallRule() {
   });
 }
 
+function getLocalCoreVersion() {
+  try {
+    const pkgPath = path.join(app.getAppPath(), 'package.json');
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    return pkg.coreVersion || '1.0.0';
+  } catch (e) {
+    return '1.0.0';
+  }
+}
+
 function getLocalRunningVersion() {
   const updatesDir = path.join(app.getPath('userData'), 'updates');
   const updatePkgPath = path.join(updatesDir, 'Codenames-dist-files', 'package.json');
@@ -178,15 +189,23 @@ function compareVersions(v1, v2) {
 async function checkAndApplyUpdates(force = false) {
   if (!app.isPackaged && !force) {
     console.log('[Updater] Dev mode: Skipping update check.');
-    return false;
+    return { type: 'none' };
   }
   try {
     console.log('[Updater] Checking for updates...');
     const remotePkg = await fetchJson('https://raw.githubusercontent.com/YossBasha/Codenames/main/client/package.json');
     const remoteVersion = remotePkg.version;
-    const localVersion = getLocalRunningVersion();
+    const remoteCoreVersion = remotePkg.coreVersion || '1.0.0';
     
-    console.log(`[Updater] Local version: ${localVersion}, Remote version: ${remoteVersion}`);
+    const localVersion = getLocalRunningVersion();
+    const localCoreVersion = getLocalCoreVersion();
+    
+    console.log(`[Updater] Local version: ${localVersion} (Core: ${localCoreVersion}), Remote version: ${remoteVersion} (Core: ${remoteCoreVersion})`);
+    
+    if (compareVersions(remoteCoreVersion, localCoreVersion) > 0) {
+      console.log('[Updater] Core update detected!');
+      return { type: 'core' };
+    }
     
     if (compareVersions(remoteVersion, localVersion) > 0) {
       console.log('[Updater] New version detected! Downloading update zip...');
@@ -204,14 +223,14 @@ async function checkAndApplyUpdates(force = false) {
       fs.unlinkSync(zipPath);
       
       console.log('[Updater] Update applied successfully!');
-      return true;
+      return { type: 'hot-swap' };
     } else {
       console.log('[Updater] App is up to date.');
     }
   } catch (err) {
     console.error('[Updater] Update check failed:', err);
   }
-  return false;
+  return { type: 'none' };
 }
 
 function createWindow(customClientHtmlPath) {
@@ -300,14 +319,45 @@ app.whenReady().then(async () => {
   }
 });
 
-ipcMain.handle('get-server-port', () => serverPort);
-ipcMain.handle('check-for-updates', async (event, force) => {
-  return await checkAndApplyUpdates(force);
-});
-ipcMain.handle('relaunch-app', () => {
-  app.relaunch();
-  app.exit(0);
-});
+  ipcMain.handle('get-server-port', () => serverPort);
+  ipcMain.handle('check-for-updates', async (event, force) => {
+    return await checkAndApplyUpdates(force);
+  });
+  ipcMain.handle('relaunch-app', () => {
+    app.relaunch();
+    app.exit(0);
+  });
+
+  autoUpdater.autoDownload = false;
+  let downloadPromise = null;
+  
+  ipcMain.handle('download-core-update', () => {
+    if (downloadPromise) return downloadPromise;
+    downloadPromise = new Promise((resolve, reject) => {
+      autoUpdater.downloadUpdate().catch(err => {
+        downloadPromise = null;
+        reject(err);
+      });
+      autoUpdater.once('update-downloaded', () => {
+        downloadPromise = null;
+        resolve(true);
+      });
+      autoUpdater.on('download-progress', (progressObj) => {
+        if (mainWindow) {
+          mainWindow.webContents.send('core-update-progress', progressObj.percent);
+        }
+      });
+      autoUpdater.on('error', (err) => {
+        downloadPromise = null;
+        reject(err);
+      });
+    });
+    return downloadPromise;
+  });
+
+  ipcMain.on('install-core-update', () => {
+    autoUpdater.quitAndInstall();
+  });
 
 ipcMain.on('set-discord-activity', (event, activity) => {
   if (rpcClient && rpcClient.user) {

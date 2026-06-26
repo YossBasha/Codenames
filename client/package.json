@@ -1,7 +1,8 @@
 {
   "name": "client",
   "private": true,
-  "version": "1.5.12",
+  "version": "1.5.13",
+  "coreVersion": "1.0.0",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
