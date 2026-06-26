@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.5.9] - 2026-06-26
+## [1.5.10] - 2026-06-26
 
 ### Added
 - **Deep Linking**: Clicking an invite link will now attempt to automatically open the Codenames desktop app if it is installed on the user's computer. If the app is not installed, it falls back to the browser experience seamlessly.
