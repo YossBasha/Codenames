@@ -122,7 +122,7 @@ app.post('/api/public-rooms/register', (req, res) => {
 });
 
 // Periodic local room registration heartbeat (for local hosting servers with active ngrok)
-const WAN_SERVER_URL = process.env.WAN_SERVER_URL || 'https://codenamesserver-bfmmt2mx.b4a.run';
+const WAN_SERVER_URL = process.env.WAN_SERVER_URL || 'https://premedical-dismally-tillie.ngrok-free.dev';
 
 setInterval(async () => {
   try {

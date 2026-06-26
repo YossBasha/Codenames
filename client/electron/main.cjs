@@ -292,6 +292,21 @@ app.whenReady().then(async () => {
 
   console.log('Starting server inside main process at:', serverPath);
   
+  // Try to load WAN_SERVER_URL from client/.env for local testing
+  try {
+    const envPath = path.join(app.getAppPath(), '..', '.env');
+    if (fs.existsSync(envPath)) {
+      const envContent = fs.readFileSync(envPath, 'utf8');
+      const match = envContent.match(/^VITE_WAN_SERVER_URL=(.*)$/m);
+      if (match) {
+        process.env.WAN_SERVER_URL = match[1].trim();
+        console.log('[Main] Loaded WAN_SERVER_URL from .env:', process.env.WAN_SERVER_URL);
+      }
+    }
+  } catch (e) {
+    console.error('Failed to read .env file for WAN_SERVER_URL', e);
+  }
+
   process.env.PORT = String(SERVER_PORT);
 
   process.send = (msg) => {

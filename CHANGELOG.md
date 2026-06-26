@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.17] - 2026-06-26
+
+### Changed
+- **Master Server Migration**: Completely removed all reliance on the B4A central server. The global discovery system now exclusively relies on your custom static Ngrok tunnel (`premedical-dismally-tillie.ngrok-free.dev`) as the master server for both hosting and joining public rooms!
+
 ## [1.5.15] - 2026-06-26
 
 ### Fixed
