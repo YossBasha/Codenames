@@ -812,7 +812,12 @@ export default function PassAndPlay() {
                 successfulGuessesThisTurn={gameState.successfulGuessesThisTurn}
                 onEndTurn={handleEndTurn}
                 canEndTurn={true}
-                onReportClue={handleReportActiveClue}
+                onReportClue={
+                  (() => {
+                    const lastCue = [...(gameState?.gameLog || [])].reverse().find(l => l.type === 'cue') as any;
+                    return (lastCue && !lastCue.declaredFair) ? handleReportActiveClue : undefined;
+                  })()
+                }
               />
             )}
 

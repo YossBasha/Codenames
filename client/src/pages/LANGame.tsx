@@ -1564,7 +1564,12 @@ export default function LANGame() {
                         }
                         onEndTurn={handleEndTurn}
                         canEndTurn={!isDisabled}
-                        onReportClue={handleReportActiveClue}
+                        onReportClue={
+                          (() => {
+                            const lastCue = [...(gameState?.gameLog || [])].reverse().find(l => l.type === 'cue') as any;
+                            return (lastCue && !lastCue.declaredFair) ? handleReportActiveClue : undefined;
+                          })()
+                        }
                       />
                     )}
 

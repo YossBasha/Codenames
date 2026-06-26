@@ -2116,8 +2116,9 @@ export function setupRoomManager(io: Server) {
     socket.on("resolve_cheat", ({ roomId, isCheat }: { roomId: string; isCheat: boolean }) => {
       const room = rooms[roomId];
       if (room && room.gameState && room.gameState.cheatVoteState) {
+        const clueEntry = room.gameState.gameLog.find(l => l.id === room.gameState!.cheatVoteState!.clueId) as any;
+        
         if (isCheat) {
-          const clueEntry = room.gameState.gameLog.find(l => l.id === room.gameState!.cheatVoteState!.clueId) as any;
           if (clueEntry) {
             clueEntry.invalidated = true;
           }
@@ -2139,6 +2140,10 @@ export function setupRoomManager(io: Server) {
           } as any);
 
           transitionToNewTurn(io as any, room);
+        } else {
+          if (clueEntry) {
+            clueEntry.declaredFair = true;
+          }
         }
         
         room.gameState.cheatVoteState = undefined;

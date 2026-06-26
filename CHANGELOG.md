@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.18] - 2026-06-26
+
+### Fixed
+- **Cheat Reports**: The report button is now hidden on clues that survive a cheat vote (declared "Fair") to prevent spam reporting.
+
 ## [1.5.17] - 2026-06-26
 
 ### Changed

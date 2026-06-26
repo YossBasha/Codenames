@@ -139,7 +139,7 @@ export default function GameLog({ logs, gameMode = "classic", onReportClue }: Ga
                         <div className="w-5 h-5 lg:w-7 lg:h-7 rounded-full flex items-center justify-center font-black text-[9px] lg:text-xs shrink-0 bg-white text-slate-950 shadow-md">
                           {log.cueNumber === 99 ? "∞" : log.cueNumber}
                         </div>
-                        {onReportClue && !log.invalidated && (
+                        {onReportClue && !log.invalidated && !log.declaredFair && (
                           <button
                             onClick={() => onReportClue(log.id, log.cueWord, log.player.name)}
                             className="p-1 hover:bg-black/20 rounded-full transition-colors group cursor-pointer"
