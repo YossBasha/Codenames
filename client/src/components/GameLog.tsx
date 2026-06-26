@@ -44,11 +44,12 @@ function LogAvatar({
 
 interface GameLogProps {
   logs: LogEntry[];
+  players?: import("../../../shared/types").Player[];
   gameMode?: "classic" | "duet";
   onReportClue?: (clueId: string, clueWord: string, submitterName: string) => void;
 }
 
-export default function GameLog({ logs, gameMode = "classic", onReportClue }: GameLogProps) {
+export default function GameLog({ logs, players, gameMode = "classic", onReportClue }: GameLogProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const { t } = useI18n();
 
@@ -94,7 +95,7 @@ export default function GameLog({ logs, gameMode = "classic", onReportClue }: Ga
                   <div className="flex items-center relative">
                     <div className="flex flex-col items-center shrink-0 relative z-10">
                       <LogAvatar
-                        src={log.player.avatarUrl}
+                        src={players?.find(p => p.name === log.player.name)?.avatarBase64 || log.player.avatarUrl}
                         name={log.player.name}
                         className="w-6 h-6 lg:w-8 lg:h-8 rounded-full bg-black/20 shrink-0 border-2 border-white/90"
                         fallbackBgClass={nameBgClass}
@@ -188,7 +189,7 @@ export default function GameLog({ logs, gameMode = "classic", onReportClue }: Ga
                 >
                   <div className="flex flex-col items-center shrink-0">
                     <LogAvatar
-                      src={log.player.avatarUrl}
+                      src={players?.find(p => p.name === log.player.name)?.avatarBase64 || log.player.avatarUrl}
                       name={log.player.name}
                       className="w-5 h-5 lg:w-7 lg:h-7 rounded-full bg-black/20 shadow-sm border-2 border-white/90"
                       fallbackBgClass={nameBgClass}

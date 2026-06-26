@@ -39,7 +39,8 @@ interface Room {
 const rooms: Record<string, Room> = {};
 
 function getPlayerAvatarUrl(player: Player, defaultBg?: string): string {
-  if (player.avatarBase64) return player.avatarBase64;
+  // Never embed huge base64 images in logs, it crashes bandwidth over websockets
+  if (player.avatarBase64 && !player.avatarBase64.startsWith('data:image')) return player.avatarBase64;
   const bg = defaultBg || (player.team === "red" ? "ef4444" : "3b82f6");
   return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=${bg}`;
 }

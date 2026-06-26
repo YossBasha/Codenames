@@ -964,6 +964,7 @@ export default function LANGame() {
             <div className="flex-1 min-w-0 flex flex-col bg-[#1a1a1a]/50 rounded-xl overflow-hidden">
                     <GameLog 
                       logs={gameState.gameLog || []} 
+                      players={roomPlayers}
                       gameMode={gameState.gameMode}
                       onReportClue={(id, word, name) => {
                         setConfirmModal({
@@ -992,6 +993,7 @@ export default function LANGame() {
             <div className="flex-grow min-w-0 flex flex-col bg-[#1a1a1a]/50 rounded-xl overflow-hidden">
               <GameLog
                 logs={gameState.gameLog || []}
+                players={roomPlayers}
                 gameMode={gameState.gameMode}
               />
             </div>
@@ -1617,6 +1619,7 @@ export default function LANGame() {
           />
           <GameLog
             logs={gameState.gameLog || []}
+            players={roomPlayers}
             gameMode={gameState.gameMode}
             onReportClue={(id, word, name) => {
               setConfirmModal({
