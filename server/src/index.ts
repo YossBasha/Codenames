@@ -29,6 +29,27 @@ app.get('/health', (req, res) => {
   res.send('Server is healthy');
 });
 
+// Serve the frontend UI
+function getClientDistPath() {
+  const paths = [
+    path.join(__dirname, '..', '..', 'client', 'dist'), // dev ts-node
+    path.join(__dirname, '..', '..', '..', '..', 'client', 'dist'), // prod dist folder
+    path.join(__dirname, '..', '..', '..', '..', 'app', 'dist'), // packaged electron app
+    path.join(process.cwd(), 'client', 'dist'),
+    path.join(process.cwd(), 'dist'),
+    path.join(path.dirname(process.execPath), 'resources', 'app', 'dist')
+  ];
+  for (const p of paths) {
+    if (fs.existsSync(p)) return p;
+  }
+  return null;
+}
+
+const clientDistPath = getClientDistPath();
+if (clientDistPath) {
+  app.use(express.static(clientDistPath));
+}
+
 app.get('/api/local-ip', (req, res) => {
   res.json({ ip: getLocalIPAddress() });
 });
@@ -255,6 +276,15 @@ function startServer(port: number) {
     }
   });
 }
+
+// Fallback for single page app routing
+app.get('*', (req, res, next) => {
+  if (clientDistPath && req.method === 'GET' && fs.existsSync(path.join(clientDistPath, 'index.html')) && !req.path.startsWith('/api/')) {
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  } else {
+    next();
+  }
+});
 
 startServer(PORT);
 
